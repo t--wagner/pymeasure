@@ -4,7 +4,7 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolb
 import Tkinter
 import time
 import Queue
-from functools import wraps
+#from functools import wraps
 
 class _IndexDict(object):
 
