@@ -1,4 +1,3 @@
-# Import time for benchmarking
 import time
 
 # Import the Keithley2000 class

@@ -1,5 +1,5 @@
-from ..pymeasure import Channel, Ramp
 from pyvisa_instrument import PyVisaInstrument
+from ..system import Channel, Ramp
 
 class _Keithley2400SourceMeterChannelSource(Channel, Ramp):
 

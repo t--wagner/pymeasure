@@ -1,11 +1,13 @@
 from pyvisa_instrument import PyVisaInstrument
-from ..pymeasure import Channel, Ramp
+from ..system import Channel, Ramp
 import time
 
+
 class _Ad5791DacChannel(Channel, Ramp):
-    
+
     def __init__(self, pyvisa_instr, channel):
-        Channel.__init__(self)       
+        Channel.__init__(self)
+
         self._pyvisa_instr = pyvisa_instr
         self._channel = channel
         self._unit = 'volt'
@@ -13,22 +15,23 @@ class _Ad5791DacChannel(Channel, Ramp):
         self._limit = [None, None]
         self._readback = True
         self._output = None
-        
+
         self._attributes = ['unit', 'factor', 'limit', 'readback', 'output']
 
         Ramp.__init__(self)
-        self.write = Ramp._rampdecorator(self, self.read, self.write, self._factor)
-        
+        self.write = Ramp._rampdecorator(self, self.read, self.write,
+                                         self._factor)
+
     #--- unit ----#
     @property
     def unit(self):
         return self._unit
-    
+
     @unit.setter
     def unit(self, unit):
         self._unit = unit
 
-    #--- factor ---#        
+    #--- factor ---#
     @property
     def factor(self):
         return self._factor
@@ -42,7 +45,7 @@ class _Ad5791DacChannel(Channel, Ramp):
                 raise ValueError
         except:
             raise ValueError('Factor must be a nonzero number.')
-        
+
     #--- limit ----#
     @property
     def limit(self):
@@ -51,7 +54,7 @@ class _Ad5791DacChannel(Channel, Ramp):
     @limit.setter
     def limit(self, limit):
         self._limit = limit
-        
+
     #--- readback ---#
     @property
     def readback(self):
@@ -60,18 +63,19 @@ class _Ad5791DacChannel(Channel, Ramp):
     @readback.setter
     def readback(self, boolean):
         if not (isinstance(boolean, int) and boolean in [0, 1]):
-            raise ValueError('readback must be bool, int with True = 1 or False = 0.')
+            err_str = 'readback must be bool, int with True = 1 or False = 0.'
+            raise ValueError(err_str)
 
         try:
             self._readback = int(boolean)
         except:
             raise ValueError('Readback must be True or False')
-                
+
     #--- output ---#
     @property
     def output(self):
         return bool(self._output)
-    
+
     @output.setter
     def output(self, output):
         try:
@@ -79,95 +83,99 @@ class _Ad5791DacChannel(Channel, Ramp):
                 output_str = 'ON'
             else:
                 output_str = 'OFF'
-        
-            self._pyvisa_instr.write("CHAN " + self._channel + ";OUT " + output_str) 
-        
+
+            self._pyvisa_instr.write("CHAN " + self._channel + ";" +
+                                     "OUT " + output_str)
+
             self._output = output
         except:
-            raise ValueError, 'ouput must be True or False.'
-        
+            raise ValueError('ouput must be True or False.')
+
     #--- read ---#
     def read(self):
         level = self._pyvisa_instr.ask_for_values("CHAN " + self._channel + ";"
-                                                  "VOLT?") 
+                                                  "VOLT?")
         return [level[0] / float(self._factor)]
 
     #--- write ---#
     def write(self, level):
         if self._limit[0] <= level or self._limit[0] is None:
             if level <= self._limit[1] or self._limit[1] is None:
-                self._pyvisa_instr.write("CHAN " + self._channel + ";" + 
+                self._pyvisa_instr.write("CHAN " + self._channel + ";" +
                                          "VOLT " + str(level * self._factor))
 
         if self._readback:
             return self.read()
         else:
             return [level]
-    
+
     #--- ramp ---#
     def ramp(self, start, stop, points, frequency, delay, verbose=False):
-        
-        self.write(start)        
-        
-        start_d = int(52428.7 * start)  
+
+        self.write(start)
+
+        start_d = int(52428.7 * start)
         stepsize_d = int(52428.7 * (stop - start) / float(points-1))
-        
+
         self._pyvisa_instr.write("RAMP:ABORT" + ";" +
                                  "CHAN " + self._channel + ";" +
-                                 "RAMP:DEF " + str(start_d) + " " + str(points) + " " + str(stepsize_d) + ";" + 
-                                 "RAMP:FREQ " + str(frequency) + ";" + 
+                                 "RAMP:DEF " + str(start_d) + " " +
+                                               str(points) + " " +
+                                               str(stepsize_d) + ";" + 
+                                 "RAMP:FREQ " + str(frequency) + ";" +
                                  "RAMP:TRIG:DELAY " + str(delay) + ";" +
                                  "RAMP:START")
 
-        steps = points 
+        steps = points
         while int(steps):
-            
+
             time.sleep(0.5/float(frequency))
-            
+
             werteliste = self._pyvisa_instr.ask_for_values("RAMP:STEPS?")
-            steps, points, level_d  = werteliste            
-        
+            steps, points, level_d = werteliste
+
             if verbose:
                 points = int(points)
-                level = 1/float(52428.7) * level_d                
-                print "Steps: " + str(steps) + "/" + str(points) + "    Level: " + str(level)
-                
-        
+                level = 1/float(52428.7) * level_d
+                print "Steps: " + str(steps) + "/" + str(points) + "    " + \
+                      "Level: " + str(level)
+
+
 class Ad5791Dac(PyVisaInstrument):
 
     def __init__(self, name, address, defaults=True, reset=False):
         PyVisaInstrument.__init__(self, address, baud_rate=115200)
-        
+
         # Channels
-        self.__setitem__('port_1a', _Ad5791DacChannel(self._pyvisa_instr, '1 A'))
-        self.__setitem__('port_1b', _Ad5791DacChannel(self._pyvisa_instr, '1 B'))
-        self.__setitem__('port_2a', _Ad5791DacChannel(self._pyvisa_instr, '2 A'))
-        self.__setitem__('port_2b', _Ad5791DacChannel(self._pyvisa_instr, '2 B'))        
-        self.__setitem__('port_3a', _Ad5791DacChannel(self._pyvisa_instr, '3 A'))
-        self.__setitem__('port_3b', _Ad5791DacChannel(self._pyvisa_instr, '3 B'))     
-        self.__setitem__('port_4a', _Ad5791DacChannel(self._pyvisa_instr, '4 A'))     
-        self.__setitem__('port_4b', _Ad5791DacChannel(self._pyvisa_instr, '4 B'))     
-        self.__setitem__('port_5a', _Ad5791DacChannel(self._pyvisa_instr, '5 A'))     
-        self.__setitem__('port_5b', _Ad5791DacChannel(self._pyvisa_instr, '5 B'))     
-        self.__setitem__('port_6a', _Ad5791DacChannel(self._pyvisa_instr, '6 A'))     
-        self.__setitem__('port_6b', _Ad5791DacChannel(self._pyvisa_instr, '6 B'))  
-           
+        self.__setitem__('1a', _Ad5791DacChannel(self._pyvisa_instr, '1 A'))
+        self.__setitem__('1b', _Ad5791DacChannel(self._pyvisa_instr, '1 B'))
+        self.__setitem__('2a', _Ad5791DacChannel(self._pyvisa_instr, '2 A'))
+        self.__setitem__('2b', _Ad5791DacChannel(self._pyvisa_instr, '2 B'))
+        self.__setitem__('3a', _Ad5791DacChannel(self._pyvisa_instr, '3 A'))
+        self.__setitem__('3b', _Ad5791DacChannel(self._pyvisa_instr, '3 B'))
+        self.__setitem__('4a', _Ad5791DacChannel(self._pyvisa_instr, '4 A'))
+        self.__setitem__('4b', _Ad5791DacChannel(self._pyvisa_instr, '4 B'))
+        self.__setitem__('5a', _Ad5791DacChannel(self._pyvisa_instr, '5 A'))
+        self.__setitem__('5b', _Ad5791DacChannel(self._pyvisa_instr, '5 B'))
+        self.__setitem__('6a', _Ad5791DacChannel(self._pyvisa_instr, '6 A'))
+        self.__setitem__('6b', _Ad5791DacChannel(self._pyvisa_instr, '6 B'))
+
         if reset is True:
             self.reset()
 
         if defaults is True:
-            self.defaults()                                 
-            
+            self.defaults()
+
     def reset(self):
         self._pyvisa_instr.write("*RST")
-    
+
     def defaults(self):
         for key, channel in self.__iter__():
             channel.output = True
             channel.limit = [-10, 10]
             channel.ramprate = 0.1
             channel.steptime = 0.1
-            
+
     @property
     def identification(self):
         return self._pyvisa_instr.ask("*IDN?")

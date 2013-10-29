@@ -1,7 +1,7 @@
 import numpy as np
-from pymeasure import Channel, Instrument, Ramp
-import time
+from ..system import Channel, Instrument
 import random
+
 
 class FooDriver(object):
 

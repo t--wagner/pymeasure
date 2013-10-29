@@ -1,5 +1,5 @@
-from ..pymeasure import Channel
 from pyvisa_instrument import PyVisaInstrument
+from ..system import Channel
 
 
 def validate_string(value):
