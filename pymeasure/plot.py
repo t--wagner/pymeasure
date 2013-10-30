@@ -3,7 +3,10 @@ from matplotlib.figure import Figure
 from matplotlib.backends.backend_tkagg import (FigureCanvasTkAgg,
                                                NavigationToolbar2TkAgg)
 import Tkinter
-import Queue
+from Queue import Queue
+from future_builtins import zip
+from collections import deque
+from threading import Event
 
 
 class Graph(_IndexDict):
@@ -13,6 +16,7 @@ class Graph(_IndexDict):
 
         #Create matplotlib Figure
         self._figure = Figure()
+        self._colums = 1
 
         #Setup the TKInter window with the canvas and a toolbar
         self._root = Tkinter.Tk()
@@ -24,7 +28,7 @@ class Graph(_IndexDict):
         self._canvas.show()
 
         #self._clear_request = threading.event()
-        self._save_path = Queue.Queue()
+        self._save_path = Queue()
 
     def __setitem__(self, key, dataplot):
         if isinstance(dataplot, Dataplot):
@@ -50,8 +54,8 @@ class Graph(_IndexDict):
 
     @property
     def rows(self):
-        rows = self.__len__() / self._colums
-        if self.__len__() % self._colums == 0:
+        rows = self.__len__() / self.colums
+        if self.__len__() % self.colums == 0:
             return rows
         else:
             return rows + 1
@@ -134,55 +138,65 @@ class DataplotFan(Dataplot):
 
 class Dataplot1d(Dataplot):
 
-    def __init__(self, length):
+    def __init__(self, points=None, continuously=False):
         Dataplot.__init__(self)
 
         self._line = None
-        self._length = length
-        self._xqueue = Queue.Queue()
-        self._xdata = list()
-        self._yqueue = Queue.Queue()
-        self._ydata = list()
+        self._points = points
+        self._continuously = continuously
+        self._data_queue = Queue()
+        self._xdata = deque()
+        self._ydata = deque()
 
     @property
     def line(self, line):
         self._line = line
 
-    def add_xdata(self, xdata):
-        try:
-            for xdatapoint in xdata:
-                self._xqueue.put(xdatapoint)
-        except TypeError:
-            self._xqueue.put(xdata)
+    @property
+    def points(self):
+        return self._points
 
-    def add_ydata(self, ydata):
-        try:
-            for ydatapoint in ydata:
-                self._yqueue.put(ydatapoint)
-        except TypeError:
-            self._yqueue.put(ydata)
+    @points.setter
+    def points(self, points):
+        self._points = points
+
+    @property
+    def continuously(self):
+        return self._continuously
+
+    @continuously.setter
+    def continuously(self, boolean):
+        self._continuously = boolean
 
     def add_data(self, xdata, ydata):
-        self.add_xdata(xdata)
-        self.add_ydata(ydata)
+        if not len(xdata) == len(ydata):
+            raise ValueError('x and y must have same length')
+
+        for xy_dataset in zip(xdata, ydata):
+            self._data_queue.put(xy_dataset)
+
+    def clear(self):
+        self._clear_event.set()
 
     def update(self):
 
         #Set update flag back to False
         need_update = False
 
-        # Check the queues for new data
-        while not self._xqueue.empty():
-            #Clear data if trace is at the end
-            if len(self._xdata) == self._length:
-                del self._xdata[:]
-                del self._ydata[:]
+        while not self._data_queue.empty():
+            if len(self._xdata) == self._points:
+                if self._continuously:
+                    self._xdata.popleft()
+                    self._ydata.popleft()
+                else:
+                    self._xdata.clear()
+                    self._ydata.clear()
 
-            #Get a new datapoint
-            self._xdata.append(self._xqueue.get())
-            self._xqueue.task_done()
-            self._ydata.append(self._yqueue.get())
-            self._yqueue.task_done()
+            #Get xy_dataset out of the data_queue
+            xy_dataset = self._data_queue.get()
+            self._data_queue.task_done()
+            self._xdata.append(xy_dataset[0])
+            self._ydata.append(xy_dataset[1])
 
             #Set the update flag to True
             need_update = True
@@ -191,12 +205,12 @@ class Dataplot1d(Dataplot):
         if need_update:
             try:
                 self._line.set_data(self._xdata,
-                                    self._ydata[0:len(self._xdata)])
+                                    self._ydata)
                 self._axes.relim()
                 self._axes.autoscale_view()
             except AttributeError:
                 self._line, = self._axes.plot(self._xdata,
-                                              self._ydata[0:len(self._xdata)])
+                                              self._ydata)
 
         # Return the update flag. If True it will cause a redraw of the canvas.
         return need_update
@@ -204,14 +218,14 @@ class Dataplot1d(Dataplot):
 
 class Dataplot2d(Dataplot):
 
-    def __init__(self, length):
+    def __init__(self, points):
         Dataplot.__init__(self)
 
         self._image = None
         self._colorbar = None
-        self._length = length
+        self._points = points
 
-        self._queue = Queue.Queue()
+        self._queue = Queue()
         self._data = [[]]
 
     @property
@@ -236,7 +250,7 @@ class Dataplot2d(Dataplot):
             self._queue.task_done()
 
             #Clear data if trace is at the end
-            if len(self._data[-1]) == self._length:
+            if len(self._data[-1]) == self._points:
 
                 try:
                     self._image.set_array(self._data)
