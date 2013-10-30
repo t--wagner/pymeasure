@@ -70,20 +70,18 @@ class Graph(_IndexDict):
             number += 1
         self.run()
 
-    def update(self):
-        update = False
+    def run(self):
 
-        #Get new data and update the Plots
+        up_to_date = False
+
+        # Call all subplots to check for updates
         for key, subplot in self.__iter__():
             if subplot.update():
-                update = True
+                up_to_date = True
 
-        #Redraw the canvas
-        if update:
+        #Redraw the canvas if not up to date
+        if up_to_date:
             self._canvas.draw()
-
-    def run(self):
-        self.update()
 
         while not self._save_path.empty():
             path = self._save_path.get()
@@ -176,37 +174,46 @@ class Dataplot1d(Dataplot):
 
     def update(self):
 
-        #Set update flag back to False
+        # Set up_to_date flag back to False.
         up_to_date = False
 
+        # Keep going until the exchange queue is empty.
         while not self._data_queue.empty():
+
+            # Get a xy_dataset out of the exchange queue.
+            xy_dataset = self._data_queue.get()
+            self._data_queue.task_done()
+
+            # Handel the maximum number of displayed points.
             if len(self._xdata) == self._points:
+                #Remove oldest datapoint if plotting continuously.
                 if self._continuously:
                     self._xdata.popleft()
                     self._ydata.popleft()
+                # Clear all displayed datapoints otherwise.
                 else:
                     self._xdata.clear()
                     self._ydata.clear()
 
-            #Get xy_dataset out of the data_queue
-            xy_dataset = self._data_queue.get()
-            self._data_queue.task_done()
+            # Add xy_dataset for plotting
             self._xdata.append(xy_dataset[0])
             self._ydata.append(xy_dataset[1])
 
-            #Set the update flag to True
+            #Set the up_to_date flag to True for redrawing
             up_to_date = True
 
         # Update the plot with the new data if necassary
         if up_to_date:
             try:
-                self._line.set_data(self._xdata,
-                                    self._ydata)
+                # Update displayed data.
+                self._line.set_data(self._xdata, self._ydata)
+                # Recompute the data limits.
                 self._axes.relim()
+                # Autoscale the view limits using the data limit.
                 self._axes.autoscale_view()
             except AttributeError:
-                self._line, = self._axes.plot(self._xdata,
-                                              self._ydata)
+                # Create matplotlib.lines.Line2D
+                self._line, = self._axes.plot(self._xdata, self._ydata)
 
         # Return the update flag. If True it will cause a redraw of the canvas.
         return up_to_date
