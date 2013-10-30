@@ -13,9 +13,6 @@ class LinearSweep(object):
         for step in self.steps:
             yield self._channel.write(step)
 
-    def __len__(self):
-        return self.points
-
     @property
     def steps(self):
         return [self.stepsize * n + self._start for n in xrange(self._points)]
@@ -38,7 +35,7 @@ class LinearSweep(object):
 
     @property
     def points(self):
-            return self._points
+        return self._points
 
     @points.setter
     def points(self, points):
@@ -58,26 +55,23 @@ class LinearSweep(object):
 
 class TimeSweep(object):
 
-    def __init__(self, time, points):
+    def __init__(self, seconds, points):
 
-        self._time = time
+        self._waitingtime = seconds
         self._points = int(points)
 
     def __iter__(self):
         for step in xrange(self._points):
-            time.sleep(self._time)
+            time.sleep(self._waitingtime)
             yield step
 
-    def __len__(self):
-        return self._points
-
     @property
-    def time(self):
-        return self._time
+    def waitingtime(self):
+        return self._waitingtime
 
-    @time.setter
-    def time(self, time):
-        self._time = time
+    @waitingtime.setter
+    def waitingtime(self, seconds):
+        self._waitingtime = seconds
 
     @property
     def points(self):

@@ -26,7 +26,7 @@ class _IndexDict(object):
 
     def __setitem__(self, key, item):
         if type(key) is not str:
-            raise KeyError('key must be str.')
+            raise KeyError('key must be str')
         else:
             self._odict[key] = item
 
@@ -71,7 +71,7 @@ class Instrument(_IndexDict):
         if isinstance(channel, Channel):
             _IndexDict.__setitem__(self, key, channel)
         else:
-            raise TypeError('item must be a Channel.')
+            raise TypeError('item must be a Channel')
 
     @property
     def channels(self):
@@ -87,7 +87,7 @@ class Rack(_IndexDict):
         if isinstance(instrument, Instrument):
             _IndexDict.__setitem__(self, key, instrument)
         else:
-            return TypeError, 'item must be a Instrument.'
+            raise TypeError('item must be a Instrument')
 
     @property
     def instruments(self):
@@ -113,8 +113,8 @@ class Ramp(object):
         return self._steptime
 
     @steptime.setter
-    def steptime(self, time):
-        self._steptime = time
+    def steptime(self, seconds):
+        self._steptime = seconds
 
     def _rampdecorator(self, read, write, factor):
 

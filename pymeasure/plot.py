@@ -6,7 +6,6 @@ import Tkinter
 from Queue import Queue
 from future_builtins import zip
 from collections import deque
-from threading import Event
 
 
 class Graph(_IndexDict):
@@ -49,8 +48,8 @@ class Graph(_IndexDict):
         return self._colums
 
     @colums.setter
-    def colums(self, nr):
-        self._colums = nr
+    def colums(self, number):
+        self._colums = number
 
     @property
     def rows(self):
@@ -64,11 +63,11 @@ class Graph(_IndexDict):
         self._save_path.put(path)
 
     def create(self):
-        nr = 1
+        number = 1
         for key, dataplot in self.__iter__():
             dataplot.axes = self.figure.add_subplot(self.rows,
-                                                    self._colums, nr)
-            nr += 1
+                                                    self._colums, number)
+            number += 1
         self.run()
 
     def update(self):
@@ -101,7 +100,7 @@ class Dataplot(object):
 
     @property
     def axes(self):
-        self._axes
+        return self._axes
 
     @axes.setter
     def axes(self, axes):
@@ -118,7 +117,7 @@ class DataplotFan(Dataplot):
 
     @property
     def axes(self):
-        self._axes
+        return self._axes
 
     @axes.setter
     def axes(self, axes):
@@ -127,13 +126,13 @@ class DataplotFan(Dataplot):
 
     def update(self):
 
-        need_update = False
+        up_to_date = False
 
         for dataplot1d in self._dataplots1d:
             if dataplot1d.update():
-                need_update = True
+                up_to_date = True
 
-        return need_update
+        return up_to_date
 
 
 class Dataplot1d(Dataplot):
@@ -175,13 +174,10 @@ class Dataplot1d(Dataplot):
         for xy_dataset in zip(xdata, ydata):
             self._data_queue.put(xy_dataset)
 
-    def clear(self):
-        self._clear_event.set()
-
     def update(self):
 
         #Set update flag back to False
-        need_update = False
+        up_to_date = False
 
         while not self._data_queue.empty():
             if len(self._xdata) == self._points:
@@ -199,10 +195,10 @@ class Dataplot1d(Dataplot):
             self._ydata.append(xy_dataset[1])
 
             #Set the update flag to True
-            need_update = True
+            up_to_date = True
 
         # Update the plot with the new data if necassary
-        if need_update:
+        if up_to_date:
             try:
                 self._line.set_data(self._xdata,
                                     self._ydata)
@@ -213,7 +209,7 @@ class Dataplot1d(Dataplot):
                                               self._ydata)
 
         # Return the update flag. If True it will cause a redraw of the canvas.
-        return need_update
+        return up_to_date
 
 
 class Dataplot2d(Dataplot):
@@ -225,29 +221,30 @@ class Dataplot2d(Dataplot):
         self._colorbar = None
         self._points = points
 
-        self._queue = Queue()
+        self._data_queue = Queue()
         self._data = [[]]
 
     @property
     def image(self):
         return self._image
 
-    def add_data(self, data):
-        for datapoint in data:
-            self._queue.put(datapoint)
-
+    @property
     def colorbar(self):
         return self._colorbar
 
+    def add_data(self, data):
+        for datapoint in data:
+            self._data_queue.put(datapoint)
+
     def update(self):
 
-        need_update = False
+        up_to_date = False
 
         # Check the queues for new data
-        while not self._queue.empty():
+        while not self._data_queue.empty():
 
-            self._data[-1].append(self._queue.get())
-            self._queue.task_done()
+            self._data[-1].append(self._data_queue.get())
+            self._data_queue.task_done()
 
             #Clear data if trace is at the end
             if len(self._data[-1]) == self._points:
@@ -262,6 +259,6 @@ class Dataplot2d(Dataplot):
                     #self._colorbar = colorbar(self._image, ax=self._axes)
 
                 self._data.append([])
-                need_update = True
+                up_to_date = True
 
-        return need_update
+        return up_to_date
