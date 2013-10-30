@@ -1,5 +1,5 @@
 from pyvisa_instrument import PyVisaInstrument
-from ..system import Channel, Ramp
+from ..case import Channel, Ramp
 import time
 
 

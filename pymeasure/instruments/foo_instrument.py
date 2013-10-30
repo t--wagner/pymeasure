@@ -1,5 +1,5 @@
 import numpy as np
-from ..system import Channel, Instrument
+from ..case import Channel, Instrument
 import random
 
 
