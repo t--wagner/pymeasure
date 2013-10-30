@@ -1,8 +1,8 @@
 from .case import _IndexDict
+import Tkinter
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_tkagg import (FigureCanvasTkAgg,
                                                NavigationToolbar2TkAgg)
-import Tkinter
 from Queue import Queue
 from future_builtins import zip
 from collections import deque
