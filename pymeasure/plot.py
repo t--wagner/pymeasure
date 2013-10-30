@@ -1,4 +1,4 @@
-from .system import _IndexDict
+from .case import _IndexDict
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_tkagg import (FigureCanvasTkAgg,
                                                NavigationToolbar2TkAgg)
