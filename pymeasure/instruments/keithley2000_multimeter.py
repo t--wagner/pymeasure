@@ -67,7 +67,7 @@ class _Keithley2000MultimeterChannel(Channel):
             else:
                 raise ValueError
         except:
-            raise ValueError('factor must be a nonzero number.')
+            raise ValueError('factor must be a nonzero number')
 
     #--- autorange ---#
     @property
