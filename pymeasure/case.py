@@ -40,6 +40,20 @@ class _IndexDict(object):
             except:
                 raise KeyError
 
+    def keys(self):
+        return self._odict.keys()
+
+    def __repr__(self):
+        
+        repr_str = self.__class__.__name__
+        
+        repr_str += '['
+        for index, key in enumerate(self.keys()):
+            repr_str += str(index) + ': \'' + key + '\', '
+        repr_str = repr_str[:-2] + ']'         
+        
+        return repr_str
+
 
 class Channel(object):
 
@@ -73,9 +87,8 @@ class Instrument(_IndexDict):
         else:
             raise TypeError('item must be a Channel')
 
-    @property
     def channels(self):
-        return [index_key for index_key in enumerate(self._odict.keys())]
+        return self._odict.values()
 
 
 class Rack(_IndexDict):
@@ -89,9 +102,8 @@ class Rack(_IndexDict):
         else:
             raise TypeError('item must be a Instrument')
 
-    @property
     def instruments(self):
-        return [index_key for index_key in enumerate(self._odict.keys())]
+        return self._odict.values()
 
 
 class Ramp(object):
