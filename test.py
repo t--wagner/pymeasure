@@ -1,5 +1,5 @@
 from pymeasure.instruments.foo_instrument import FooInstrument
-from pymeasure.plot import Graph, MultiDataplot1d, Dataplot1d
+from pymeasure.plot import Graph, MultiDataplot1d, Dataplot1d, Dataplot2d
 from pymeasure.sweep import LinearSweep
 
 from threading import Thread
@@ -12,9 +12,14 @@ foo = FooInstrument()
 
 fig = plt.Figure()
 graph = Graph(fig)
+graph.colums = 3
 graph['fan'] = MultiDataplot1d()
 graph['fan']['sin'] = Dataplot1d(50, continuously=True)
 graph['fan']['cos'] = Dataplot1d(100, continuously=True)
+graph['2d'] = Dataplot2d(10)
+graph['2d']._figure = graph.figure
+graph['2d2'] = Dataplot2d(25)
+graph['2d2']._figure = graph.figure
 graph.create()
 
 
@@ -23,6 +28,8 @@ def run():
     for step in LinearSweep(foo['out'], 0, 2 * pi, 501):
         graph['fan']['sin'].add_data(step, foo['sin'].read())
         graph['fan']['cos'].add_data(step, foo['cos'].read())
+        graph['2d'].add_data(foo['random'].read())
+        graph['2d2'].add_data(foo['sin'].read())
         time.sleep(25e-3)
 
 t = Thread(target=run)

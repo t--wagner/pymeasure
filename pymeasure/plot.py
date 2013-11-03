@@ -3,9 +3,12 @@ import Tkinter
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_tkagg import (FigureCanvasTkAgg,
                                                NavigationToolbar2TkAgg)
+from matplotlib.colorbar import Colorbar
 from Queue import Queue
 from future_builtins import zip
 from collections import deque
+
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 
 class Graph(IndexDict):
@@ -230,6 +233,7 @@ class Dataplot2d(Dataplot):
         self._image = None
         self._colorbar = None
         self._points = points
+        self._figure = None
 
         self._data_queue = Queue()
         self._data = [[]]
@@ -266,8 +270,12 @@ class Dataplot2d(Dataplot):
                     #self._image = self._axes.matshow(self._data,aspect='auto')
                     self._image = self._axes.imshow(self._data, aspect='auto')
                     self._axes.set_axis_off()
-                    #self._colorbar = colorbar(self._image, ax=self._axes)
 
+                    # Colorbar
+                    #divider = make_axes_locatable(self._axes)
+                    #cax = divider.append_axes("right", size="5%", pad=0.05)                
+                    #self._figure.colorbar(self._image, cax)
+                
                 self._data.append([])
                 up_to_date = False
 
