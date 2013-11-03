@@ -1,133 +1,87 @@
-import numpy as np
 from ..case import Channel, Instrument
 import random
+import numpy as np
 
 
-class FooDriver(object):
+class _FooInstrumentChannelRandom(Channel):
 
-        def __init__(self):
-                self._values = []
-        
-        def measure(self, measf):
-            product = 1
-            for value in self._values:
-                product *= value
-            return measf(product)
-
-        def source(self, port, value=None):
-            if value is None:
-                return self._values[port]
-            else: 
-                self._values[port] = value
-                return value
-
-
-class FooChannelMeas(Channel):
-    
-    def __init__(self, driver, measf):
-        super(FooChannelMeas, self).__init__()
-        self._driver = driver
-        self._measf = measf
-        
-    def read(self):
-        return [self._driver.measure(self._measf)]
-
-
-class FooChannelSin(FooChannelMeas):
-    
-    def __init__(self, driver):
-        super(FooChannelSin, self).__init__(driver, np.sin)
-        
-    def read(self):
-        """ Hallo hier gibt es den Sin """
-        return super(FooChannelSin, self).read()
-
-
-class FooChannelCos(FooChannelMeas):
-        
-    def __init__(self, driver):
-        super(FooChannelCos, self).__init__(driver, np.cos)
-        
-    def read(self):
-        """ Hallo hier gibt es den Cos """
-        return super(FooChannelCos, self).read()
-
-    
-class FooChannelSource(Channel):
-    
-    def __init__(self, driver, port):
-        super(FooChannelSource, self).__init__()
-        
-        self._driver = driver
-        self._port = port
-        self._driver._values.append(0)
-        
-        #Ramp.__init__(self)
-        #self.write = self._rampdecorator(self.read, self.write)
-        
-    def read(self):
-        return [self._driver.source(self._port)]
-        
-    def write(self, value):
-        return [self._driver.source(self._port, value)]
-        
-  
-class FooChannelPort0(FooChannelSource):
-    
-    def __init__(self, driver):
-        super(FooChannelPort0, self).__init__(driver, 0)
-        
-    def read(self):
-        """ Hier bekommst den Level von Port 0 """
-        return super(FooChannelPort0, self).read()
-        
-    def write(self, value):
-        """ Hier kannst den Level von Port 0 setzen """
-        return super(FooChannelPort0, self).write(value)
-       
-        
-class FooChannelPort1(FooChannelSource):
-    
-    def __init__(self, driver):
-        super(FooChannelPort1, self).__init__(driver, 1)
-        
-    def read(self):
-        """ Hier bekommst den Level von Port 1 """
-        return super(FooChannelPort1, self).read()
-        
-    def write(self, value):
-        """ Hier kannst den Level von Port 1 setzen """
-        return super(FooChannelPort1, self).write(value)
-
-
-class FooChannelRandom(Channel):
-    
     def __init__(self):
-        pass
-    
+        Channel.__init__(self)
+
+        self._minimum = 0
+        self._maximimu = 1
+
+    @property
+    def minimum(self):
+        return self._minimum
+
+    @minimum.setter
+    def minimum(self, minimum):
+        self._minimum = minimum
+
+    @property
+    def maximum(self):
+        return self._maximum
+
+    @maximum.setter
+    def maximum(self, maximum):
+        self._maximum = maximum
+
     def read(self):
-        return [random.uniform(-1, 1)]
-        
+        return [random.uniform(self._minimum, self._maximum)]
+
+
+class _FooInstrumentChannelOutput(Channel):
+
+    def __init__(self):
+        Channel.__init__(self)
+
+        self._period = 2 * np.pi
+        self._value = 0
+
+    @property
+    def period(self):
+        return self._period
+
+    @period.setter
+    def period(self, period):
+        self._period = period
+
+    def write(self, value):
+        self._value = value
+        return [self._value]
+
+    def read(self):
+        return [self._value]
+
+
+class _FooInstrumentChannelFunction(Channel):
+
+    def __init__(self, function, output):
+        Channel.__init__(self)
+
+        self._function = function
+        self._output = output
+
+    def read(self):
+
+        return [self._function(self._output()[0])]
+
 
 class FooInstrument(Instrument):
 
     def __init__(self, reset=True):
-        super(FooInstrument, self).__init__()
-        
-        self._driver = FooDriver()
-        
-        self.__setitem__('source0', FooChannelPort0(self._driver))   
-        self.__setitem__('source1', FooChannelPort1(self._driver))
-        
-        self.__setitem__('sin', FooChannelSin(self._driver))
-        self.__setitem__('cos', FooChannelCos(self._driver))
-        self.__setitem__('random', FooChannelRandom())
-        
+        Instrument.__init__(self)
+
+        self.__setitem__('random', _FooInstrumentChannelRandom())
+        self.__setitem__('out', _FooInstrumentChannelOutput())
+
+        output = self.__getitem__('out')
+        self.__setitem__('sin', _FooInstrumentChannelFunction(np.sin, output))
+        self.__setitem__('cos', _FooInstrumentChannelFunction(np.cos, output))
+
         if reset is True:
             self.reset()
-        
+
     def reset(self):
         pass
-        #self.__getitem__('source0').steptime = 10e-3
-        #self.__getitem__('source1').steptime = 10e-3
-        
