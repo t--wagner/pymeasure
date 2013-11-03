@@ -3,13 +3,13 @@ import time
 #from functools import wraps
 
 
-class _IndexDict(object):
+class IndexDict(object):
 
     def __init__(self):
         self._odict = OrderedDict()
 
     def __iter__(self):
-        return iter(self._odict.items())
+        return iter(self._odict.values())
 
     def __len__(self):
         return len(self._odict)
@@ -40,19 +40,19 @@ class _IndexDict(object):
             except:
                 raise KeyError
 
+    def __repr__(self):
+
+        repr_str = self.__class__.__name__
+
+        repr_str += '['
+        for index, key in enumerate(self._odict.keys()):
+            repr_str += str(index) + ': \'' + key + '\', '
+        repr_str = repr_str[:-2] + ']'
+
+        return repr_str
+
     def keys(self):
         return self._odict.keys()
-
-    def __repr__(self):
-        
-        repr_str = self.__class__.__name__
-        
-        repr_str += '['
-        for index, key in enumerate(self.keys()):
-            repr_str += str(index) + ': \'' + key + '\', '
-        repr_str = repr_str[:-2] + ']'         
-        
-        return repr_str
 
 
 class Channel(object):
@@ -76,14 +76,14 @@ class Channel(object):
                 print attribute + " = " + str(self.__getattribute__(attribute))
 
 
-class Instrument(_IndexDict):
+class Instrument(IndexDict):
 
     def __init__(self):
-        _IndexDict.__init__(self)
+        IndexDict.__init__(self)
 
     def __setitem__(self, key, channel):
         if isinstance(channel, Channel):
-            _IndexDict.__setitem__(self, key, channel)
+            IndexDict.__setitem__(self, key, channel)
         else:
             raise TypeError('item must be a Channel')
 
@@ -91,14 +91,14 @@ class Instrument(_IndexDict):
         return self._odict.values()
 
 
-class Rack(_IndexDict):
+class Rack(IndexDict):
 
     def __init__(self):
-        _IndexDict.__init__(self)
+        IndexDict.__init__(self)
 
     def __setitem__(self, key, instrument):
         if isinstance(instrument, Instrument):
-            _IndexDict.__setitem__(self, key, instrument)
+            IndexDict.__setitem__(self, key, instrument)
         else:
             raise TypeError('item must be a Instrument')
 
