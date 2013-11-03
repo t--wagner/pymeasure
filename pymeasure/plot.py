@@ -1,4 +1,4 @@
-from .case import _IndexDict
+from .case import IndexDict
 import Tkinter
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_tkagg import (FigureCanvasTkAgg,
@@ -8,10 +8,10 @@ from future_builtins import zip
 from collections import deque
 
 
-class Graph(_IndexDict):
+class Graph(IndexDict):
 
     def __init__(self):
-        _IndexDict.__init__(self)
+        IndexDict.__init__(self)
 
         #Create matplotlib Figure
         self._figure = Figure()
@@ -31,7 +31,7 @@ class Graph(_IndexDict):
 
     def __setitem__(self, key, dataplot):
         if isinstance(dataplot, Dataplot):
-            _IndexDict.__setitem__(self, key, dataplot)
+            IndexDict.__setitem__(self, key, dataplot)
         else:
             raise TypeError('item must be a Dataplot.')
 
@@ -64,7 +64,7 @@ class Graph(_IndexDict):
 
     def create(self):
         number = 1
-        for key, dataplot in self.__iter__():
+        for dataplot in self.__iter__():
             dataplot.axes = self.figure.add_subplot(self.rows,
                                                     self._colums, number)
             number += 1
@@ -72,15 +72,15 @@ class Graph(_IndexDict):
 
     def run(self):
 
-        up_to_date = False
+        up_to_date = True
 
         # Call all subplots to check for updates
-        for key, subplot in self.__iter__():
-            if subplot.update():
-                up_to_date = True
+        for subplot in self.__iter__():
+            if not subplot.update():
+                up_to_date = False
 
         #Redraw the canvas if not up to date
-        if up_to_date:
+        if not up_to_date:
             self._canvas.draw()
 
         while not self._save_path.empty():
@@ -105,13 +105,13 @@ class Dataplot(object):
         self._axes = axes
 
 
-class DataplotFan(Dataplot):
+class MultiDataplot1d(IndexDict, Dataplot):
 
-    def __init__(self, *dataplots1d):
+    def __init__(self):
+        IndexDict.__init__(self)
         Dataplot.__init__(self)
 
         self._axes = None
-        self._dataplots1d = dataplots1d
 
     @property
     def axes(self):
@@ -119,16 +119,16 @@ class DataplotFan(Dataplot):
 
     @axes.setter
     def axes(self, axes):
-        for dataplot1d in self._dataplots1d:
+        for dataplot1d in self.__iter__():
             dataplot1d.axes = axes
 
     def update(self):
 
-        up_to_date = False
+        up_to_date = True
 
-        for dataplot1d in self._dataplots1d:
-            if dataplot1d.update():
-                up_to_date = True
+        for dataplot1d in self.__iter__():
+            if not dataplot1d.update():
+                up_to_date = False
 
         return up_to_date
 
@@ -175,7 +175,7 @@ class Dataplot1d(Dataplot):
     def update(self):
 
         # Set up_to_date flag back to False.
-        up_to_date = False
+        up_to_date = True
 
         # Keep going until the exchange queue is empty.
         while not self._data_queue.empty():
@@ -200,10 +200,10 @@ class Dataplot1d(Dataplot):
             self._ydata.append(xy_dataset[1])
 
             #Set the up_to_date flag to True for redrawing
-            up_to_date = True
+            up_to_date = False
 
         # Update the plot with the new data if necassary
-        if up_to_date:
+        if not up_to_date:
             try:
                 # Update displayed data.
                 self._line.set_data(self._xdata, self._ydata)
@@ -245,7 +245,7 @@ class Dataplot2d(Dataplot):
 
     def update(self):
 
-        up_to_date = False
+        up_to_date = True
 
         # Check the queues for new data
         while not self._data_queue.empty():
@@ -266,6 +266,6 @@ class Dataplot2d(Dataplot):
                     #self._colorbar = colorbar(self._image, ax=self._axes)
 
                 self._data.append([])
-                up_to_date = True
+                up_to_date = False
 
         return up_to_date
