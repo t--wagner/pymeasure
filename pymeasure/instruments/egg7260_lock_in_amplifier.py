@@ -1,5 +1,5 @@
 from pyvisa_instrument import PyVisaInstrument
-from ..case import Channel, Ramp
+from pymeasure.case import Channel, Ramp
 
 
 class _Egg7260LockInAmplifierChannel(Channel):

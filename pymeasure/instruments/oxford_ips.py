@@ -1,5 +1,5 @@
 from pyvisa_instrument import PyVisaInstrument
-from ..case import Channel
+from pymeasure.case import Channel
 import time
 from visa import VisaIOError
 

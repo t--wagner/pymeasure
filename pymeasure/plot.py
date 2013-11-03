@@ -1,4 +1,4 @@
-from .case import IndexDict
+from pymeasure.case import IndexDict
 import Tkinter
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_tkagg import (FigureCanvasTkAgg,
@@ -10,11 +10,14 @@ from collections import deque
 
 class Graph(IndexDict):
 
-    def __init__(self):
+    def __init__(self, figure=Figure()):
         IndexDict.__init__(self)
 
         #Create matplotlib Figure
-        self._figure = Figure()
+        if figure:
+            self._figure = figure
+        else:
+            self._figure = Figure()
         self._colums = 1
 
         #Setup the TKInter window with the canvas and a toolbar
@@ -93,8 +96,8 @@ class Graph(IndexDict):
 
 class Dataplot(object):
 
-    def __init__(self):
-        self._axes = None
+    def __init__(self, axes=None):
+        self._axes = axes
 
     @property
     def axes(self):

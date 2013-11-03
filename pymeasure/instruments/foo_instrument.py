@@ -1,4 +1,4 @@
-from ..case import Channel, Instrument
+from pymeasure.case import Channel, Instrument
 import random
 import numpy as np
 
@@ -9,7 +9,7 @@ class _FooInstrumentChannelRandom(Channel):
         Channel.__init__(self)
 
         self._minimum = 0
-        self._maximimu = 1
+        self._maximum = 1
 
     @property
     def minimum(self):
