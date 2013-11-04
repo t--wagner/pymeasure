@@ -14,8 +14,8 @@ fig = plt.Figure()
 graph = Graph(fig)
 graph.colums = 3
 graph['fan'] = MultiDataplot1d()
-graph['fan']['sin'] = Dataplot1d(50, continuously=True)
-graph['fan']['cos'] = Dataplot1d(100, continuously=True)
+graph['fan']['sin'] = Dataplot1d(5001, continuously=False)
+graph['fan']['cos'] = Dataplot1d(5001, continuously=False)
 graph['2d'] = Dataplot2d(10)
 graph['2d']._figure = graph.figure
 graph['2d2'] = Dataplot2d(25)
@@ -25,7 +25,7 @@ graph.create()
 
 def run():
 
-    for step in LinearSweep(foo['out'], 0, 2 * pi, 501):
+    for step in LinearSweep(foo['out1'], 0, 2 * pi, 5001):
         graph['fan']['sin'].add_data(step, foo['sin'].read())
         graph['fan']['cos'].add_data(step, foo['cos'].read())
         graph['2d'].add_data(foo['random'].read())

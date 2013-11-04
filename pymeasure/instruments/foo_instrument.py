@@ -33,11 +33,12 @@ class _FooInstrumentChannelRandom(Channel):
 
 class _FooInstrumentChannelOutput(Channel):
 
-    def __init__(self):
+    def __init__(self, index):
         Channel.__init__(self)
 
         self._period = 2 * np.pi
-        self._value = 0
+        self._index = index
+        self._value = [0, 0]
 
     @property
     def period(self):
@@ -48,11 +49,11 @@ class _FooInstrumentChannelOutput(Channel):
         self._period = period
 
     def write(self, value):
-        self._value = value
-        return [self._value]
+        self._value[self._index] = value
+        return [self._value[self._index]]
 
     def read(self):
-        return [self._value]
+        return [self._value[self._index]]
 
 
 class _FooInstrumentChannelFunction(Channel):
@@ -73,10 +74,11 @@ class FooInstrument(Instrument):
     def __init__(self, reset=True):
         Instrument.__init__(self)
 
-        self.__setitem__('random', _FooInstrumentChannelRandom())
-        self.__setitem__('out', _FooInstrumentChannelOutput())
+        self.__setitem__('out0', _FooInstrumentChannelOutput(0))
+        self.__setitem__('out1', _FooInstrumentChannelOutput(1))
 
-        output = self.__getitem__('out')
+        self.__setitem__('random', _FooInstrumentChannelRandom())
+        output = self.__getitem__('out1')
         self.__setitem__('sin', _FooInstrumentChannelFunction(np.sin, output))
         self.__setitem__('cos', _FooInstrumentChannelFunction(np.cos, output))
 

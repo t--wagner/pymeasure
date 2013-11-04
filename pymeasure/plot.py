@@ -3,7 +3,6 @@ import Tkinter
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_tkagg import (FigureCanvasTkAgg,
                                                NavigationToolbar2TkAgg)
-from matplotlib.colorbar import Colorbar
 from Queue import Queue
 from future_builtins import zip
 from collections import deque
@@ -272,9 +271,9 @@ class Dataplot2d(Dataplot):
                     self._axes.set_axis_off()
 
                     # Colorbar
-                    #divider = make_axes_locatable(self._axes)
-                    #cax = divider.append_axes("right", size="5%", pad=0.05)                
-                    #self._figure.colorbar(self._image, cax)
+                    divider = make_axes_locatable(self._axes)
+                    cax = divider.append_axes("right", size="5%", pad=0.05)                
+                    self._figure.colorbar(self._image, cax)
                 
                 self._data.append([])
                 up_to_date = False
