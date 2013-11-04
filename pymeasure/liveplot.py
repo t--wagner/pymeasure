@@ -125,6 +125,24 @@ class LiveGraphTk(LiveGraphBase):
         self._master.after(25, self.run)
 
 
+class LiveGraphGtk(LiveGraphBase):
+
+    def __init__(self, figure=None, master=None):
+        LiveGraphBase.__init__(self, figure=figure)
+
+
+class LiveGraphQt(LiveGraphBase):
+
+    def __init__(self, figure=None, master=None):
+        LiveGraphBase.__init__(self, figure=figure)
+
+
+class LiveGraphWx(LiveGraphBase):
+
+    def __init__(self, figure=None, master=None):
+        LiveGraphBase.__init__(self, figure=figure)
+
+
 class Dataplot(object):
 
     def __init__(self):
@@ -301,6 +319,7 @@ class Dataplot2d(Dataplot):
 
     def update(self):
 
+        #Set up_to_date flag back to True
         up_to_date = True
 
         # Check the queues for new data

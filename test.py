@@ -1,5 +1,6 @@
 from pymeasure.instruments.foo_instrument import FooInstrument
-from pymeasure.plot import LiveGraphTk, MultiDataplot1d, Dataplot1d, Dataplot2d
+from pymeasure.liveplot import (LiveGraphTk, MultiDataplot1d, Dataplot1d,
+                                Dataplot2d)
 from pymeasure.sweep import LinearSweep
 
 from threading import Thread
@@ -12,8 +13,8 @@ foo = FooInstrument()
 
 points = 401
 
-
-graph = LiveGraphTk()
+fig = plt.Figure()
+graph = LiveGraphTk(figure=fig)
 graph.colums = 1
 graph['fan1'] = MultiDataplot1d()
 graph['fan1']['sin'] = Dataplot1d(points, continuously=False)
