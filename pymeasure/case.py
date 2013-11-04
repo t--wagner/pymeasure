@@ -1,6 +1,5 @@
 from collections import OrderedDict
 import time
-#from functools import wraps
 
 
 class IndexDict(object):

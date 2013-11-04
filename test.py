@@ -1,5 +1,5 @@
 from pymeasure.instruments.foo_instrument import FooInstrument
-from pymeasure.plot import Graph, MultiDataplot1d, Dataplot1d, Dataplot2d
+from pymeasure.plot import LiveGraphTk, MultiDataplot1d, Dataplot1d, Dataplot2d
 from pymeasure.sweep import LinearSweep
 
 from threading import Thread
@@ -10,27 +10,39 @@ import matplotlib.pyplot as plt
 
 foo = FooInstrument()
 
-fig = plt.Figure()
-graph = Graph(fig)
-graph.colums = 3
-graph['fan'] = MultiDataplot1d()
-graph['fan']['sin'] = Dataplot1d(5001, continuously=False)
-graph['fan']['cos'] = Dataplot1d(5001, continuously=False)
-graph['2d'] = Dataplot2d(10)
-graph['2d']._figure = graph.figure
-graph['2d2'] = Dataplot2d(25)
-graph['2d2']._figure = graph.figure
-graph.create()
+points = 401
+
+
+graph = LiveGraphTk()
+graph.colums = 1
+graph['fan1'] = MultiDataplot1d()
+graph['fan1']['sin'] = Dataplot1d(points, continuously=False)
+graph['fan1']['cos'] = Dataplot1d(points, continuously=False)
+graph.build()
+graph.run()
+
+graph2d = LiveGraphTk()
+graph2d['2d1'] = Dataplot2d(points)
+graph2d['2d1']._figure = graph.figure
+graph2d['2d2'] = Dataplot2d(points)
+graph2d['2d2']._figure = graph.figure
+graph2d.build()
+graph2d.run()
 
 
 def run():
+    for step0 in LinearSweep(foo['out0'], 0, 4 * pi, points / 2):
 
-    for step in LinearSweep(foo['out1'], 0, 2 * pi, 5001):
-        graph['fan']['sin'].add_data(step, foo['sin'].read())
-        graph['fan']['cos'].add_data(step, foo['cos'].read())
-        graph['2d'].add_data(foo['random'].read())
-        graph['2d2'].add_data(foo['sin'].read())
-        time.sleep(25e-3)
+        for step1 in LinearSweep(foo['out1'], 0, 4 * pi, points):
+
+            data_sin = foo['sin'].read()
+            graph['fan1']['sin'].add_data(step1, data_sin)
+            graph2d['2d1'].add_data(data_sin)
+
+            data_cos = foo['cos'].read()
+            graph['fan1']['cos'].add_data(step1, data_cos)
+            graph2d['2d2'].add_data(data_cos)
+            time.sleep(10e-3)
 
 t = Thread(target=run)
 t.start()

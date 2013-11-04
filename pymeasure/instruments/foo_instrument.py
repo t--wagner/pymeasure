@@ -33,12 +33,11 @@ class _FooInstrumentChannelRandom(Channel):
 
 class _FooInstrumentChannelOutput(Channel):
 
-    def __init__(self, index):
+    def __init__(self):
         Channel.__init__(self)
 
         self._period = 2 * np.pi
-        self._index = index
-        self._value = [0, 0]
+        self._value = 0
 
     @property
     def period(self):
@@ -49,24 +48,25 @@ class _FooInstrumentChannelOutput(Channel):
         self._period = period
 
     def write(self, value):
-        self._value[self._index] = value
-        return [self._value[self._index]]
+        self._value = value
+        return [self._value]
 
     def read(self):
-        return [self._value[self._index]]
+        return [self._value]
 
 
 class _FooInstrumentChannelFunction(Channel):
 
-    def __init__(self, function, output):
+    def __init__(self, function, output1, output2):
         Channel.__init__(self)
 
         self._function = function
-        self._output = output
+        self._output1 = output1
+        self._output2 = output2
 
     def read(self):
 
-        return [self._function(self._output()[0])]
+        return [self._function(self._output1()[0] + self._output2()[0])]
 
 
 class FooInstrument(Instrument):
@@ -74,13 +74,19 @@ class FooInstrument(Instrument):
     def __init__(self, reset=True):
         Instrument.__init__(self)
 
-        self.__setitem__('out0', _FooInstrumentChannelOutput(0))
-        self.__setitem__('out1', _FooInstrumentChannelOutput(1))
+        chan_out1 = _FooInstrumentChannelOutput()
+        self.__setitem__('out0', chan_out1)
+
+        chan_out2 = _FooInstrumentChannelOutput()
+        self.__setitem__('out1', chan_out2)
+
+        sin_chan = _FooInstrumentChannelFunction(np.sin, chan_out1, chan_out2)
+        self.__setitem__('sin', sin_chan)
+
+        cos_chan = _FooInstrumentChannelFunction(np.cos, chan_out1, chan_out2)
+        self.__setitem__('cos', cos_chan)
 
         self.__setitem__('random', _FooInstrumentChannelRandom())
-        output = self.__getitem__('out1')
-        self.__setitem__('sin', _FooInstrumentChannelFunction(np.sin, output))
-        self.__setitem__('cos', _FooInstrumentChannelFunction(np.cos, output))
 
         if reset is True:
             self.reset()
