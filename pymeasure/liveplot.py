@@ -236,7 +236,7 @@ class Dataplot1d(DataplotBase):
                     del self._ydata[:]
 
             # Handel the maximum number of displayed points.
-            if len(self._xdata) > self._length:
+            while len(self._xdata) > self._length:
 
                 #Remove oldest datapoints if plotting continuously.
                 if self._continuously:
@@ -321,6 +321,17 @@ class Dataplot2d(DataplotBase):
 
         DataplotBase.build(self, axes, figure)
 
+        self._image = self._axes.imshow([[float('nan')]],
+                                        aspect='auto',
+                                        interpolation='none')
+
+        # Make a colorbar (this works, don't aks me why)
+        axes_divider = make_axes_locatable(self._axes)
+        axes = axes_divider.append_axes("right",
+                                        size="2.5%",
+                                        pad=0.05)
+        self._figure.colorbar(self._image, axes)
+
         self._axes.set_axis_off()
 
     def add_data(self, data):
@@ -341,33 +352,25 @@ class Dataplot2d(DataplotBase):
             self._exchange_queue.task_done()
 
             try:
-                #if (len(self._data[-1]) + len(data)) > self._points
                 self._data[-1] += package.pop()
             except:
                 message = package
                 if message == 'clear':
-                    pass
+                    self._data = [[]]
 
-            #Clear data if trace is at the end
-            if len(self._data[-1]) >= self._length:
+            # Handel the maximum number of displayed points.
+            while len(self._data[-1]) > self._length:
 
-                try:
-                    self._image.set_data(self._data)
-                    self._image.autoscale()
-                except AttributeError:
-                    #self._image = self._axes.matshow(self._data,aspect='auto')
-                    self._image = self._axes.imshow(self._data,
-                                                    aspect='auto',
-                                                    interpolation='none')
+                split = self._data[-1][self._length:]
+                del self._data[-1][self._length:]
+                self._data.append(split)
 
-                    # Make a colorbar (this works, don't aks me why)
-                    axes_divider = make_axes_locatable(self._axes)
-                    axes = axes_divider.append_axes("right",
-                                                    size="2.5%",
-                                                    pad=0.05)
-                    self._figure.colorbar(self._image, axes)
-
-                self._data.append([])
+                #Set the up_to_date flag to True for redrawing
                 up_to_date = False
+
+        if not up_to_date:
+
+            self._image.set_data(self._data[:-1])
+            self._image.autoscale()
 
         return up_to_date

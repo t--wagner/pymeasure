@@ -27,22 +27,32 @@ graph2d.run()
 
 
 def run():
-    for step0 in LinearSweep(foo['out0'], 0, 4 * pi, (points - 1) / 40 + 1):
 
-        graph['fan1']['sin'].clear()
-        graph['fan1']['cos'].clear()
+    for point in range(0,10):    
+    
+        for step0 in LinearSweep(foo['out0'], 0, 4 * pi, (points - 1) / 40 + 1):
 
-        for step1 in LinearSweep(foo['out1'], 0, 4 * pi, points):
+            
+            graph['fan1']['cos'].clear()
+            
+            data_sin = []
+            steps = []
 
-            data_sin = foo['sin'].read()
-            data_sin = [datapoint * 2 for datapoint in data_sin]
-            graph['fan1']['sin'].add_data(step1, data_sin)
+            for step1 in LinearSweep(foo['out1'], 0, 4 * pi, points):
+                
+                data_sin += foo['sin'].read()            
+                steps += step1
+                
+                data_cos = foo['cos'].read()
+                graph['fan1']['cos'].add_data(step1, data_cos)
+                graph2d['2d2'].add_data(data_cos)
+                time.sleep(5e-3)
+            
+            graph['fan1']['sin'].clear()
+            graph['fan1']['sin'].add_data(steps, data_sin)
             graph2d['2d1'].add_data(data_sin)
-
-            data_cos = foo['cos'].read()
-            graph['fan1']['cos'].add_data(step1, data_cos)
-            graph2d['2d2'].add_data(data_cos)
-            time.sleep(5e-3)
+                
+        #graph2d['2d1'].clear()
 
 
 
