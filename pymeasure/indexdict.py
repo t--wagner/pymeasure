@@ -51,3 +51,6 @@ class IndexDict(object):
 
     def keys(self):
         return self._odict.keys()
+
+    def index(self):
+        return [(index, key) for index, key in enumerate(self.keys())]
