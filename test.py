@@ -6,44 +6,46 @@ from pymeasure.sweep import LinearSweep
 from threading import Thread
 from numpy import pi
 import time
-import matplotlib.pyplot as plt
-
 
 foo = FooInstrument()
 
 points = 401
 
-fig = plt.Figure()
-graph = LiveGraphTk(figure=fig)
+graph = LiveGraphTk()
 graph.colums = 1
 graph['fan1'] = MultiDataplot1d()
-graph['fan1']['sin'] = Dataplot1d(points, continuously=False)
-graph['fan1']['cos'] = Dataplot1d(points, continuously=False)
+graph['fan1']['sin'] = Dataplot1d()
+graph['fan1']['cos'] = Dataplot1d()
 graph.build()
 graph.run()
 
 graph2d = LiveGraphTk()
 graph2d['2d1'] = Dataplot2d(points)
-graph2d['2d1']._figure = graph.figure
 graph2d['2d2'] = Dataplot2d(points)
-graph2d['2d2']._figure = graph.figure
 graph2d.build()
 graph2d.run()
 
 
 def run():
-    for step0 in LinearSweep(foo['out0'], 0, 4 * pi, points / 2):
+    for step0 in LinearSweep(foo['out0'], 0, 4 * pi, (points - 1) / 40 + 1):
+
+        graph['fan1']['sin'].clear()
+        graph['fan1']['cos'].clear()
 
         for step1 in LinearSweep(foo['out1'], 0, 4 * pi, points):
 
             data_sin = foo['sin'].read()
+            data_sin = [datapoint * 2 for datapoint in data_sin]
             graph['fan1']['sin'].add_data(step1, data_sin)
             graph2d['2d1'].add_data(data_sin)
 
             data_cos = foo['cos'].read()
             graph['fan1']['cos'].add_data(step1, data_cos)
             graph2d['2d2'].add_data(data_cos)
-            time.sleep(10e-3)
+            time.sleep(5e-3)
+
+
+
 
 t = Thread(target=run)
 t.start()

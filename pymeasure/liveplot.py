@@ -33,7 +33,7 @@ class LiveGraphBase(IndexDict):
         self._snapshot_path_queue = Queue()
 
     def __setitem__(self, key, dataplot):
-        if isinstance(dataplot, Dataplot):
+        if isinstance(dataplot, DataplotBase):
             IndexDict.__setitem__(self, key, dataplot)
         else:
             raise TypeError('item must be a Dataplot.')
@@ -130,11 +130,13 @@ class LiveGraphTk(LiveGraphBase):
         self._master.after(25, self.run)
 
 
-class Dataplot(object):
+class DataplotBase(object):
 
     def __init__(self):
         self._figure = None
         self._axes = None
+
+        self._exchange_queue = Queue()
 
     @property
     def figure(self):
@@ -152,16 +154,27 @@ class Dataplot(object):
     def axes(self, axes):
         self._axes = axes
 
+    def build(self, axes, figure):
 
-class Dataplot1d(Dataplot):
+        # Set axes and figure attributes
+        self._axes = axes
+        self._figure = figure
 
-    def __init__(self, points=None, continuously=False):
-        Dataplot.__init__(self)
+    def clear(self):
+
+        # Put a 'clear' meassage into the data exchange queue
+        self._exchange_queue.put('clear')
+
+
+class Dataplot1d(DataplotBase):
+
+    def __init__(self, length=float('+inf'), continuously=False):
+        DataplotBase.__init__(self)
 
         self._line = None
-        self._points = points
+        self._length = length
         self._continuously = continuously
-        self._data_queue = Queue()
+
         self._xdata = list()
         self._ydata = list()
 
@@ -170,12 +183,12 @@ class Dataplot1d(Dataplot):
         self._line = line
 
     @property
-    def points(self):
-        return self._points
+    def length(self):
+        return self._length
 
-    @points.setter
-    def points(self, points):
-        self._points = points
+    @length.setter
+    def length(self, points):
+        self._length = points
 
     @property
     def continuously(self):
@@ -185,59 +198,60 @@ class Dataplot1d(Dataplot):
     def continuously(self, boolean):
         self._continuously = boolean
 
-    def add_data(self, xdata, ydata):
-        self._data_queue.put([xdata, ydata])
-
     def build(self, axes, figure):
 
-        # Set axes and figure
-        self._axes = axes
-        self._figure = figure
+        # Call build method of the base class
+        DataplotBase.build(self, axes, figure)
 
-        # build matplotlib.lines.Line2D
+        # Build matplotlib.lines.Line2D
         self._line, = self._axes.plot(self._xdata, self._ydata)
 
-    def clear(self):
-        pass
+    def add_data(self, xdata, ydata):
+
+        # Put the incoming data into the data exchange queue
+        self._exchange_queue.put([xdata, ydata])
 
     def update(self):
 
         # Set up_to_date flag back to False.
         up_to_date = True
 
-        # Keep going until the exchange queue is empty.
-        while not self._data_queue.empty():
+        # Keep going until the data exchange queue is empty.
+        while not self._exchange_queue.empty():
 
-            # Get a xy_dataset out of the exchange queue.
-            xy_data = self._data_queue.get()
-            self._data_queue.task_done()
+            # Get a new package out of the exchange queue.
+            package = self._exchange_queue.get()
+            self._exchange_queue.task_done()
 
-            # Try to add data to the x and y list for plotting
+            # Try to add data to the x and y lists for plotting
             try:
-                self._xdata += xy_data[0]
-                self._ydata += xy_data[1]
+                self._ydata += package.pop()
+                self._xdata += package.pop()
 
-            # Look for a clearing request
-            except IndexError:
-                pass
+            # Look for a clearing request if the pop() attribute failed
+            except AttributeError:
+                meassage = package
+                if meassage == 'clear':
+                    del self._xdata[:]
+                    del self._ydata[:]
 
             # Handel the maximum number of displayed points.
-            if len(self._xdata) > self._points:
+            if len(self._xdata) > self._length:
 
-                #Remove oldest datapoint if plotting continuously.
+                #Remove oldest datapoints if plotting continuously.
                 if self._continuously:
-                    del self._xdata[:-self._points]
-                    del self._ydata[:-self._points]
+                    del self._xdata[:-self._length]
+                    del self._ydata[:-self._length]
 
                 # Clear all displayed datapoints otherwise.
                 else:
-                    del self._xdata[:self._points]
-                    del self._ydata[:self._points]
+                    del self._xdata[:self._length]
+                    del self._ydata[:self._length]
 
             #Set the up_to_date flag to True for redrawing
             up_to_date = False
 
-        # Update the plot with the new data if available
+        # Update the line with the new data if available
         if not up_to_date:
 
             # Update displayed data.
@@ -253,11 +267,11 @@ class Dataplot1d(Dataplot):
         return up_to_date
 
 
-class MultiDataplot1d(IndexDict, Dataplot):
+class MultiDataplot1d(IndexDict, DataplotBase):
 
     def __init__(self):
         IndexDict.__init__(self)
-        Dataplot.__init__(self)
+        DataplotBase.__init__(self)
 
     @property
     def axes(self):
@@ -283,16 +297,16 @@ class MultiDataplot1d(IndexDict, Dataplot):
         return up_to_date
 
 
-class Dataplot2d(Dataplot):
+class Dataplot2d(DataplotBase):
 
-    def __init__(self, points):
-        Dataplot.__init__(self)
+    def __init__(self, length=float('+inf')):
+        DataplotBase.__init__(self)
 
         self._image = None
         self._colorbar = None
-        self._points = points
+        self._length = length
 
-        self._data_queue = Queue()
+        self._exchange_queue = Queue()
         self._data = [[]]
 
     @property
@@ -303,14 +317,16 @@ class Dataplot2d(Dataplot):
     def colorbar(self):
         return self._colorbar
 
-    def add_data(self, data):
-        self._data_queue.put(data)
-
     def build(self, axes, figure):
-        self._axes = axes
-        self._figure = figure
+
+        DataplotBase.build(self, axes, figure)
 
         self._axes.set_axis_off()
+
+    def add_data(self, data):
+
+        # Put the incoming data into the data exchange queue
+        self._exchange_queue.put([data])
 
     def update(self):
 
@@ -318,19 +334,22 @@ class Dataplot2d(Dataplot):
         up_to_date = True
 
         # Check the queues for new data
-        while not self._data_queue.empty():
+        while not self._exchange_queue.empty():
 
-            # Get a data out of the exchange queue.
-            data = self._data_queue.get()
-            self._data_queue.task_done()
+            # Get new package out of the exchange queue.
+            package = self._exchange_queue.get()
+            self._exchange_queue.task_done()
 
             try:
-                self._data[-1] += data
+                #if (len(self._data[-1]) + len(data)) > self._points
+                self._data[-1] += package.pop()
             except:
-                pass
+                message = package
+                if message == 'clear':
+                    pass
 
             #Clear data if trace is at the end
-            if len(self._data[-1]) >= self._points:
+            if len(self._data[-1]) >= self._length:
 
                 try:
                     self._image.set_data(self._data)
