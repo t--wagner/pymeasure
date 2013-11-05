@@ -1,13 +1,18 @@
-from pymeasure.case import IndexDict
-import Tkinter
+from pymeasure.indexdict import IndexDict
+
+import sys
+if sys.version_info[0] < 3:
+    import Tkinter as Tk
+else:
+    import tkinter as Tk
+
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_tkagg import (FigureCanvasTkAgg,
                                                NavigationToolbar2TkAgg)
-from Queue import Queue
-from future_builtins import zip
-from collections import deque
-
 from mpl_toolkits.axes_grid1 import make_axes_locatable
+
+from Queue import Queue
+#from collections import deque
 
 
 class LiveGraphBase(IndexDict):
@@ -98,18 +103,18 @@ class LiveGraphTk(LiveGraphBase):
 
         #Setup the TKInter window with the canvas and a toolbar
         if not master:
-            self._master = Tkinter.Tk()
+            self._master = Tk.Tk()
         else:
             self._master = master
 
         # build canvas for Tk
         self._canvas = FigureCanvasTkAgg(self._figure, master=self._master)
-        self._tkwidget = self._canvas.get_tk_widget()
+        self._canvas.get_tk_widget().pack(side=Tk.TOP, fill=Tk.BOTH, expand=1)
 
         # Navigation Toolbar
         self._toolbar = NavigationToolbar2TkAgg(self._canvas, self._master)
         self._toolbar.update()
-        self._tkwidget.pack(side=Tkinter.LEFT, fill=Tkinter.BOTH, expand=1)
+        self._canvas._tkcanvas.pack(side=Tk.TOP, fill=Tk.BOTH, expand=1)
 
     def update(self):
 
@@ -123,24 +128,6 @@ class LiveGraphTk(LiveGraphBase):
     def run(self):
         self.update()
         self._master.after(25, self.run)
-
-
-class LiveGraphGtk(LiveGraphBase):
-
-    def __init__(self, figure=None, master=None):
-        LiveGraphBase.__init__(self, figure=figure)
-
-
-class LiveGraphQt(LiveGraphBase):
-
-    def __init__(self, figure=None, master=None):
-        LiveGraphBase.__init__(self, figure=figure)
-
-
-class LiveGraphWx(LiveGraphBase):
-
-    def __init__(self, figure=None, master=None):
-        LiveGraphBase.__init__(self, figure=figure)
 
 
 class Dataplot(object):
@@ -175,8 +162,8 @@ class Dataplot1d(Dataplot):
         self._points = points
         self._continuously = continuously
         self._data_queue = Queue()
-        self._xdata = deque()
-        self._ydata = deque()
+        self._xdata = list()
+        self._ydata = list()
 
     @property
     def line(self, line):
@@ -199,18 +186,19 @@ class Dataplot1d(Dataplot):
         self._continuously = boolean
 
     def add_data(self, xdata, ydata):
-        if not len(xdata) == len(ydata):
-            raise ValueError('x and y must have same length')
-
-        for xy_dataset in zip(xdata, ydata):
-            self._data_queue.put(xy_dataset)
+        self._data_queue.put([xdata, ydata])
 
     def build(self, axes, figure):
+
+        # Set axes and figure
         self._axes = axes
         self._figure = figure
 
         # build matplotlib.lines.Line2D
         self._line, = self._axes.plot(self._xdata, self._ydata)
+
+    def clear(self):
+        pass
 
     def update(self):
 
@@ -221,36 +209,44 @@ class Dataplot1d(Dataplot):
         while not self._data_queue.empty():
 
             # Get a xy_dataset out of the exchange queue.
-            xy_dataset = self._data_queue.get()
+            xy_data = self._data_queue.get()
             self._data_queue.task_done()
 
+            # Try to add data to the x and y list for plotting
+            try:
+                self._xdata += xy_data[0]
+                self._ydata += xy_data[1]
+
+            # Look for a clearing request
+            except IndexError:
+                pass
+
             # Handel the maximum number of displayed points.
-            if len(self._xdata) == self._points:
+            if len(self._xdata) > self._points:
+
                 #Remove oldest datapoint if plotting continuously.
                 if self._continuously:
-                    self._xdata.popleft()
-                    self._ydata.popleft()
+                    del self._xdata[:-self._points]
+                    del self._ydata[:-self._points]
+
                 # Clear all displayed datapoints otherwise.
                 else:
-                    self._xdata.clear()
-                    self._ydata.clear()
-
-            # Add xy_dataset for plotting
-            self._xdata.append(xy_dataset[0])
-            self._ydata.append(xy_dataset[1])
+                    del self._xdata[:self._points]
+                    del self._ydata[:self._points]
 
             #Set the up_to_date flag to True for redrawing
             up_to_date = False
 
-        # Update the plot with the new data if necassary
+        # Update the plot with the new data if available
         if not up_to_date:
+
             # Update displayed data.
             self._line.set_data(self._xdata, self._ydata)
 
             # Recompute the data limits.
             self._axes.relim()
 
-            # Autoscale the view limits using the data limit.
+            # Autoscale the view limits using the previous computed data limit.
             self._axes.autoscale_view()
 
         # Return the update flag. If True it will cause a redraw of the canvas.
@@ -308,8 +304,7 @@ class Dataplot2d(Dataplot):
         return self._colorbar
 
     def add_data(self, data):
-        for datapoint in data:
-            self._data_queue.put(datapoint)
+        self._data_queue.put(data)
 
     def build(self, axes, figure):
         self._axes = axes
@@ -325,12 +320,17 @@ class Dataplot2d(Dataplot):
         # Check the queues for new data
         while not self._data_queue.empty():
 
-            # Insert queue data into data list
-            self._data[-1].append(self._data_queue.get())
+            # Get a data out of the exchange queue.
+            data = self._data_queue.get()
             self._data_queue.task_done()
 
+            try:
+                self._data[-1] += data
+            except:
+                pass
+
             #Clear data if trace is at the end
-            if len(self._data[-1]) == self._points:
+            if len(self._data[-1]) >= self._points:
 
                 try:
                     self._image.set_data(self._data)
@@ -341,10 +341,12 @@ class Dataplot2d(Dataplot):
                                                     aspect='auto',
                                                     interpolation='none')
 
-                    # Colorbar
-                    divider = make_axes_locatable(self._axes)
-                    cax = divider.append_axes("right", size="2.5%", pad=0.05)
-                    self._figure.colorbar(self._image, cax)
+                    # Make a colorbar (this works, don't aks me why)
+                    axes_divider = make_axes_locatable(self._axes)
+                    axes = axes_divider.append_axes("right",
+                                                    size="2.5%",
+                                                    pad=0.05)
+                    self._figure.colorbar(self._image, axes)
 
                 self._data.append([])
                 up_to_date = False
