@@ -52,7 +52,7 @@ def run():
             graph['fan1']['sin'].add_data(steps, data_sin)
             graph2d['2d1'].add_data(data_sin)
                 
-        #graph2d['2d1'].clear()
+        graph2d['2d1'].clear()
 
 
 

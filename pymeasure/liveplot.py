@@ -235,7 +235,7 @@ class Dataplot1d(DataplotBase):
                     del self._xdata[:]
                     del self._ydata[:]
 
-            # Handel the maximum number of displayed points.
+            # Handle the maximum number of displayed points.
             while len(self._xdata) > self._length:
 
                 #Remove oldest datapoints if plotting continuously.
@@ -321,7 +321,7 @@ class Dataplot2d(DataplotBase):
 
         DataplotBase.build(self, axes, figure)
 
-        self._image = self._axes.imshow([[float('nan')]],
+        self._image = self._axes.imshow([[0]],
                                         aspect='auto',
                                         interpolation='none')
 
@@ -338,6 +338,11 @@ class Dataplot2d(DataplotBase):
 
         # Put the incoming data into the data exchange queue
         self._exchange_queue.put([data])
+
+    def next_line(self):
+
+        # Put a 'next' meassage into the data exchange queue
+        self._exchange_queue.put('next')
 
     def update(self):
 
@@ -357,8 +362,11 @@ class Dataplot2d(DataplotBase):
                 message = package
                 if message == 'clear':
                     self._data = [[]]
+                    up_to_date = False
+                elif message == 'next':
+                    self._data.append([])
 
-            # Handel the maximum number of displayed points.
+            # Handle the maximum number of displayed points.
             while len(self._data[-1]) > self._length:
 
                 split = self._data[-1][self._length:]
@@ -370,7 +378,11 @@ class Dataplot2d(DataplotBase):
 
         if not up_to_date:
 
-            self._image.set_data(self._data[:-1])
+            try:
+                self._image.set_data(self._data[:-1])
+            except TypeError:
+                self._image.set_data([[0]])
+
             self._image.autoscale()
 
         return up_to_date
