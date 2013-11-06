@@ -50,6 +50,10 @@ class IndexDict(object):
         return repr_str
 
     def keys(self):
+        """
+        Return a list of keys in IndexDict
+        """        
+        
         return self._odict.keys()
 
     def index(self):

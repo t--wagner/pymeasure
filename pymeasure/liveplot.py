@@ -26,6 +26,8 @@ class LiveGraphBase(IndexDict):
         else:
             self._figure = figure
 
+        self._canvas = None
+
         # Set the number of colums
         self._colums = 1
 
@@ -40,10 +42,17 @@ class LiveGraphBase(IndexDict):
 
     @property
     def dataplots(self):
+        """
+        """
+
         return [index_key for index_key in enumerate(self._odict.keys())]
 
     @property
     def figure(self):
+        """
+        Return the figure of graph.
+
+        """
         return self._figure
 
     @property
@@ -62,10 +71,22 @@ class LiveGraphBase(IndexDict):
         else:
             return rows + 1
 
-    def snapshot(self, path):
-        self._snapshot_path_queue.put(path)
+    def snapshot(self, filename):
+        """Make a snapshot of the current graph and save it as filename.
+
+        """
+
+        self._snapshot_path_queue.put(filename)
 
     def build(self):
+        """Create the matplotlib axes for the dataplots.        
+        
+        Create the matplotlib axes and pass them together with the matplotlib
+        figure to the build methods of the added dataplots.
+        The build method must be called after adding all dataplots to the
+        graph and before run.
+
+        """
 
         #Iterate through all dataplots
         for index, dataplot in enumerate(self.__iter__(), 1):
@@ -77,6 +98,14 @@ class LiveGraphBase(IndexDict):
             dataplot.build(axes, self._figure)
 
     def update(self):
+        """Update all dataplots and redraw the canvas if necassary.        
+        
+        Calls the update methods of all dataplots and makes requested
+        snapshots.
+        The update method is called periodically by the run method of the
+        backend and should not be used directly.
+
+        """
 
         # Set up_to_date flag back to True
         up_to_date = True
@@ -92,8 +121,9 @@ class LiveGraphBase(IndexDict):
             self._snapshot_path_queue.task_done()
             self._figure.savefig(path)
 
-        # Return up_to_date flag
-        return up_to_date
+        # Redraw the canvas
+        if not up_to_date:
+            self._canvas.draw()
 
 
 class LiveGraphTk(LiveGraphBase):
@@ -116,18 +146,23 @@ class LiveGraphTk(LiveGraphBase):
         self._toolbar.update()
         self._canvas._tkcanvas.pack(side=Tk.TOP, fill=Tk.BOTH, expand=1)
 
-    def update(self):
+    def run(self, delay=25):
+        """Calls the update method periodically with the delay in milliseconds.
+        
+        Decrease the delay to make the plotting smoother and increase it to
+        reduce the preformance. For live plotting the delay must fit the rate
+        of the incoming data.
 
-        # Call GraphBase update function
-        up_to_date = LiveGraphBase.update(self)
+        Keyword arguments:
+        delay -- the delay in millisconds after each call (default 25)
 
-        # Redraw the canvas if not up to date
-        if not up_to_date:
-            self._canvas.draw()
+        """
 
-    def run(self):
+        # Call the update function
         self.update()
-        self._master.after(25, self.run)
+
+        # Call run again afer the delay time
+        self._master.after(delay, self.run, delay)
 
 
 class DataplotBase(object):
@@ -260,7 +295,7 @@ class Dataplot1d(DataplotBase):
             # Recompute the data limits.
             self._axes.relim()
 
-            # Autoscale the view limits using the previous computed data limit.
+            # Resacale the view limits using the previous computed data limit.
             self._axes.autoscale_view()
 
         # Return the update flag. If True it will cause a redraw of the canvas.
@@ -319,8 +354,10 @@ class Dataplot2d(DataplotBase):
 
     def build(self, axes, figure):
 
+        # Call the build function of the DataplotBase class
         DataplotBase.build(self, axes, figure)
 
+        # Draw an empty image
         self._image = self._axes.imshow([[0]],
                                         aspect='auto',
                                         interpolation='none')
@@ -376,13 +413,18 @@ class Dataplot2d(DataplotBase):
                 #Set the up_to_date flag to True for redrawing
                 up_to_date = False
 
+        # Update the image with the new data if available
         if not up_to_date:
 
+            # Try to set the new data
             try:
                 self._image.set_data(self._data[:-1])
+            # If no data available plot an empty image
             except TypeError:
-                self._image.set_data([[0]])
+                self._image.set_data([[float('nan')]])
 
+            # Resacale the image
             self._image.autoscale()
 
+        # Return the update flag. If True it will cause a redraw of the canvas.
         return up_to_date
