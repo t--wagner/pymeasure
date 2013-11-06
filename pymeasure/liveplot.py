@@ -1,3 +1,13 @@
+"""
+The liveplotting module is part of the pymeasure package. It allows parallel
+1D and 2D live plotting of multiple incoming datastreams with python. The focus
+of the module is on rapid and uncomplicated displaying of the data streams.
+Liveplotting makes adding and removing streams as easy as possible. Although
+the direct focus is not so much on pretty graphs the access to the underlying
+matplotlib elements gives you almost unlimted power.
+
+"""
+
 from pymeasure.indexdict import IndexDict
 
 import sys
@@ -16,6 +26,8 @@ from Queue import Queue
 
 
 class LiveGraphBase(IndexDict):
+    """Base class for differnt backends
+    """
 
     def __init__(self, figure=None):
         IndexDict.__init__(self)
@@ -41,19 +53,18 @@ class LiveGraphBase(IndexDict):
             raise TypeError('item must be a Dataplot.')
 
     @property
-    def dataplots(self):
-        """
-        """
-
-        return [index_key for index_key in enumerate(self._odict.keys())]
-
-    @property
     def figure(self):
-        """
-        Return the figure of graph.
+        """The matplotlib.figure.Figure of Graph.
 
         """
         return self._figure
+
+    def dataplots(self):
+        """Return a list of (index, key) pairs in Graph.
+
+        """
+
+        return [index_key for index_key in enumerate(self._odict.keys())]
 
     @property
     def colums(self):
@@ -72,18 +83,18 @@ class LiveGraphBase(IndexDict):
             return rows + 1
 
     def snapshot(self, filename):
-        """Make a snapshot of the current graph and save it as filename.
+        """Make a snapshot and save it as filename.
 
         """
 
         self._snapshot_path_queue.put(filename)
 
     def build(self):
-        """Create the matplotlib axes for the dataplots.        
-        
-        Create the matplotlib axes and pass them together with the matplotlib
-        figure to the build methods of the added dataplots.
-        The build method must be called after adding all dataplots to the
+        """Create the matplotlib.axes.Axes for the Dataplot items.
+
+        Create the matplotlib.axes.Axe and pass them together with the
+        matplotlib figure to the build methods of the added Dataplot items.
+        This build method must be called after adding all dataplots to the
         graph and before run.
 
         """
@@ -98,8 +109,8 @@ class LiveGraphBase(IndexDict):
             dataplot.build(axes, self._figure)
 
     def update(self):
-        """Update all dataplots and redraw the canvas if necassary.        
-        
+        """Update all dataplots and redraw the canvas if necassary.
+
         Calls the update methods of all dataplots and makes requested
         snapshots.
         The update method is called periodically by the run method of the
@@ -148,7 +159,7 @@ class LiveGraphTk(LiveGraphBase):
 
     def run(self, delay=25):
         """Calls the update method periodically with the delay in milliseconds.
-        
+
         Decrease the delay to make the plotting smoother and increase it to
         reduce the preformance. For live plotting the delay must fit the rate
         of the incoming data.

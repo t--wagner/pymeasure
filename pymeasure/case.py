@@ -1,3 +1,18 @@
+"""
+The case module is part of the pymeasure package and implements the fundamental
+abstraction on which pymeasure is based on. Every pymeasure instrument has the
+Instrument class as base class and contains items based on Channel.
+
+But Instrument and Channel only identify classes as pymeasure instruments and
+provide the interface for an intuitiv, interactive use on the ipython shell.
+The real abstraction concept can not just be inherited but must be implemented
+directly. So refer to the documentation how to write a pymeasure instrument.
+
+The Rack class is only an Containerclass for Instruments. Althogh it is not a
+necessary part of the abstraction concept it rounds things up.
+
+"""
+
 from indexdict import IndexDict
 import time
 
