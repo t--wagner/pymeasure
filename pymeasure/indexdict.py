@@ -30,8 +30,8 @@ class IndexDict(object):
     def __getattr__(self, attr):
         """x.__getattr__(attr) <==> x._odict.attr
 
-        The __getattr__() magic method gives access to all attributes of the
-        ordered dict while hiding them from tab completion.
+        The __getattr__() magic method implements access to all attributes of
+        the ordered dict while hiding them from tab completion.
 
         """
 
@@ -44,15 +44,25 @@ class IndexDict(object):
     def __iter__(self):
         """x.__iter__() <==> iter(x)
 
+        Return listiterator for IndexDict values.
+
         """
 
         return iter(self._odict.values())
 
     def __len__(self):
+        """x.__len__() <==> len(x)
+
+        Return number of items in IndexDict.
+
+        """
+
         return len(self._odict)
 
     def __getitem__(self, key):
         """x.__getitem__(key) <==> x[key]
+
+        Return IndexDict item of key.
 
         """
 
@@ -82,6 +92,8 @@ class IndexDict(object):
 
     def __delitem__(self, key):
         """x.__delitem__(key) <==> del x[key]
+
+        Removes IndexDict pair of key.
 
         """
 
@@ -114,7 +126,7 @@ class IndexDict(object):
             return repr_str + '([])'
 
     def keys(self):
-        """Return a list of keys in IndexDict
+        """Return list of keys in IndexDict
 
         """
 

@@ -3,7 +3,7 @@ The liveplotting module is part of the pymeasure package. It allows parallel
 1D and 2D live plotting of multiple incoming data streams. The focus of the
 module is on rapid and uncomplicated displaying of data streams. Liveplotting
 makes adding and removing streams as easy as possible. Although the direct
-focus is not so much on pretty figures, the access to the underlying matplotlib 
+focus is not so much on pretty figures, the access to the underlying matplotlib
 elements gives you almost unlimted power.
 
 """
@@ -26,7 +26,8 @@ from Queue import Queue
 
 
 class LiveGraphBase(IndexDict):
-    """Base class for differnt backends
+    """Base class for differnt graphic backends.
+
     """
 
     def __init__(self, figure=None):
@@ -68,6 +69,10 @@ class LiveGraphBase(IndexDict):
 
     @property
     def colums(self):
+        """Number of columns.
+
+        """
+
         return self._colums
 
     @colums.setter
@@ -76,6 +81,10 @@ class LiveGraphBase(IndexDict):
 
     @property
     def rows(self):
+        """Number of rows.
+
+        """
+
         rows = self.__len__() / self.colums
         if self.__len__() % self.colums == 0:
             return rows
@@ -138,6 +147,9 @@ class LiveGraphBase(IndexDict):
 
 
 class LiveGraphTk(LiveGraphBase):
+    """ LiveGraph backend for Tkinter.
+
+    """
 
     def __init__(self, figure=None, master=None):
         LiveGraphBase.__init__(self, figure=figure)
@@ -179,6 +191,10 @@ class LiveGraphTk(LiveGraphBase):
 class DataplotBase(object):
 
     def __init__(self):
+        """Initiate DataplotBase class.
+
+        """
+
         self._figure = None
         self._axes = None
 
@@ -186,14 +202,23 @@ class DataplotBase(object):
 
     @property
     def figure(self):
+        """The matplotlib.figure.Figure of Graph.
+
+        """
+
         return self._figure
 
     @figure.setter
     def figure(self, figure):
+
         self._figure = figure
 
     @property
     def axes(self):
+        """The matplotlib.axes.Axes of Dataplot.
+
+        """
+
         return self._axes
 
     @axes.setter
@@ -201,12 +226,21 @@ class DataplotBase(object):
         self._axes = axes
 
     def build(self, axes, figure):
+        """Build method of DataplotBase.
+
+        The build mehod of DataplotBase gets called by the subclass build
+        method.
+
+        """
 
         # Set axes and figure attributes
         self._axes = axes
         self._figure = figure
 
     def clear(self):
+        """Clear the Dataplot immediately.
+
+        """
 
         # Put a 'clear' meassage into the data exchange queue
         self._exchange_queue.put('clear')
@@ -215,6 +249,10 @@ class DataplotBase(object):
 class Dataplot1d(DataplotBase):
 
     def __init__(self, length=float('+inf'), continuously=False):
+        """Initiate Dataplot1d class.
+
+        """
+
         DataplotBase.__init__(self)
 
         self._line = None
@@ -226,10 +264,21 @@ class Dataplot1d(DataplotBase):
 
     @property
     def line(self, line):
+        """matplotlib.lines.Line2D of Dataplot1D.
+
+        """
+
         self._line = line
 
     @property
     def length(self):
+        """Length of displayed datapoints.
+
+        If continuously plotting is off Dataplot1d gets cleared when the number
+        of added datapoints matches length. Otherwise this is the maximum
+        number of displayed datapoints.
+
+        """
         return self._length
 
     @length.setter
@@ -238,6 +287,12 @@ class Dataplot1d(DataplotBase):
 
     @property
     def continuously(self):
+        """Set continuously plotting True or False.
+
+        If continuously plotting is True Dataplot1d gets cleared when the
+        number of added datapoints matches length.
+
+        """
         return self._continuously
 
     @continuously.setter
@@ -245,6 +300,16 @@ class Dataplot1d(DataplotBase):
         self._continuously = boolean
 
     def build(self, axes, figure):
+        """Create the the matplotlib.lines.Line2d of Dataplot1d.
+
+        The build method is called by Gaph build method and should not be
+        called directly.
+
+        axes:   matplotlib.axes.Axes
+
+        figure: matplotlib.figure.Figure
+
+        """
 
         # Call build method of the base class
         DataplotBase.build(self, axes, figure)
@@ -253,11 +318,22 @@ class Dataplot1d(DataplotBase):
         self._line, = self._axes.plot(self._xdata, self._ydata)
 
     def add_data(self, xdata, ydata):
+        """Add a list of data to the plot.
+
+        """
 
         # Put the incoming data into the data exchange queue
         self._exchange_queue.put([xdata, ydata])
 
     def update(self):
+        """Update the dataplot with the incoming data.
+
+        Process the added data, handle the maximum number of displayed
+        datapoints and manage view limits.
+        The update method is called by the Gaph build method and should not be
+        called directly.
+
+        """
 
         # Set up_to_date flag back to False.
         up_to_date = True
@@ -271,8 +347,10 @@ class Dataplot1d(DataplotBase):
 
             # Try to add data to the x and y lists for plotting
             try:
-                self._ydata += package.pop()
-                self._xdata += package.pop()
+                for xdatapoint in package.pop():
+                    self._ydata.append(xdatapoint)
+                for ydatapoint in package.pop():
+                    self._ydata.append(ydatapoint)
 
             # Look for a clearing request if the pop() attribute failed
             except AttributeError:
@@ -404,8 +482,12 @@ class Dataplot2d(DataplotBase):
             package = self._exchange_queue.get()
             self._exchange_queue.task_done()
 
+            # Try to add data to plotting list
             try:
-                self._data[-1] += package.pop()
+                for datapoint in package.pop():
+                    self._data[-1].append(datapoint)
+
+            # Look for a clearing request if the pop() attribute failed
             except:
                 message = package
                 if message == 'clear':
