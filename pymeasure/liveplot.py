@@ -1,10 +1,10 @@
 """
 The liveplotting module is part of the pymeasure package. It allows parallel
-1D and 2D live plotting of multiple incoming datastreams with python. The focus
-of the module is on rapid and uncomplicated displaying of the data streams.
-Liveplotting makes adding and removing streams as easy as possible. Although
-the direct focus is not so much on pretty graphs the access to the underlying
-matplotlib elements gives you almost unlimted power.
+1D and 2D live plotting of multiple incoming data streams. The focus of the
+module is on rapid and uncomplicated displaying of data streams. Liveplotting
+makes adding and removing streams as easy as possible. Although the direct
+focus is not so much on pretty figures, the access to the underlying matplotlib 
+elements gives you almost unlimted power.
 
 """
 
@@ -92,7 +92,7 @@ class LiveGraphBase(IndexDict):
     def build(self):
         """Create the matplotlib.axes.Axes for the Dataplot items.
 
-        Create the matplotlib.axes.Axe and pass them together with the
+        Create the matplotlib.axes.Axes and pass them together with the
         matplotlib figure to the build methods of the added Dataplot items.
         This build method must be called after adding all dataplots to the
         graph and before run.

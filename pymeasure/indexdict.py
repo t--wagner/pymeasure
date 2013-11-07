@@ -49,7 +49,7 @@ class IndexDict(object):
         return iter(self._odict.values())
 
     def __len__(self):
-        return self._odict.__len__()
+        return len(self._odict)
 
     def __getitem__(self, key):
         """x.__getitem__(key) <==> x[key]
