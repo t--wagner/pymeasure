@@ -38,8 +38,9 @@ class IndexDict(object):
         try:
             return self._odict.__getattribute__(attr)
         except AttributeError:
-            err_msg = '\'IndexDict\' object has no attribute \'' + attr + '\''
-            raise AttributeError(err_msg)
+            name = self.__class__.__name__
+            msg = '\'' + name + '\' object has no attribute \'' + attr + '\''
+            raise AttributeError(msg)
 
     def __iter__(self):
         """x.__iter__() <==> iter(x)
@@ -118,7 +119,7 @@ class IndexDict(object):
             repr_str += '(['
             for index, key in enumerate(self._odict.keys()):
                 repr_str += str(index) + ': \'' + key + '\', '
-                repr_str = repr_str[:-1] + '])'
+            repr_str = repr_str[:-2] + '])'
 
             return repr_str
 
