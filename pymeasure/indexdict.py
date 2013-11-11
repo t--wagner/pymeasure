@@ -1,7 +1,10 @@
 """
-The indexdict module is part of the pymeasure package. It contains the
-IndexDict class which provides a lightweight and intuitiv interface for the
-collections.OrderedDict class with additional indexing.
+    pymeasure.indexdict
+    -------------------
+
+    The module is part of the pymeasure package. It contains the IndexDict
+    class which provides a lightweight and intuitiv interface for the
+    collections.OrderedDict class with additional indexing.
 
 """
 

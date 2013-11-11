@@ -1,16 +1,20 @@
 """
-The case module is part of the pymeasure package and implements the fundamental
-abstraction on which pymeasure is based on. Every pymeasure instrument has the
-Instrument class as base class and contains items based on the Channel class.
+    pymeasure.case
+    --------------
 
-But Instrument and Channel only identify classes as pymeasure instruments and
-provide the interface for an intuitiv, interactive use on the ipython shell.
-The real abstraction concept can not be inherited but must be implemented
-directly. So refer to the documentation how to write and design pymeasure
-instruments and channels.
+    The module is part of the pymeasure package and implements the fundamental
+    abstraction on which pymeasure is based on. Every pymeasure instrument has
+    the Instrument class as base class and contains items based on the Channel
+    class.
 
-The additional Rack class is an container for Instruments. Althogh it is not a
-necessary part of the abstraction concept it rounds things off.
+    But Instrument and Channel only identify classes as pymeasure instruments
+    and provide the interface for an intuitiv, interactive use on the ipython
+    shell. The real abstraction concept can not be inherited but must be
+    implemented directly. So refer to the documentation how to write and design
+    pymeasure instruments and channels.
+
+    The additional Rack class is an container for Instruments. Althogh it is
+    not a necessary part of the abstraction concept it rounds things off.
 
 """
 
@@ -19,6 +23,9 @@ import time
 
 
 class Channel(object):
+    """Channel class of .
+
+    """
 
     def __init__(self):
         self._attributes = list()
@@ -40,8 +47,18 @@ class Channel(object):
 
 
 class Instrument(IndexDict):
+    """Container class for pymeasure.Channel.
+
+    Instrument is the Base class of all pymeasure instruments. It inherits
+    from IndexDict to provide a lightweight interface for interactive work.
+
+    """
 
     def __init__(self):
+        """Initiate Instrument class.
+
+        """
+
         IndexDict.__init__(self)
 
     def __setitem__(self, key, channel):
@@ -51,10 +68,17 @@ class Instrument(IndexDict):
             raise TypeError('item must be a Channel')
 
     def channels(self):
+        """Return list of all Channels in Instrument.
+
+        """
+
         return self._odict.values()
 
 
 class Rack(IndexDict):
+    """
+
+    """
 
     def __init__(self):
         IndexDict.__init__(self)

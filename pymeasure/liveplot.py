@@ -1,10 +1,14 @@
 """
-The liveplotting module is part of the pymeasure package. It allows parallel
-1D and 2D live plotting of multiple incoming data streams. The focus of the
-module is on rapid and uncomplicated displaying of data streams. Liveplotting
-makes adding and removing streams as easy as possible. Although the direct
-focus is not so much on pretty figures, the access to the underlying matplotlib
-elements gives you almost unlimted power.
+    pymeasure.liveplotting
+    ----------------------
+
+    The liveplotting module is part of the pymeasure package. It allows
+    parallel 1D and 2D live plotting of multiple incoming data streams. The
+    focus of the module is on rapid and uncomplicated displaying of data
+    streams. Liveplotting makes adding and removing streams as easy as
+    possible. Although the direct focus is not so much on pretty figures, the
+    access to the underlying matplotlib elements gives you almost unlimted
+    power.
 
 """
 
@@ -31,6 +35,14 @@ class LiveGraphBase(IndexDict):
     """
 
     def __init__(self, figure=None):
+        """Initiate LivegraphBase class.
+
+        Keyword arguments:
+        figure -- Can take a matplotlib.figure.Figure otherwise it will be
+                  created.
+
+        """
+
         IndexDict.__init__(self)
 
         # Define matplotlib Figure
@@ -48,6 +60,11 @@ class LiveGraphBase(IndexDict):
         self._snapshot_path_queue = Queue()
 
     def __setitem__(self, key, dataplot):
+        """x.__setitem__(key, dataplot) <==> x['key'] = dataplot
+
+        Add a Dataplot to Graph.
+        """
+
         if isinstance(dataplot, DataplotBase):
             IndexDict.__setitem__(self, key, dataplot)
         else:
@@ -264,7 +281,7 @@ class Dataplot1d(DataplotBase):
 
     @property
     def line(self, line):
-        """matplotlib.lines.Line2D of Dataplot1D.
+        """matplotlib.lines.Line2D instance.
 
         """
 
@@ -305,9 +322,9 @@ class Dataplot1d(DataplotBase):
         The build method is called by Gaph build method and should not be
         called directly.
 
-        axes:   matplotlib.axes.Axes
+        axes:   matplotlib.axes.Axes instance
 
-        figure: matplotlib.figure.Figure
+        figure: matplotlib.figure.Figure instance
 
         """
 
@@ -397,8 +414,23 @@ class MultiDataplot1d(IndexDict, DataplotBase):
         IndexDict.__init__(self)
         DataplotBase.__init__(self)
 
+    def __setitem__(self, key, dataplot1d):
+        """x.__setitem__(key, dataplot1d) <==> x['key'] = dataplot1d
+
+        Add a Dataplot1d to MultiDataplot1d.
+        """
+
+        if isinstance(dataplot1d, Dataplot1d):
+            IndexDict.__setitem__(self, key, dataplot1d)
+        else:
+            raise TypeError('item must be a Dataplot.')
+
     @property
     def axes(self):
+        """The matplotlib.axes.Axes of Dataplot.
+
+        """
+
         return self._axes
 
     @axes.setter
@@ -439,9 +471,21 @@ class Dataplot2d(DataplotBase):
 
     @property
     def colorbar(self):
+        """The matplotlib.colorbar.ColorBar of Dataplot2d.
+
+        """
+
         return self._colorbar
 
     def build(self, axes, figure):
+        """Update the dataplot with the incoming data.
+
+        Process the added data, handle the maximum number of displayed
+        datapoints and manage view limits.
+        The update method is called by the Gaph build method and should not be
+        called directly.
+
+        """
 
         # Call the build function of the DataplotBase class
         DataplotBase.build(self, axes, figure)
