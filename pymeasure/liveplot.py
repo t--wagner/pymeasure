@@ -20,6 +20,8 @@ if sys.version_info[0] < 3:
 else:
     import tkinter as Tk
 
+import warnings
+
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_tkagg import (FigureCanvasTkAgg,
                                                NavigationToolbar2TkAgg)
@@ -54,7 +56,7 @@ class LiveGraphBase(IndexDict):
         self._canvas = None
 
         # Set the number of colums
-        self._colums = 1
+        self._columns = 1
 
         #self._clear_request = threading.event()
         self._snapshot_path_queue = Queue()
@@ -85,16 +87,16 @@ class LiveGraphBase(IndexDict):
         return [index_key for index_key in enumerate(self._odict.keys())]
 
     @property
-    def colums(self):
+    def columns(self):
         """Number of columns.
 
         """
 
-        return self._colums
+        return self._columns
 
-    @colums.setter
-    def colums(self, number):
-        self._colums = number
+    @columns.setter
+    def columns(self, number):
+        self._columns = number
 
     @property
     def rows(self):
@@ -102,8 +104,8 @@ class LiveGraphBase(IndexDict):
 
         """
 
-        rows = self.__len__() / self.colums
-        if self.__len__() % self.colums == 0:
+        rows = self.__len__() / self._columns
+        if self.__len__() % self._columns == 0:
             return rows
         else:
             return rows + 1
@@ -115,7 +117,7 @@ class LiveGraphBase(IndexDict):
 
         self._snapshot_path_queue.put(filename)
 
-    def build(self):
+    def build_grid(self, columns=None):
         """Create the matplotlib.axes.Axes for the Dataplot items.
 
         Create the matplotlib.axes.Axes and pass them together with the
@@ -125,11 +127,14 @@ class LiveGraphBase(IndexDict):
 
         """
 
+        if columns:
+            self._columns = columns
+
         #Iterate through all dataplots
         for index, dataplot in enumerate(self.__iter__(), 1):
 
             #build axes for dataplot
-            axes = self.figure.add_subplot(self.rows, self._colums, index)
+            axes = self.figure.add_subplot(self.rows, self._columns, index)
 
             # Call build method of dataplot
             dataplot.build(axes, self._figure)
@@ -316,6 +321,14 @@ class Dataplot1d(DataplotBase):
     def continuously(self, boolean):
         self._continuously = boolean
 
+    @property
+    def xlabel(self):
+        return self._axes.get_xlabel()
+
+    @xlabel.setter
+    def xlabel(self, string):
+        self._axes.set_xlabel(string)
+
     def build(self, axes, figure):
         """Create the the matplotlib.lines.Line2d of Dataplot1d.
 
@@ -364,9 +377,13 @@ class Dataplot1d(DataplotBase):
 
             # Try to add data to the x and y lists for plotting
             try:
-                for xdatapoint in package.pop():
-                    self._ydata.append(xdatapoint)
-                for ydatapoint in package.pop():
+                ydata = package.pop()
+                xdata = package.pop()
+
+                for xdatapoint in xdata:
+                    self._xdata.append(xdatapoint)
+
+                for ydatapoint in ydata:
                     self._ydata.append(ydatapoint)
 
             # Look for a clearing request if the pop() attribute failed
@@ -495,12 +512,17 @@ class Dataplot2d(DataplotBase):
                                         aspect='auto',
                                         interpolation='none')
 
-        # Make a colorbar (this works, don't aks me why)
+        # Divide axes to fit colorbar (this works but don't aks me why)
         axes_divider = make_axes_locatable(self._axes)
         axes = axes_divider.append_axes("right",
                                         size="2.5%",
                                         pad=0.05)
-        self._figure.colorbar(self._image, axes)
+
+        # Create colorbar and ignor warning caused because figure has only
+        # one value.
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            self._colorbar = self._figure.colorbar(self._image, axes)
 
         self._axes.set_axis_off()
 
@@ -558,7 +580,7 @@ class Dataplot2d(DataplotBase):
                 self._image.set_data(self._data[:-1])
             # If no data available plot an empty image
             except TypeError:
-                self._image.set_data([[float('nan')]])
+                self._image.set_data([[0]])
 
             # Resacale the image
             self._image.autoscale()
