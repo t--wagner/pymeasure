@@ -1,41 +1,57 @@
-# Importing modules
-import numpy as np
-import pymeasure.liveplot as lplt
+from pymeasure.case import Instrument
+from pymeasure.instruments.foo_instrument import FooInstrument
+from pymeasure.sweep import LinearSweep
+from pymeasure.liveplot import LiveGraphTk, Dataplot1d, Dataplot2d
+from numpy import pi
 from threading import Thread
 import time
-import Tkinter as Tk
 
+# Create instruments
+foo = FooInstrument('foo')
 
-#Creating Graphs
-graph = lplt.LiveGraphTk()
-axes = []
+#Create Sample
+sample = Instrument()
+sample['gate1'] = foo['out0']
+sample['gate2'] = foo['out1']
+sample['vxx'] = foo['sin']
+sample['vxy'] = foo['cos']
 
-graph['sin'] = lplt.Dataplot1d(length=100, continuously=True)
-graph['sin_2d'] = lplt.Dataplot2d(length=201)
-graph['cos'] = lplt.Dataplot1d(length=100, continuously=True)
-graph['cos_2d'] = lplt.Dataplot2d(length=201)
-graph.build_grid(2)
-graph['sin'].xlabel = 'test'
-graph.run(delay=25)
+#Creat Graphs
+graph = LiveGraphTk()
+graph['vxx'] = Dataplot1d(graph.add_subplot(221), 101, False)
+graph['vxy'] = Dataplot1d(graph.add_subplot(222), 101, False, color='red')
+graph['vxx2d'] = Dataplot2d(graph.figure, graph.add_subplot(223), 101)
+graph['vxy2d'] = Dataplot2d(graph.figure, graph.add_subplot(224), 101)
+graph.run()
+
+filename = 'test/test'
 
 # Main Programm
 def main():
-    for step1 in xrange(0, 101):
 
-        for step2 in xrange(0, 201):
-            sin_val = np.sin(2 * np.pi / 100 * (step1 + step2))
-            graph['sin'].add_data([step2], [sin_val])
-            graph['sin_2d'].add_data([sin_val])
+    for step0 in LinearSweep(sample['gate1'], 0, 4 * pi, 101):
 
-            cos_val = np.cos(2 * np.pi / 100 * (step1 + step2))
-            graph['cos'].add_data([step2], [cos_val])
-            graph['cos_2d'].add_data([cos_val])
+        datafile = open(filename + '_' + str(step0[0]) + '.txt', 'w')
 
-            time.sleep(50e-3)
-        
-        graph['sin'].clear()
-        graph['cos'].clear()
+        for step1 in LinearSweep(sample['gate2'], 0, 4 * pi, 101):
+            dataline = []
 
+            sin_val = sample['vxx'].read()
+            dataline += sin_val
+            graph['vxx'].add_data(step1, sin_val)
+            graph['vxx2d'].add_data(sin_val)
+
+            cos_val = sample['vxy'].read()
+            dataline += cos_val
+            graph['vxy'].add_data(step1, cos_val)
+            graph['vxy2d'].add_data(cos_val)
+
+            datafile.write(str(dataline)[1:-1] + '\n')
+            time.sleep(100e-3)
+
+        graph.snapshot(filename + '_' + str(step0) + '.png')
+
+        datafile.close()
 
 # Main Programm muss als thread gestartet werden)
 t = Thread(target=main)

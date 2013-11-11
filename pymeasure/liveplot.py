@@ -28,7 +28,6 @@ from matplotlib.backends.backend_tkagg import (FigureCanvasTkAgg,
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 from Queue import Queue
-#from collections import deque
 
 
 class LiveGraphBase(IndexDict):
@@ -86,29 +85,12 @@ class LiveGraphBase(IndexDict):
 
         return [index_key for index_key in enumerate(self._odict.keys())]
 
-    @property
-    def columns(self):
-        """Number of columns.
+    def add_subplot(self, *args, **kwargs):
+        """Wrapper for matplotlib.figure.add_subplot(*args, **kwargs)
 
         """
 
-        return self._columns
-
-    @columns.setter
-    def columns(self, number):
-        self._columns = number
-
-    @property
-    def rows(self):
-        """Number of rows.
-
-        """
-
-        rows = self.__len__() / self._columns
-        if self.__len__() % self._columns == 0:
-            return rows
-        else:
-            return rows + 1
+        return self._figure.add_subplot(*args, **kwargs)
 
     def snapshot(self, filename):
         """Make a snapshot and save it as filename.
@@ -116,28 +98,6 @@ class LiveGraphBase(IndexDict):
         """
 
         self._snapshot_path_queue.put(filename)
-
-    def build_grid(self, columns=None):
-        """Create the matplotlib.axes.Axes for the Dataplot items.
-
-        Create the matplotlib.axes.Axes and pass them together with the
-        matplotlib figure to the build methods of the added Dataplot items.
-        This build method must be called after adding all dataplots to the
-        graph and before run.
-
-        """
-
-        if columns:
-            self._columns = columns
-
-        #Iterate through all dataplots
-        for index, dataplot in enumerate(self.__iter__(), 1):
-
-            #build axes for dataplot
-            axes = self.figure.add_subplot(self.rows, self._columns, index)
-
-            # Call build method of dataplot
-            dataplot.build(axes, self._figure)
 
     def update(self):
         """Update all dataplots and redraw the canvas if necassary.
@@ -212,28 +172,13 @@ class LiveGraphTk(LiveGraphBase):
 
 class DataplotBase(object):
 
-    def __init__(self):
+    def __init__(self, axes):
         """Initiate DataplotBase class.
 
         """
 
-        self._figure = None
-        self._axes = None
-
+        self._axes = axes
         self._exchange_queue = Queue()
-
-    @property
-    def figure(self):
-        """The matplotlib.figure.Figure of Graph.
-
-        """
-
-        return self._figure
-
-    @figure.setter
-    def figure(self, figure):
-
-        self._figure = figure
 
     @property
     def axes(self):
@@ -243,21 +188,29 @@ class DataplotBase(object):
 
         return self._axes
 
-    @axes.setter
-    def axes(self, axes):
-        self._axes = axes
+    @property
+    def xlabel(self):
+        return self._axes.get_xlabel()
 
-    def build(self, axes, figure):
-        """Build method of DataplotBase.
+    @xlabel.setter
+    def xlabel(self, string):
+        self._axes.set_xlabel(string)
 
-        The build mehod of DataplotBase gets called by the subclass build
-        method.
+    @property
+    def ylabel(self):
+        return self._axes.get_ylabel()
 
-        """
+    @ylabel.setter
+    def ylabel(self, string):
+        self._axes.set_ylabel(string)
 
-        # Set axes and figure attributes
-        self._axes = axes
-        self._figure = figure
+    @property
+    def title(self):
+        return self._axes.get_title()
+
+    @title.setter
+    def title(self, string):
+        self._axes.set_title(string)
 
     def clear(self):
         """Clear the Dataplot immediately.
@@ -270,17 +223,21 @@ class DataplotBase(object):
 
 class Dataplot1d(DataplotBase):
 
-    def __init__(self, length=float('+inf'), continuously=False):
+    def __init__(self, axes, length, continuously, *line_args, **line_kwargs):
         """Initiate Dataplot1d class.
 
         """
 
-        DataplotBase.__init__(self)
+        DataplotBase.__init__(self, axes)
 
-        self._line = None
+        # Create emtpy line instance for axes
+        self._line, = self._axes.plot([], [], *line_args, **line_kwargs)
+
+        # Attributes for displayed number of points
         self._length = length
         self._continuously = continuously
 
+        # Create list to contain plotting data
         self._xdata = list()
         self._ydata = list()
 
@@ -320,32 +277,6 @@ class Dataplot1d(DataplotBase):
     @continuously.setter
     def continuously(self, boolean):
         self._continuously = boolean
-
-    @property
-    def xlabel(self):
-        return self._axes.get_xlabel()
-
-    @xlabel.setter
-    def xlabel(self, string):
-        self._axes.set_xlabel(string)
-
-    def build(self, axes, figure):
-        """Create the the matplotlib.lines.Line2d of Dataplot1d.
-
-        The build method is called by Gaph build method and should not be
-        called directly.
-
-        axes:   matplotlib.axes.Axes instance
-
-        figure: matplotlib.figure.Figure instance
-
-        """
-
-        # Call build method of the base class
-        DataplotBase.build(self, axes, figure)
-
-        # Build matplotlib.lines.Line2D
-        self._line, = self._axes.plot(self._xdata, self._ydata)
 
     def add_data(self, xdata, ydata):
         """Add a list of data to the plot.
@@ -425,62 +356,32 @@ class Dataplot1d(DataplotBase):
         return up_to_date
 
 
-class MultiDataplot1d(IndexDict, DataplotBase):
-
-    def __init__(self):
-        IndexDict.__init__(self)
-        DataplotBase.__init__(self)
-
-    def __setitem__(self, key, dataplot1d):
-        """x.__setitem__(key, dataplot1d) <==> x['key'] = dataplot1d
-
-        Add a Dataplot1d to MultiDataplot1d.
-        """
-
-        if isinstance(dataplot1d, Dataplot1d):
-            IndexDict.__setitem__(self, key, dataplot1d)
-        else:
-            raise TypeError('item must be a Dataplot.')
-
-    @property
-    def axes(self):
-        """The matplotlib.axes.Axes of Dataplot.
-
-        """
-
-        return self._axes
-
-    @axes.setter
-    def axes(self, axes):
-        for dataplot1d in self.__iter__():
-            dataplot1d.axes = axes
-
-    def build(self, axes, figure):
-        for dataplot1d in self.__iter__():
-            dataplot1d.build(axes, figure)
-
-    def update(self):
-
-        up_to_date = True
-
-        for dataplot1d in self.__iter__():
-            if not dataplot1d.update():
-                up_to_date = False
-
-        return up_to_date
-
-
 class Dataplot2d(DataplotBase):
 
-    def __init__(self, length=float('+inf')):
-        DataplotBase.__init__(self)
+    def __init__(self, figure, axes, length, **image_kwargs):
+        DataplotBase.__init__(self, axes)
 
-        self._image = None
-        self._colorbar = None
         self._length = length
 
         self._exchange_queue = Queue()
         self._data = [[]]
+
+        # Draw an empty image
+        self._image = self._axes.imshow([[0]], aspect='auto', **image_kwargs)
+
+        # Divide axes to fit colorbar (this works but don't aks me why)
+        axes_divider = make_axes_locatable(self._axes)
+        axes = axes_divider.append_axes("right",
+                                        size="2.5%",
+                                        pad=0.05)
+
+        # Create colorbar and ignor warning caused because figure has only
+        # one value.
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            self._colorbar = figure.colorbar(self._image, axes)
+
+        self._axes.set_axis_off()
 
     @property
     def image(self):
@@ -493,38 +394,6 @@ class Dataplot2d(DataplotBase):
         """
 
         return self._colorbar
-
-    def build(self, axes, figure):
-        """Update the dataplot with the incoming data.
-
-        Process the added data, handle the maximum number of displayed
-        datapoints and manage view limits.
-        The update method is called by the Gaph build method and should not be
-        called directly.
-
-        """
-
-        # Call the build function of the DataplotBase class
-        DataplotBase.build(self, axes, figure)
-
-        # Draw an empty image
-        self._image = self._axes.imshow([[0]],
-                                        aspect='auto',
-                                        interpolation='none')
-
-        # Divide axes to fit colorbar (this works but don't aks me why)
-        axes_divider = make_axes_locatable(self._axes)
-        axes = axes_divider.append_axes("right",
-                                        size="2.5%",
-                                        pad=0.05)
-
-        # Create colorbar and ignor warning caused because figure has only
-        # one value.
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            self._colorbar = self._figure.colorbar(self._image, axes)
-
-        self._axes.set_axis_off()
 
     def add_data(self, data):
 
