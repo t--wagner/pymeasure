@@ -19,6 +19,7 @@
 """
 
 from indexdict import IndexDict
+import abc
 import time
 
 
@@ -26,6 +27,7 @@ class Channel(object):
     """Channel class of pymeasure.case.
 
     """
+    __metaclass__ = abc.ABCMeta
 
     def __init__(self):
         self._attributes = list()
@@ -54,6 +56,10 @@ class Channel(object):
         else:
             for attribute in self._attributes:
                 print attribute + " = " + str(self.__getattribute__(attribute))
+
+    @abc.abstractmethod
+    def read(self):
+        pass
 
 
 class Instrument(IndexDict):

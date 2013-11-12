@@ -31,17 +31,21 @@ filename = 'test'
 # Main Programm
 def main():
 
+<<<<<<< HEAD
     for nr, step0 in enumerate(LinearSweep(sample['gate1'], 0, 4 * pi, 101)):
 
         if nr < 10:
             nr = '0' + str(nr)
         else:
             nr = str(nr)
+=======
+    for step0 in LinearSweep(sample['gate1'], 0, 4 * pi, 5):
+>>>>>>> c9c7741e729f61bb338c79256696e9089b979700
 
         file_str = path + nr + '_' + filename + '_' + str(*step0)
         datafile = open(file_str + '.txt', 'w')
 
-        for step1 in LinearSweep(sample['gate2'], 0, 4 * pi, 101):
+        for step1 in LinearSweep(sample['gate2'], 0, 2 * pi, 101):
             dataline = []
 
             sin_val = sample['vxx'].read()       
