@@ -13,7 +13,7 @@
 """
 
 from pymeasure.indexdict import IndexDict
-
+import abc
 import sys
 if sys.version_info[0] < 3:
     import Tkinter as Tk
@@ -171,6 +171,7 @@ class LiveGraphTk(LiveGraphBase):
 
 
 class DataplotBase(object):
+    __metaclass__ = abc.ABCMeta
 
     def __init__(self, axes):
         """Initiate DataplotBase class.
@@ -219,6 +220,14 @@ class DataplotBase(object):
 
         # Put a 'clear' meassage into the data exchange queue
         self._exchange_queue.put('clear')
+
+    @abc.abstractmethod
+    def add_data(self):
+        pass
+
+    @abc.abstractmethod
+    def update(self):
+        pass
 
 
 class Dataplot1d(DataplotBase):

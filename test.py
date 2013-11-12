@@ -29,11 +29,11 @@ filename = 'test/test'
 # Main Programm
 def main():
 
-    for step0 in LinearSweep(sample['gate1'], 0, 4 * pi, 101):
+    for step0 in LinearSweep(sample['gate1'], 0, 4 * pi, 5):
 
         datafile = open(filename + '_' + str(step0[0]) + '.txt', 'w')
 
-        for step1 in LinearSweep(sample['gate2'], 0, 4 * pi, 101):
+        for step1 in LinearSweep(sample['gate2'], 0, 2 * pi, 101):
             dataline = []
 
             sin_val = sample['vxx'].read()
