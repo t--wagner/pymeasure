@@ -4,8 +4,8 @@
 
     The module is part of the pymeasure package and implements the fundamental
     abstraction on which pymeasure is based on. Every pymeasure instrument has
-    the Instrument class as base class and contains items based on the Channel
-    class.
+    the Instrument class as base class and is a container for instances of
+    pymeasure.Channel.
 
     But Instrument and Channel only identify classes as pymeasure instruments
     and provide the interface for an intuitiv, interactive use on the ipython
@@ -23,7 +23,7 @@ import time
 
 
 class Channel(object):
-    """Channel class of .
+    """Channel class of pymeasure.case.
 
     """
 
@@ -31,10 +31,20 @@ class Channel(object):
         self._attributes = list()
 
     def __call__(self, *values):
-        if len(values) == 0:
-            return self.read()
-        else:
+        """x.__call__(*values) <==> x(*values)
+
+        With optional *values the write method gets called
+            x.__call__(*values) <==> x(*values) <==> x.read(*values)
+        otherwise the write method
+            x.__call__() <==> x() <==> x.read()
+
+        """
+
+        # Check for optional *values and call read or wirte
+        if len(values):
             return self.write(*values)
+        else:
+            return self.read()
 
     def config(self, load=None, save=None):
         if load is not None:
@@ -47,9 +57,9 @@ class Channel(object):
 
 
 class Instrument(IndexDict):
-    """Container class for pymeasure.Channel.
+    """Container class for instances of pymeasure.Channel.
 
-    Instrument is the Base class of all pymeasure instruments. It inherits
+    Instrument is the base class of all pymeasure instruments. It inherits
     from IndexDict to provide a lightweight interface for interactive work.
 
     """
@@ -76,7 +86,7 @@ class Instrument(IndexDict):
 
 
 class Rack(IndexDict):
-    """
+    """Container class for instances of pymeasure.Channel.
 
     """
 

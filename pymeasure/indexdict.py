@@ -119,19 +119,27 @@ class IndexDict(object):
         repr_str = self.__class__.__name__
 
         if self.__len__():
-            repr_str += '(['
+            repr_str += '['
             for index, key in enumerate(self._odict.keys()):
                 repr_str += str(index) + ': \'' + key + '\', '
-            repr_str = repr_str[:-2] + '])'
+            repr_str = repr_str[:-2] + ']'
 
             return repr_str
 
         else:
-            return repr_str + '([])'
+            return repr_str + '[]'
+
+    def index(self):
+        """Return a list of the all (index, key) pairs.
+
+        """
+        index_keys = list()
+        for pair in enumerate(self._odict.keys()):
+            index_keys.append(pair)
+        return index_keys
 
     def keys(self):
         """Return list of keys in IndexDict
 
         """
-
         return self._odict.keys()

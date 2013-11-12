@@ -39,8 +39,8 @@ class LiveGraphBase(IndexDict):
         """Initiate LivegraphBase class.
 
         Keyword arguments:
-        figure -- Can take a matplotlib.figure.Figure otherwise it will be
-                  created.
+        figure -- Can take an instance of matplotlib.figure.Figure otherwise it
+                  will be created.
 
         """
 
@@ -51,8 +51,6 @@ class LiveGraphBase(IndexDict):
             self._figure = Figure()
         else:
             self._figure = figure
-
-        self._canvas = None
 
         # Set the number of colums
         self._columns = 1
@@ -99,6 +97,9 @@ class LiveGraphBase(IndexDict):
 
         self._snapshot_path_queue.put(filename)
 
+        while not self._snapshot_path_queue.empty():
+            pass
+
     def update(self):
         """Update all dataplots and redraw the canvas if necassary.
 
@@ -125,7 +126,7 @@ class LiveGraphBase(IndexDict):
 
         # Redraw the canvas
         if not up_to_date:
-            self._canvas.draw()
+            self.figure.canvas.draw()
 
 
 class LiveGraphTk(LiveGraphBase):
@@ -143,13 +144,13 @@ class LiveGraphTk(LiveGraphBase):
             self._master = master
 
         # build canvas for Tk
-        self._canvas = FigureCanvasTkAgg(self._figure, master=self._master)
-        self._canvas.get_tk_widget().pack(side=Tk.TOP, fill=Tk.BOTH, expand=1)
+        canvas = FigureCanvasTkAgg(self._figure, master=self._master)
+        canvas.get_tk_widget().pack(side=Tk.TOP, fill=Tk.BOTH, expand=1)
 
         # Navigation Toolbar
-        self._toolbar = NavigationToolbar2TkAgg(self._canvas, self._master)
+        self._toolbar = NavigationToolbar2TkAgg(canvas, self._master)
         self._toolbar.update()
-        self._canvas._tkcanvas.pack(side=Tk.TOP, fill=Tk.BOTH, expand=1)
+        canvas._tkcanvas.pack(side=Tk.TOP, fill=Tk.BOTH, expand=1)
 
     def run(self, delay=25):
         """Calls the update method periodically with the delay in milliseconds.
@@ -189,6 +190,14 @@ class DataplotBase(object):
         return self._axes
 
     @property
+    def title(self):
+        return self._axes.get_title()
+
+    @title.setter
+    def title(self, string):
+        self._axes.set_title(string)
+
+    @property
     def xlabel(self):
         return self._axes.get_xlabel()
 
@@ -204,14 +213,6 @@ class DataplotBase(object):
     def ylabel(self, string):
         self._axes.set_ylabel(string)
 
-    @property
-    def title(self):
-        return self._axes.get_title()
-
-    @title.setter
-    def title(self, string):
-        self._axes.set_title(string)
-
     def clear(self):
         """Clear the Dataplot immediately.
 
@@ -223,7 +224,7 @@ class DataplotBase(object):
 
 class Dataplot1d(DataplotBase):
 
-    def __init__(self, axes, length, continuously, *line_args, **line_kwargs):
+    def __init__(self, axes, length, continuously=False, **line_kwargs):
         """Initiate Dataplot1d class.
 
         """
@@ -231,7 +232,7 @@ class Dataplot1d(DataplotBase):
         DataplotBase.__init__(self, axes)
 
         # Create emtpy line instance for axes
-        self._line, = self._axes.plot([], [], *line_args, **line_kwargs)
+        self._line, = self._axes.plot([], [], **line_kwargs)
 
         # Attributes for displayed number of points
         self._length = length
@@ -432,7 +433,7 @@ class Dataplot2d(DataplotBase):
                     self._data.append([])
 
             # Handle the maximum number of displayed points.
-            while len(self._data[-1]) > self._length:
+            while len(self._data[-1]) >= self._length:
 
                 split = self._data[-1][self._length:]
                 del self._data[-1][self._length:]
