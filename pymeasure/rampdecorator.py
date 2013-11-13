@@ -4,7 +4,6 @@ import time
 from case import Channel
 
 
-
 def RampDecorator(cls):
 
     # --- Add ramprate property ---
@@ -53,17 +52,15 @@ def RampDecorator(cls):
                 stepsize = (stop - start)
                 steps = 1
                 steptime = 0
-                
 
             start_time = time.time()
             last_time = start_time
             position = start
-            print position
-            print 'hallo'
+            
             for n, step in ((n, start + n * stepsize) for n in xrange(1, steps + 1)):
 
                 position = write_method(self, step)
-                
+
 
                 if verbose:
                     if (time.time() - last_time) > verbose:

@@ -66,7 +66,7 @@ class Channel(object):
 
 def RampDecorator(cls):
 
-    # --- Add ramprate property ---
+    # Add ramprate property
     setattr(cls, '_ramprate', None)
 
     @property
@@ -79,7 +79,7 @@ def RampDecorator(cls):
 
     setattr(cls, 'ramprate', ramprate)
 
-    # --- Add steptime property --- #
+    # Add steptime property
     setattr(cls, '_steptime', None)
 
     @property
@@ -92,7 +92,7 @@ def RampDecorator(cls):
 
     setattr(cls, 'steptime', steptime)
 
-    # --- Define the ramp decorator --- #
+    # Define ramp for write method
     def write_decorator(write_method):
 
         @wraps(write_method)
@@ -107,7 +107,8 @@ def RampDecorator(cls):
                 # Correct stepsize and steptime for equal stepping
                 stepsize = float(stop - start) / steps
                 steptime = abs(stepsize / float(self._ramprate))
-
+            
+            # Handle exception if steptime and ramprate are None
             except (TypeError, ZeroDivisionError):
                 stepsize = (stop - start)
                 steps = 1
@@ -116,6 +117,7 @@ def RampDecorator(cls):
             start_time = time.time()
             last_time = start_time
             position = start
+
             for n, step in ((n, start + n * stepsize) for n in xrange(1, steps + 1)):
 
                 position = write_method(self, step)
