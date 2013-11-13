@@ -1,6 +1,7 @@
 import time
 from functools import wraps
 
+
 def RampDecorator(cls):
 
     # --- Add ramprate property ---
