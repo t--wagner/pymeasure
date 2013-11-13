@@ -1,4 +1,4 @@
-from pymeasure.case import Channel, Instrument
+from pymeasure.case import Channel, RampDecorator, Instrument
 import random
 import numpy as np
 
@@ -31,6 +31,7 @@ class _FooInstrumentChannelRandom(Channel):
         return [random.uniform(self._minimum, self._maximum)]
 
 
+@RampDecorator
 class _FooInstrumentChannelOutput(Channel):
 
     def __init__(self):
@@ -47,11 +48,11 @@ class _FooInstrumentChannelOutput(Channel):
     def period(self, period):
         self._period = period
 
-    def write(self, value):
-        self._value = value
+    def read(self):
         return [self._value]
 
-    def read(self):
+    def write(self, value):
+        self._value = value
         return [self._value]
 
 

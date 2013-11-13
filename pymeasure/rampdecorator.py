@@ -1,5 +1,8 @@
-import time
 from functools import wraps
+from math import ceil
+import time
+from case import Channel
+
 
 
 def RampDecorator(cls):
@@ -31,50 +34,47 @@ def RampDecorator(cls):
     setattr(cls, 'steptime', steptime)
 
     # --- Define the ramp decorator --- #
-    def write_decorator(write):
+    def write_decorator(write_method):
 
-        @wraps(write)
+        @wraps(write_method)
         def ramp(self, stop, verbose=False):
             start = self.read()[0]
-            position = start
 
+            #Calculate the steps, stepsize and steptime
             try:
-                stepsize = abs(self._steptime * self._ramprate * self._factor)
-            except TypeError:
-                stepsize = None
+                stepsize = abs(self._ramprate * self._steptime)
+                steps = int(ceil(abs(stop - start) / stepsize))
 
-            #Calculate number of points
-            try:
-                points = abs(int(float(stop - start) / stepsize)) + 1
-            except TypeError:
-                points = 1
+                # Correct stepsize and steptime for equal stepping
+                stepsize = float(stop - start) / steps
+                steptime = abs(stepsize / float(self._ramprate))
 
-            #Correction of stepsize
-            stepsize = float(stop - start) / points
-
-            #Correction of steptime
-            try:
-                steptime = abs(stepsize / float(self._ramprate * self._factor))
-            except TypeError:
+            except (TypeError, ZeroDivisionError):
+                stepsize = (stop - start)
+                steps = 1
                 steptime = 0
+                
 
             start_time = time.time()
-            for n, step in ((n, start + n * stepsize) for n in xrange(1, points + 1)):
-                #print "step: " + str(step)
-                position = write(self, step)
+            last_time = start_time
+            position = start
+            print position
+            print 'hallo'
+            for n, step in ((n, start + n * stepsize) for n in xrange(1, steps + 1)):
+
+                position = write_method(self, step)
+                
+
                 if verbose:
-                    print position
+                    if (time.time() - last_time) > verbose:
+                        print position
+                        last_time = time.time()
 
                 wait_time = steptime - (time.time() - start_time)
                 if wait_time > 0:
                     time.sleep(wait_time)
 
                 start_time = time.time()
-
-                try:
-                    pass
-                except KeyboardInterrupt:
-                    break
 
             return position
 
@@ -86,22 +86,21 @@ def RampDecorator(cls):
 
 
 @RampDecorator
-class Test(object):
+class Test(Channel):
 
     def __init__(self):
         self._factor = 1
         self._val = 0
 
     def read(self):
-        return [self._val]
-
+        return [self._val / self._factor]
 
     def write(self, val):
         """Write method
 
         """
 
-        self._val = val
+        self._val = val * self._factor
         return self.read()
 
 

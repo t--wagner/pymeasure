@@ -1,9 +1,10 @@
 from pyvisa_instrument import PyVisaInstrument
-from pymeasure.case import Channel, Ramp
+from pymeasure.case import Channel, RampDecorator
 import time
 
 
-class IoTechDac488HrChannel(Channel, Ramp):
+@RampDecorator
+class IoTechDac488HrChannel(Channel):
 
     def __init__(self, pyvisa_instr,  port):
         Channel.__init__(self)
@@ -14,11 +15,6 @@ class IoTechDac488HrChannel(Channel, Ramp):
         self._factor = 1
         self._limit = [None, None]
         self._readback = True
-
-        Ramp.__init__(self)
-        self.write = Ramp._rampdecorator(self, self.read, self.write,
-                                         self._factor)
-        self.steptime = 100e-3
 
         self._attributes = ['unit', 'factor', 'limit', 'range', 'readback']
 
