@@ -543,7 +543,7 @@ class Keithley2000Multimeter(PyVisaInstrument):
         self._pyvisa_instr.write("*RST")
         self._pyvisa_instr.write("*CLS")
 
-        for key, channel in self.__iter__():
+        for channel in self.__iter__():
                 channel.factor = 1
                 channel.buffering = False
 

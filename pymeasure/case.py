@@ -34,7 +34,7 @@ class Channel(object):
     def __init__(self):
         self._attributes = list()
 
-    def __call__(self, *values):
+    def __call__(self, *values, **kw):
         """x.__call__(*values) <==> x(*values)
 
         With optional *values the write method gets called
@@ -46,7 +46,7 @@ class Channel(object):
 
         # Check for optional *values and call read or wirte
         if len(values):
-            return self.write(*values)
+            return self.write(*values, **kw)
         else:
             return self.read()
 

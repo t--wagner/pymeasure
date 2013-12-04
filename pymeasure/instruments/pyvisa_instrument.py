@@ -5,8 +5,10 @@ import pyvisa.vpp43 as vpp43
 
 class _PyVisaSubsystem(object):
 
-    def __init__(self, pyvisa_instr):
+    def __init__(self, pyvisa_instr, address):
         self._pyvisa_instr = pyvisa_instr
+        self._address = address
+
 
     @property
     def timeout(self):
@@ -29,9 +31,8 @@ class _PyVisaSubsystem(object):
 
 class PyVisaInstrument(Instrument):
 
-    def __init__(self, instrument_adress, *args, **kwargs):
+    def __init__(self, instrument_address, *args, **kwargs):
         Instrument.__init__(self)
-        self._pyvisa_instr = visa.instrument(instrument_adress,
+        self._pyvisa_instr = visa.instrument(instrument_address,
                                              *args, **kwargs)
-        self._address = instrument_adress
-        self.pyvisa = _PyVisaSubsystem(self._pyvisa_instr)
+        self.pyvisa = _PyVisaSubsystem(self._pyvisa_instr, instrument_address)

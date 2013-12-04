@@ -170,7 +170,7 @@ class Ad5791Dac(PyVisaInstrument):
         self._pyvisa_instr.write("*RST")
 
     def defaults(self):
-        for key, channel in self.__iter__():
+        for channel in self.__iter__():
             channel.output = True
             channel.limit = [-10, 10]
             channel.ramprate = 0.1
