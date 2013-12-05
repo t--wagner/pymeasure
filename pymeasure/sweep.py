@@ -3,15 +3,22 @@ import time
 
 class LinearSweep(object):
 
-    def __init__(self, channel, start, stop, points):
-        self._channel = channel
+    def __init__(self, channels, start, stop, points):
+        if isinstance(channels, (list, tuple)):
+            self._channels = channels
+        else:
+            self._channels = [channels]
+
         self._start = start
         self._stop = stop
         self._points = points
 
     def __iter__(self):
         for step in self.steps:
-            yield self._channel.write(step)
+            step_list = []
+            for channel in self._channels:
+                step_list += channel.write(step)
+            yield step_list
 
     @property
     def steps(self):
