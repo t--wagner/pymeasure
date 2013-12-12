@@ -1,9 +1,9 @@
 from pyvisa_instrument import PyVisaInstrument
-from pymeasure.case import Channel, Ramp
+from pymeasure.case import Channel, RampDecorator
 import time
 
-
-class _Ad5791DacChannel(Channel, Ramp):
+@RampDecorator
+class _Ad5791DacChannel(Channel):
 
     def __init__(self, pyvisa_instr, channel):
         Channel.__init__(self)
@@ -17,10 +17,6 @@ class _Ad5791DacChannel(Channel, Ramp):
         self._output = None
 
         self._attributes = ['unit', 'factor', 'limit', 'readback', 'output']
-
-        Ramp.__init__(self)
-        self.write = Ramp._rampdecorator(self, self.read, self.write,
-                                         self._factor)
 
     #--- unit ----#
     @property

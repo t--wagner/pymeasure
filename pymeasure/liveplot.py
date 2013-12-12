@@ -23,6 +23,7 @@ else:
 import warnings
 
 from matplotlib.figure import Figure
+from matplotlib.colors import SymLogNorm
 from matplotlib.backends.backend_tkagg import (FigureCanvasTkAgg,
                                                NavigationToolbar2TkAgg)
 from mpl_toolkits.axes_grid1 import make_axes_locatable
@@ -72,7 +73,7 @@ class LiveGraphBase(IndexDict):
     @property
     def figure(self):
         """The matplotlib.figure.Figure of Graph.
-
+SymLogNorm
         """
         return self._figure
 
@@ -377,7 +378,10 @@ class Dataplot2d(DataplotBase):
         self._data = [[]]
 
         # Draw an empty image
-        self._image = self._axes.imshow([[0]], aspect='auto', **image_kwargs)
+        self._image = self._axes.imshow([[0]], aspect='auto',
+                                        norm=SymLogNorm(1e-10),
+                                        interpolation="nearest",
+                                        **image_kwargs)
 
         # Divide axes to fit colorbar (this works but don't aks me why)
         axes_divider = make_axes_locatable(self._axes)
