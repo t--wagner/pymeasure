@@ -99,7 +99,8 @@ class _Ad5791DacChannel(Channel):
             if level <= self._limit[1] or self._limit[1] is None:
                 self._pyvisa_instr.write("CHAN " + self._channel + ";" +
                                          "VOLT " + str(level * self._factor))
-
+        time.sleep(0.010)
+        
         if self._readback:
             return self.read()
         else:
