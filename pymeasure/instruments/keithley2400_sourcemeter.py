@@ -1,7 +1,8 @@
 from pyvisa_instrument import PyVisaInstrument
-from pymeasure.case import Channel, Ramp
+from pymeasure.case import Channel, RampDecorator
 
-class _Keithley2400SourceMeterChannelSource(Channel, Ramp):
+@RampDecorator
+class _Keithley2400SourceMeterChannelSource(Channel):
 
     def __init__(self, pyvisa_instr, source_function):
         Channel.__init__(self)
@@ -11,9 +12,6 @@ class _Keithley2400SourceMeterChannelSource(Channel, Ramp):
         self._unit = None
         self._factor = 1
         self._readback = True
-        
-        Ramp.__init__(self)
-        self.write = Ramp._rampdecorator(self, self.read, self.write, self._factor)
 
     #--- unit ---#
     @property
@@ -214,7 +212,7 @@ class _Keithley2400SourceMeterChannelMeasureResistance(_Keithley2400SourceMeterC
 class Keithley2400SourceMeter(PyVisaInstrument):
 
     #--- constructor ---#
-    def __init__(self, address, reset=True):
+    def __init__(self, name, address, defaults=True, reset=False):
         PyVisaInstrument.__init__(self, address)
         
         # Channels
@@ -223,16 +221,23 @@ class Keithley2400SourceMeter(PyVisaInstrument):
         
         self.__setitem__('measure_voltage_dc', _Keithley2400SourceMeterChannelMeasureVoltage(self._pyvisa_instr))
         self.__setitem__('measure_current_dc', _Keithley2400SourceMeterChannelMeasureCurrent(self._pyvisa_instr))
-        self.__setitem__('measure_resistance', _Keithley2400SourceMeterChannelMeasureResistance(self._pyvisa_instr))
+        #self.__setitem__('measure_resistance', _Keithley2400SourceMeterChannelMeasureResistance(self._pyvisa_instr))
         
-        if reset is True:
+        if defaults:    
+            self.defaults()
+        
+        if reset:
             self.reset()
-        
+    
+    #--- defaults ---#
+    def defaults(self):
+        self._pyvisa_instr.write("SENSe:FUNCtion:CONCurrent 0")
+    
     #--- reset ----#        
     def reset(self):
         self._pyvisa_instr.write("*CLS")
         self._pyvisa_instr.write("*RST")
-        self._pyvisa_instr.write("SENSe:FUNCtion:CONCurrent 0")
+        self.defaults()
         
     #--- identification ---#
     @property
