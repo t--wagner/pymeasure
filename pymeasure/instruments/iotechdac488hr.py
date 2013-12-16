@@ -93,7 +93,7 @@ class IoTechDac488HrChannel(Channel):
 
 class IoTechDac488Hr(PyVisaInstrument):
 
-    def __init__(self, name, address, reset=True):
+    def __init__(self, name, address, defaults=True, reset=False):
         PyVisaInstrument.__init__(self, address)
 
         # Channels
@@ -102,11 +102,20 @@ class IoTechDac488Hr(PyVisaInstrument):
         self.__setitem__('port3', IoTechDac488HrChannel(self._pyvisa_instr, 3))
         self.__setitem__('port4', IoTechDac488HrChannel(self._pyvisa_instr, 4))
 
+        if defaults:
+            self.defaults()
+            
         if reset:
             self.reset()
+
+    def defaults(self):
+        for channel in self.__iter__():
+            channel.limit = [-10, 10]
+            channel.ramprate = 0.1
+            channel.steptime = 0.1
 
     def reset(self):
         self._pyvisa_instr.write("*RX")
         time.sleep(2)
         for channel in self.__iter__():
-            channel.range = 1
+            channel.range = 4
