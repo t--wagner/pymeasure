@@ -252,7 +252,7 @@ class Keithley2400SourceMeter(PyVisaInstrument):
     #--- output ---#
     @property        
     def output(self):
-        return bool(self._pyvisa_instr.ask("OUTPut:STATe?"))
+        return bool(int(self._pyvisa_instr.ask("OUTPut:STATe?")))
     
     @output.setter
     def output(self, boolean):
