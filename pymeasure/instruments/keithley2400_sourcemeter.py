@@ -11,6 +11,7 @@ class _Keithley2400SourceMeterChannelSource(Channel):
         self._srcf = source_function
         self._unit = None
         self._factor = 1
+        self._limit = [None, None]
         self._readback = True
 
     #--- unit ---#
@@ -30,6 +31,15 @@ class _Keithley2400SourceMeterChannelSource(Channel):
     @factor.setter
     def factor(self, factor):
         self._factor = factor
+        
+    #--- limit ----#
+    @property
+    def limit(self):
+        return self._limit
+
+    @limit.setter
+    def limit(self, limit):
+        self._limit = limit
 
     #--- readback ---#
     @property
@@ -43,7 +53,11 @@ class _Keithley2400SourceMeterChannelSource(Channel):
     #--- range ---#
     @property
     def range(self):
+<<<<<<< HEAD
         return self._instrument.ask("SOURce:" + str(self._srcf) + ":RANGe?")
+=======
+        return float(self._pyvisa_instr.ask("SOURce:" + str(self._srcf) + ":RANGe?"))
+>>>>>>> 09ff2c0065a5699e1bba2b0d993b387dfaaa5cac
     
     @range.setter
     def range(self, range):
@@ -52,11 +66,21 @@ class _Keithley2400SourceMeterChannelSource(Channel):
     #--- autorange ---#
     @property
     def autorange(self):
+<<<<<<< HEAD
         return self._instrument.ask("SOURce:" + str(self._srcf) + ":RANGe:AUTO?")
     
     @autorange.setter
     def autorange(self, autorange):
         self._instrument.write("SOURce:" + str(self._srcf) + ":RANGe:AUTO " + str(autorange))
+=======
+        autorange = self._pyvisa_instr.ask("SOURce:" + str(self._srcf) + ":RANGe:AUTO?")
+        return bool(int(autorange))
+    
+    @autorange.setter
+    def autorange(self, autorange):
+        autorange = int(autorange)
+        self._pyvisa_instr.write("SOURce:" + str(self._srcf) + ":RANGe:AUTO " + str(autorange))
+>>>>>>> 09ff2c0065a5699e1bba2b0d993b387dfaaa5cac
 
     #--- read ---#    
     def read(self):
@@ -65,9 +89,16 @@ class _Keithley2400SourceMeterChannelSource(Channel):
                                                                                                                     
     #--- write ---#   
     def write(self, value):
+<<<<<<< HEAD
         self._instrument.write("SOURce:FUNCtion " + str(self._srcf))
         self._instrument.write("SOURce:" + str(self._srcf) + ":Mode Fixed")
         self._instrument.write("SOURce:" + str(self._srcf) + ":LEVel " + str(value * self._factor))
+=======
+        if (self._limit[0] <= value or self._limit[0] is None) and (value <= self._limit[1] or self._limit[1] is None):
+            self._pyvisa_instr.write("SOURce:FUNCtion " + str(self._srcf))
+            self._pyvisa_instr.write("SOURce:" + str(self._srcf) + ":Mode Fixed")
+            self._pyvisa_instr.write("SOURce:" + str(self._srcf) + ":LEVel " + str(value * self._factor))
+>>>>>>> 09ff2c0065a5699e1bba2b0d993b387dfaaa5cac
 
         if self.readback:
             return self.read()
@@ -134,7 +165,11 @@ class _Keithley2400SourceMeterChannelMeasure(Channel):
     #--- range ---#
     @property
     def range(self):
+<<<<<<< HEAD
         return self._instrument.ask("SENSe:" + str(self._measf) + ":RANGe?")
+=======
+        return float(self._pyvisa_instr.ask("SENSe:" + str(self._measf) + ":RANGe?"))
+>>>>>>> 09ff2c0065a5699e1bba2b0d993b387dfaaa5cac
 
     @range.setter
     def range(self, range):
@@ -143,11 +178,21 @@ class _Keithley2400SourceMeterChannelMeasure(Channel):
     #--- autorange ---#
     @property
     def autorange(self):
+<<<<<<< HEAD
         return self._instrument.ask("SENSe:" + str(self._measf) + ":RANGe:AUTO?")
 
     @autorange.setter
     def autorange(self, autorange):
         self._instrument.write("SENSe:" + str(self._measf) + ":RANGe:AUTO " + str(autorange))
+=======
+        autorange = self._pyvisa_instr.ask("SENSe:" + str(self._measf) + ":RANGe:AUTO?")
+        return bool(int(autorange))
+
+    @autorange.setter
+    def autorange(self, autorange):
+        autorange = int(autorange)
+        self._pyvisa_instr.write("SENSe:" + str(self._measf) + ":RANGe:AUTO " + str(autorange))
+>>>>>>> 09ff2c0065a5699e1bba2b0d993b387dfaaa5cac
             
     #--- speed ---#
     @property
@@ -231,7 +276,13 @@ class Keithley2400SourceMeter(PyVisaInstrument):
     
     #--- defaults ---#
     def defaults(self):
+<<<<<<< HEAD
         self._instrument.write("SENSe:FUNCtion:CONCurrent 0")
+=======
+        self._pyvisa_instr.write("SENSe:FUNCtion:CONCurrent 0")
+        for channel in self.__iter__():
+            channel.autorange = True
+>>>>>>> 09ff2c0065a5699e1bba2b0d993b387dfaaa5cac
     
     #--- reset ----#        
     def reset(self):
@@ -252,7 +303,11 @@ class Keithley2400SourceMeter(PyVisaInstrument):
     #--- output ---#
     @property        
     def output(self):
+<<<<<<< HEAD
         return bool(self._instrument.ask("OUTPut:STATe?"))
+=======
+        return bool(int(self._pyvisa_instr.ask("OUTPut:STATe?")))
+>>>>>>> 09ff2c0065a5699e1bba2b0d993b387dfaaa5cac
     
     @output.setter
     def output(self, boolean):
