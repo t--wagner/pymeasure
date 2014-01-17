@@ -2,13 +2,14 @@ from pyvisa_instrument import PyVisaInstrument
 from pymeasure.case import Channel, RampDecorator
 import time
 
+
 @RampDecorator
 class _Ad5791DacChannel(Channel):
 
-    def __init__(self, pyvisa_instr, channel):
+    def __init__(self, instrument, channel):
         Channel.__init__(self)
 
-        self._pyvisa_instr = pyvisa_instr
+        self._instrument = instrument
         self._channel = channel
         self._unit = 'volt'
         self._factor = 1.
@@ -80,8 +81,8 @@ class _Ad5791DacChannel(Channel):
             else:
                 output_str = 'OFF'
 
-            self._pyvisa_instr.write("CHAN " + self._channel + ";" +
-                                     "OUT " + output_str)
+            self._instrument.write("CHAN " + self._channel + ";" +
+                                   "OUT " + output_str)
 
             self._output = output
         except:
@@ -89,18 +90,18 @@ class _Ad5791DacChannel(Channel):
 
     #--- read ---#
     def read(self):
-        level = self._pyvisa_instr.ask_for_values("CHAN " + self._channel + ";"
-                                                  "VOLT?")
+        level = self._instrument.ask_for_values("CHAN " + self._channel + ";"
+                                                "VOLT?")
         return [level[0] / float(self._factor)]
 
     #--- write ---#
     def write(self, level):
         if self._limit[0] <= level or self._limit[0] is None:
             if level <= self._limit[1] or self._limit[1] is None:
-                self._pyvisa_instr.write("CHAN " + self._channel + ";" +
-                                         "VOLT " + str(level * self._factor))
+                self._instrument.write("CHAN " + self._channel + ";" +
+                                       "VOLT " + str(level * self._factor))
         time.sleep(0.010)
-        
+
         if self._readback:
             return self.read()
         else:
@@ -109,26 +110,31 @@ class _Ad5791DacChannel(Channel):
     #--- ramp ---#
     def ramp(self, start, stop, points, frequency, delay, verbose=False):
 
+        # Set dac to start position
         self.write(start)
 
+        # Calculate the dword values
         start_d = int(52428.7 * start)
         stepsize_d = int(52428.7 * (stop - start) / float(points-1))
 
-        self._pyvisa_instr.write("RAMP:ABORT" + ";" +
-                                 "CHAN " + self._channel + ";" +
-                                 "RAMP:DEF " + str(start_d) + " " +
-                                               str(points) + " " +
-                                               str(stepsize_d) + ";" + 
-                                 "RAMP:FREQ " + str(frequency) + ";" +
-                                 "RAMP:TRIG:DELAY " + str(delay) + ";" +
-                                 "RAMP:START")
+        # Define the ramp
+        self._instrument.write("RAMP:ABORT" + ";" +
+                               "CHAN " + self._channel + ";" +
+                               "RAMP:DEF " + str(start_d) + " " +
+                                             str(points) + " " +
+                                             str(stepsize_d) + ";" +
+                               "RAMP:FREQ " + str(frequency) + ";" +
+                               "RAMP:TRIG:DELAY " + str(delay))
+
+        # Start the ramp
+        self._instrument.write("RAMP:START")
 
         steps = points
         while int(steps):
 
             time.sleep(0.5/float(frequency))
 
-            werteliste = self._pyvisa_instr.ask_for_values("RAMP:STEPS?")
+            werteliste = self._instrument.ask_for_values("RAMP:STEPS?")
             steps, points, level_d = werteliste
 
             if verbose:
@@ -140,22 +146,22 @@ class _Ad5791DacChannel(Channel):
 
 class Ad5791Dac(PyVisaInstrument):
 
-    def __init__(self, name, address, defaults=True, reset=False):
-        PyVisaInstrument.__init__(self, address, baud_rate=115200)
+    def __init__(self, address, name='', defaults=False, reset=False):
+        PyVisaInstrument.__init__(self, address, name, baud_rate=115200)
 
         # Channels
-        self.__setitem__('1a', _Ad5791DacChannel(self._pyvisa_instr, '1 A'))
-        self.__setitem__('1b', _Ad5791DacChannel(self._pyvisa_instr, '1 B'))
-        self.__setitem__('2a', _Ad5791DacChannel(self._pyvisa_instr, '2 A'))
-        self.__setitem__('2b', _Ad5791DacChannel(self._pyvisa_instr, '2 B'))
-        self.__setitem__('3a', _Ad5791DacChannel(self._pyvisa_instr, '3 A'))
-        self.__setitem__('3b', _Ad5791DacChannel(self._pyvisa_instr, '3 B'))
-        self.__setitem__('4a', _Ad5791DacChannel(self._pyvisa_instr, '4 A'))
-        self.__setitem__('4b', _Ad5791DacChannel(self._pyvisa_instr, '4 B'))
-        self.__setitem__('5a', _Ad5791DacChannel(self._pyvisa_instr, '5 A'))
-        self.__setitem__('5b', _Ad5791DacChannel(self._pyvisa_instr, '5 B'))
-        self.__setitem__('6a', _Ad5791DacChannel(self._pyvisa_instr, '6 A'))
-        self.__setitem__('6b', _Ad5791DacChannel(self._pyvisa_instr, '6 B'))
+        self.__setitem__('1a', _Ad5791DacChannel(self._instrument, '1 A'))
+        self.__setitem__('1b', _Ad5791DacChannel(self._instrument, '1 B'))
+        self.__setitem__('2a', _Ad5791DacChannel(self._instrument, '2 A'))
+        self.__setitem__('2b', _Ad5791DacChannel(self._instrument, '2 B'))
+        self.__setitem__('3a', _Ad5791DacChannel(self._instrument, '3 A'))
+        self.__setitem__('3b', _Ad5791DacChannel(self._instrument, '3 B'))
+        self.__setitem__('4a', _Ad5791DacChannel(self._instrument, '4 A'))
+        self.__setitem__('4b', _Ad5791DacChannel(self._instrument, '4 B'))
+        self.__setitem__('5a', _Ad5791DacChannel(self._instrument, '5 A'))
+        self.__setitem__('5b', _Ad5791DacChannel(self._instrument, '5 B'))
+        self.__setitem__('6a', _Ad5791DacChannel(self._instrument, '6 A'))
+        self.__setitem__('6b', _Ad5791DacChannel(self._instrument, '6 B'))
 
         if reset is True:
             self.reset()
@@ -164,7 +170,7 @@ class Ad5791Dac(PyVisaInstrument):
             self.defaults()
 
     def reset(self):
-        self._pyvisa_instr.write("*RST")
+        self._instrument.write("*RST")
 
     def defaults(self):
         for channel in self.__iter__():
@@ -175,4 +181,4 @@ class Ad5791Dac(PyVisaInstrument):
 
     @property
     def identification(self):
-        return self._pyvisa_instr.ask("*IDN?")
+        return self._instrument.ask("*IDN?")

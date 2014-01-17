@@ -4,12 +4,12 @@ import time
 
 
 @RampDecorator
-class IoTechDac488HrChannel(Channel):
+class _IoTechDac488HrChannel(Channel):
 
-    def __init__(self, pyvisa_instr,  port):
+    def __init__(self, instrument,  port):
         Channel.__init__(self)
 
-        self._pyvisa_instr = pyvisa_instr
+        self._instrument = instrument
         self._port = port
         self._unit = 'volt'
         self._factor = 1
@@ -54,11 +54,11 @@ class IoTechDac488HrChannel(Channel):
     #--- range ---#
     @property
     def range(self):
-        return self._pyvisa_instr.ask("P" + str(self._port) + "R?X")
+        return self._instrument.ask("P" + str(self._port) + "R?X")
 
     @range.setter
     def range(self, range):
-        self._pyvisa_instr.write("P" + str(self._port) +
+        self._instrument.write("P" + str(self._port) +
                                  "R" + str(range) +
                                  "X")
 
@@ -76,16 +76,20 @@ class IoTechDac488HrChannel(Channel):
 
     #--- read ---#
     def read(self):
-        level = self._pyvisa_instr.ask_for_values("P" + str(self._port) +
-                                                  "V?X")
+        level = self._instrument.ask_for_values("P" + str(self._port) +
+                                                "V?X")
         return [level[0] / float(self._factor)]
 
     #--- write ---#
     def write(self, level):
+        
+        # Check if value is inside the limits
         if (self._limit[0] <= level or self._limit[0] is None) and (level <= self._limit[1] or self._limit[1] is None):
-                self._pyvisa_instr.write("P" + str(self._port) + "V" + str(level * self._factor) + "X")
+            
+            # Set the level on the instrument
+            self._instrument.write("P" + str(self._port) + "V" + str(level * self._factor) + "X")
 
-        if self._readback is True:
+        if self._readback:
             return self.read()
         else:
             return [level]
@@ -93,14 +97,14 @@ class IoTechDac488HrChannel(Channel):
 
 class IoTechDac488Hr(PyVisaInstrument):
 
-    def __init__(self, name, address, defaults=True, reset=False):
-        PyVisaInstrument.__init__(self, address)
+    def __init__(self, address, name='', defaults=False, reset=False):
+        PyVisaInstrument.__init__(self, address, name)
 
         # Channels
-        self.__setitem__('port1', IoTechDac488HrChannel(self._pyvisa_instr, 1))
-        self.__setitem__('port2', IoTechDac488HrChannel(self._pyvisa_instr, 2))
-        self.__setitem__('port3', IoTechDac488HrChannel(self._pyvisa_instr, 3))
-        self.__setitem__('port4', IoTechDac488HrChannel(self._pyvisa_instr, 4))
+        self.__setitem__('port1', _IoTechDac488HrChannel(self._instrument, 1))
+        self.__setitem__('port2', _IoTechDac488HrChannel(self._instrument, 2))
+        self.__setitem__('port3', _IoTechDac488HrChannel(self._instrument, 3))
+        self.__setitem__('port4', _IoTechDac488HrChannel(self._instrument, 4))
 
         if defaults:
             self.defaults()
@@ -111,11 +115,11 @@ class IoTechDac488Hr(PyVisaInstrument):
     def defaults(self):
         for channel in self.__iter__():
             channel.limit = [-10, 10]
-            channel.ramprate = 0.1
-            channel.steptime = 0.1
+            channel.ramprate = 0.005
+            channel.steptime = 0.2 # Measured write time 0.16s.
 
     def reset(self):
-        self._pyvisa_instr.write("*RX")
+        self._instrument.write("*RX")
         time.sleep(2)
         for channel in self.__iter__():
             channel.range = 4

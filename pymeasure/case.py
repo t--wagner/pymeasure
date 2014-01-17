@@ -107,8 +107,9 @@ def RampDecorator(cls):
                 # Correct stepsize and steptime for equal stepping
                 stepsize = float(stop - start) / steps
                 steptime = abs(stepsize / float(self._ramprate))
-            
-            # Handle exception if steptime and ramprate are None
+
+            # Handle exception if steptime and ramprate are None from 
+            # pymeasure.case import Instrument
             except (TypeError, ZeroDivisionError):
                 stepsize = (stop - start)
                 steps = 1
@@ -126,7 +127,6 @@ def RampDecorator(cls):
                     if (time.time() - last_time) > verbose:
                         last_time = time.time()
                         print position
-                        
 
                 wait_time = steptime - (time.time() - start_time)
                 if wait_time > 0:
@@ -151,18 +151,23 @@ class Instrument(IndexDict):
 
     """
 
-    def __init__(self):
+    def __init__(self, name=''):
         """Initiate Instrument class.
 
         """
 
         IndexDict.__init__(self)
+        self._name = name
 
     def __setitem__(self, key, channel):
         if isinstance(channel, Channel):
             IndexDict.__setitem__(self, key, channel)
         else:
             raise TypeError('item must be a Channel')
+
+    @property
+    def name(self):
+        return self._name
 
     def channels(self):
         """Return list of all Channels in Instrument.

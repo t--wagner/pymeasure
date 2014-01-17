@@ -2,7 +2,6 @@ from pymeasure.case import Instrument
 import visa
 import pyvisa.vpp43 as vpp43
 
-
 class _PyVisaSubsystem(object):
 
     def __init__(self, instrument, address):
@@ -39,3 +38,28 @@ class PyVisaInstrument(Instrument):
     @property
     def pyvisa(self):
         return self._pyvisa_subsystem
+
+
+class PyVisaBackend(object):
+
+    def __init__:
+        self.instrument 
+        
+    def read(self):
+        pass
+        
+    def write(self):
+        pass
+    
+    def ask(self):
+        pass
+    
+    def ask_for_values(self):
+        pass
+        
+class OxfordIsobusBackend(visa.instrument):
+    
+    def __init__(self):
+        visa.instrument.__init__(self)
+        
+    def 

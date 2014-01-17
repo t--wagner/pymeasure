@@ -6,9 +6,9 @@ from visa import VisaIOError
 
 class _OxfordIPSFieldChannel(Channel):
 
-    def __init__(self, pyvisa_instr):
+    def __init__(self, instrument):
         Channel.__init__(self)
-        self._pyvisa_instr = pyvisa_instr
+        self._instrument = instrument
         self._unit = 'tesla'
         self._readback = True
 
@@ -20,8 +20,8 @@ class _OxfordIPSFieldChannel(Channel):
             # Sending '\r' before every command makes the communication very
             # stabel and is strongly recommendanded by Timo (after an entire
             # weekend of fighting with the fucking ips)
-            self._pyvisa_instr.ask('')
-            answer = self._pyvisa_instr.ask(cmd_string)
+            self._instrument.ask('')
+            answer = self._instrument.ask(cmd_string)
 
             try:
                 # The ips answers with the commands first letter if it
@@ -37,17 +37,17 @@ class _OxfordIPSFieldChannel(Channel):
                 #print answer
                 #print '---------------------'
 
-                timeout = self._pyvisa_instr.timeout
-                self._pyvisa_instr.timeout = 0.5
+                timeout = self._instrument.timeout
+                self._instrument.timeout = 0.5
                 try:
-                    self._pyvisa_instr.read()
+                    self._instrument.read()
                 except VisaIOError:
                     pass
-                self._pyvisa_instr.timeout = timeout
+                self._instrument.timeout = timeout
 
     @property
     def rate(self):
-        return self._pyvisa_instr.ask_for_values('R9')
+        return self._instrument.ask_for_values('R9')
 
     @rate.setter
     def rate(self, rate):
@@ -154,10 +154,14 @@ class _OxfordIPSFieldChannel(Channel):
         # Go to set point
         self.goto_setpoint()
 
+        last_time = time.time()
         # Wait until the oxford stops sweeping
         while int(self._send_command('X')[10:11]):
+
             if verbose:
-                print self.read()
+                if (time.time() - last_time) > verbose:
+                    last_time = time.time()
+                    print self.read()
 
         # Put on hold
         self.hold()
@@ -184,18 +188,18 @@ class _OxfordIPSFieldChannel(Channel):
 
 class QxfordIPS(PyVisaInstrument):
 
-    def __init__(self, name, address, reset=True, defaults=True):
-        PyVisaInstrument.__init__(self, address)
+    def __init__(self, address, name='', reset=True, defaults=True):
+        PyVisaInstrument.__init__(self, address, name)
 
         # Channels
-        self.__setitem__('bfield', _OxfordIPSFieldChannel(self._pyvisa_instr))
+        self.__setitem__('bfield', _OxfordIPSFieldChannel(self._instrument))
 
         if defaults is True:
             self.defaults()
 
     #@property
     #def status(self):
-    #    return self._pyvisa_instr.ask('X')
+    #    return self._instrument.ask('X')
 
     def defaults(self):
         pass

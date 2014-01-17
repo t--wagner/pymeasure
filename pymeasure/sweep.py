@@ -70,7 +70,7 @@ class TimeSweep(object):
     def __iter__(self):
         for step in xrange(self._points):
             time.sleep(self._waitingtime)
-            yield step
+            yield [step]
 
     @property
     def waitingtime(self):
