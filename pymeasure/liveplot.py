@@ -73,7 +73,7 @@ class LiveGraphBase(IndexDict):
     @property
     def figure(self):
         """The matplotlib.figure.Figure of Graph.
-SymLogNorm
+
         """
         return self._figure
 
