@@ -46,10 +46,10 @@ def validate_limits(value, limits):
 
 class _Keithley2000MultimeterChannel(Channel):
 
-    def __init__(self, pyvisa_instr, measurment_function):
+    def __init__(self, instrument, measurment_function):
         Channel.__init__(self)
 
-        self._pyvisa_instr = pyvisa_instr
+        self._instrument = instrument
         self._measf = measurment_function
         self._buffering = False
         self._factor = 1
@@ -72,7 +72,7 @@ class _Keithley2000MultimeterChannel(Channel):
     #--- autorange ---#
     @property
     def autorange(self):
-        return bool(int(self._pyvisa_instr.ask("SENSe:" + str(self._measf) +
+        return bool(int(self._instrument.ask("SENSe:" + str(self._measf) +
                                                ":RANGe:AUTO?")))
 
     @autorange.setter
@@ -81,13 +81,13 @@ class _Keithley2000MultimeterChannel(Channel):
             err_str = 'autorange must be bool, int with True = 1 or False = 0.'
             raise ValueError(err_str)
 
-        self._pyvisa_instr.write("SENSe:" + str(self._measf) +
+        self._instrument.write("SENSe:" + str(self._measf) +
                                  ":RANGe:AUTO " + str(int(boolean)))
 
     #--- integration time ---#
     @property
     def integration_time(self):
-        npcs = float(self._pyvisa_instr.ask("SENSe:" + str(self._measf) +
+        npcs = float(self._instrument.ask("SENSe:" + str(self._measf) +
                                             ":NPLCycles?"))
         return 20e-3 * npcs
 
@@ -101,7 +101,7 @@ class _Keithley2000MultimeterChannel(Channel):
         else:
             raise ValueError('integration time must be a number between 0.0002s - 0.2s, or string with \'DEFault\' = 0.02s, \'MINimum\' = 0.0002s, \'MAXimum\' = 0.2s.') 
 
-        self._pyvisa_instr.write("SENSe:" + str(self._measf) +
+        self._instrument.write("SENSe:" + str(self._measf) +
                                  ":NPLCycles " + str(npls))
 
     #--- buffering ---#
@@ -119,21 +119,21 @@ class _Keithley2000MultimeterChannel(Channel):
     #--- initiate ---#
     def initiate(self):
         # Put the Keithley 2000 back to idel
-        self._pyvisa_instr.write("INITiate:CONTinuous OFF")
-        self._pyvisa_instr.write("ABORt")
+        self._instrument.write("INITiate:CONTinuous OFF")
+        self._instrument.write("ABORt")
 
         # Clear the buffer
         if not self._buffering:
 
-            self._pyvisa_instr.write("TRACe:FEED:CONTrol NEVer")
-            self._pyvisa_instr.write("TRACe:CLEar")
+            self._instrument.write("TRACe:FEED:CONTrol NEVer")
+            self._instrument.write("TRACe:CLEar")
 
         # Initialize the measurment
-        self._pyvisa_instr.write("INITiate")
+        self._instrument.write("INITiate")
 
     #--- read ---#
     def read(self, initiate=True):
-        self._pyvisa_instr.write("SENSe:FUNCtion '" + str(self._measf) + "'")
+        self._instrument.write("SENSe:FUNCtion '" + str(self._measf) + "'")
 
         # Trigger a new measurment if true
         if initiate:
@@ -144,16 +144,16 @@ class _Keithley2000MultimeterChannel(Channel):
         # hang up (for ever?) if it can't fetch the data.
         # This should be restored by SRE but I don't get it running
         try:
-            while not self._pyvisa_instr.ask('TRACe:FEED:CONTrol?') == 'NEV':
+            while not self._instrument.ask('TRACe:FEED:CONTrol?') == 'NEV':
                 pass
         except KeyboardInterrupt:
             return []
 
         # Get the data
         if self._buffering:
-            data_raw = self._pyvisa_instr.ask_for_values("TRACe:DATA?")
+            data_raw = self._instrument.ask_for_values("TRACe:DATA?")
         else:
-            data_raw = self._pyvisa_instr.ask_for_values("FETCH?")
+            data_raw = self._instrument.ask_for_values("FETCH?")
 
         # Devide the datapoints by the factor and return the data
         return [point / float(self._factor) for point in data_raw]
@@ -161,14 +161,14 @@ class _Keithley2000MultimeterChannel(Channel):
 
 class _Keithley2000MultimeterChannelVoltageDC(_Keithley2000MultimeterChannel):
 
-    def __init__(self, pyvisa_instr):
-        _Keithley2000MultimeterChannel.__init__(self, pyvisa_instr,
+    def __init__(self, instrument):
+        _Keithley2000MultimeterChannel.__init__(self, instrument,
                                                 'VOLTage:DC')
 
     #--- range ---#
     @property
     def range(self):
-        return float(self._pyvisa_instr.ask("SENSe:" + str(self._measf) +
+        return float(self._instrument.ask("SENSe:" + str(self._measf) +
                                             ":RANGe?"))
 
     @range.setter
@@ -180,20 +180,20 @@ class _Keithley2000MultimeterChannelVoltageDC(_Keithley2000MultimeterChannel):
         else:
             raise ValueError('range must be int, float between 0V and 1010V or string with \'DEFault\' = 1010V, \'MINimum\' = 0.1V, \'MAXimum\' = 1010V.')
 
-        self._pyvisa_instr.write("SENSe:" + str(self._measf) +
+        self._instrument.write("SENSe:" + str(self._measf) +
                                  ":RANGe " + str(voltage))
 
 
 class _Keithley2000MultimeterChannelCurrentDC(_Keithley2000MultimeterChannel):
 
-    def __init__(self, pyvisa_instr):
-        _Keithley2000MultimeterChannel.__init__(self, pyvisa_instr,
+    def __init__(self, instrument):
+        _Keithley2000MultimeterChannel.__init__(self, instrument,
                                                 'CURRent:DC')
 
     #--- range ---#
     @property
     def range(self):
-        return float(self._pyvisa_instr.ask("SENSe:" + str(self._measf) +
+        return float(self._instrument.ask("SENSe:" + str(self._measf) +
                                             ":RANGe?"))
 
     @range.setter
@@ -205,20 +205,20 @@ class _Keithley2000MultimeterChannelCurrentDC(_Keithley2000MultimeterChannel):
         else:
             raise ValueError('range must be int, float between 0A and 3.03A or string with \'DEFault\' = 3.1A, \'MINimum\' = 0.01A, \'MAXimum\ = 3.1A.')
 
-        self._pyvisa_instr.write("SENSe:" + str(self._measf) +
+        self._instrument.write("SENSe:" + str(self._measf) +
                                  ":RANGe " + str(ampere))
 
 
 class _Keithley2000MultimeterChannelResistance(_Keithley2000MultimeterChannel):
 
-    def __init__(self, pyvisa_instr):
-        _Keithley2000MultimeterChannel.__init__(self, pyvisa_instr,
+    def __init__(self, instrument):
+        _Keithley2000MultimeterChannel.__init__(self, instrument,
                                                 'RESistance')
 
     #--- range ---#
     @property
     def range(self):
-        return float(self._pyvisa_instr.ask("SENSe:" + str(self._measf) +
+        return float(self._instrument.ask("SENSe:" + str(self._measf) +
                                             ":RANGe?"))
 
     @range.setter
@@ -230,84 +230,84 @@ class _Keithley2000MultimeterChannelResistance(_Keithley2000MultimeterChannel):
         else:
             raise ValueError('range must be int, float between 0Ohm and 120e6Ohm or string with \'DEFault\' = 120e6Ohm, \'MINimum\' = 100Ohm, \'MAXimum\' = 120e6Ohm.')
 
-        self._pyvisa_instr.write("SENSe:" + str(self._measf) +
+        self._instrument.write("SENSe:" + str(self._measf) +
                                  ":RANGe " + str(ohm))
 
 
 class _Keithley2000MultimeterSubsystemDisplay(object):
 
-    def __init__(self, pyvisa_instr):
-        self._pyvisa_instr = pyvisa_instr
+    def __init__(self, instrument):
+        self._instrument = instrument
 
     #--- enable display ---#
     @property
     def enable(self):
-        return bool(int(self._pyvisa_instr.ask("DISPlay:ENABle?")))
+        return bool(int(self._instrument.ask("DISPlay:ENABle?")))
 
     @enable.setter
     def enable(self, boolean):
         if not (isinstance(boolean, int) and boolean in [0, 1]):
             raise ValueError('enable must be bool, int with True = 1 or False = 0.')
 
-        self._pyvisa_instr.write("DISPlay:ENABle " + str(int(boolean)))
+        self._instrument.write("DISPlay:ENABle " + str(int(boolean)))
 
     #--- print text message on the display ---#
     @property
     def text(self):
-        return self._pyvisa_instr.ask("DISPLay:TEXT:DATA?")[1:-1]
+        return self._instrument.ask("DISPLay:TEXT:DATA?")[1:-1]
 
     @text.setter
     def text(self, string):
         if not (isinstance(string, str) and len(string) <= 12):
             raise ValueError('text must be a string with up to 12 characters.')
 
-        self._pyvisa_instr.write("DISPLay:TEXT:DATA \'" + str(string + '\''))
+        self._instrument.write("DISPLay:TEXT:DATA \'" + str(string + '\''))
 
     #--- enable display text ---#
     @property
     def show_text(self):
-        return bool(int(self._pyvisa_instr.ask("DISPLay:TEXT:STATe?")))
+        return bool(int(self._instrument.ask("DISPLay:TEXT:STATe?")))
 
     @show_text.setter
     def show_text(self, boolean):
         if not (isinstance(boolean, int) and boolean in [0, 1]):
             raise ValueError('show_text must be bool, int with True = 1 or False = 0.')
 
-        self._pyvisa_instr.write("DISPLay:TEXT:STATe " + str(int(boolean)))
+        self._instrument.write("DISPLay:TEXT:STATe " + str(int(boolean)))
 
 
 class _Keithley2000MultimeterSubsystemTrigger(object):
 
-    def __init__(self, pyvisa_instr):
-        self._pyvisa_instr = pyvisa_instr
+    def __init__(self, instrument):
+        self._instrument = instrument
 
     def initiate(self):
-        self._pyvisa_instr.write("INITiate")
+        self._instrument.write("INITiate")
 
     def abort(self):
-        self._pyvisa_instr.write("ABORt")
+        self._instrument.write("ABORt")
 
     def sent_signal(self):
-        self._pyvisa_instr.write("TRIGger:SIGNal")
+        self._instrument.write("TRIGger:SIGNal")
 
     def sent_bustrigger(self):
-        self._pyvisa_instr.write("*TRG")
+        self._instrument.write("*TRG")
 
     @property
     def continuous(self):
-        return bool(int(self._pyvisa_instr.ask("INITiate:CONTinuous?")))
+        return bool(int(self._instrument.ask("INITiate:CONTinuous?")))
 
     @continuous.setter
     def continuous(self, boolean):
         if not (isinstance(boolean, int) and boolean in [0, 1]):
             raise ValueError('continuous must be bool, int with True = 1 or False = 0.')
 
-        self._pyvisa_instr.write("INITiate:CONTinuous " + str(int(boolean)))
+        self._instrument.write("INITiate:CONTinuous " + str(int(boolean)))
 
     #--- count ---#
     @property
     def count(self):
-        points = self._pyvisa_instr.ask("TRIGger:COUNT?")
+        points = self._instrument.ask("TRIGger:COUNT?")
         try:
             return int(points)
         except ValueError:
@@ -323,12 +323,12 @@ class _Keithley2000MultimeterSubsystemTrigger(object):
         else:
             raise ValueError('count must be int between 1 and 9999 or str with \'INF\', \'DEFault\' = 1, \'MINimum\' = 1, \'MAXimum\' = 9999.')
 
-        self._pyvisa_instr.write("TRIGger:COUNT " + str(points))
+        self._instrument.write("TRIGger:COUNT " + str(points))
 
     #--- delay ---#
     @property
     def delay(self):
-        return float(self._pyvisa_instr.ask("TRIGger:DELay?"))
+        return float(self._instrument.ask("TRIGger:DELay?"))
 
     @delay.setter
     def delay(self, seconds):
@@ -339,36 +339,36 @@ class _Keithley2000MultimeterSubsystemTrigger(object):
         else:
             raise ValueError('delay must be a number between 0s and 999999.999s or string with \'DEFault\' = 0s, \'MINimum\' = 0s, \'MAXimum\' = 999999.999s.' )
 
-        self._pyvisa_instr.write("TRIGger:DELay " + str(seconds))
+        self._instrument.write("TRIGger:DELay " + str(seconds))
 
     #--- autodelay ---#
     @property
     def autodelay(self):
-        return bool(int(self._pyvisa_instr.ask("TRIGger:DELay:AUTO?")))
+        return bool(int(self._instrument.ask("TRIGger:DELay:AUTO?")))
 
     @autodelay.setter
     def autodelay(self, boolean):
         if not (isinstance(boolean, int) and boolean in [0, 1]):
             raise ValueError('autodelay must be bool, int with True == 1 or False == 0.')
 
-        self._pyvisa_instr.write("TRIGger:DELay:AUTO " + str(int(boolean)))
+        self._instrument.write("TRIGger:DELay:AUTO " + str(int(boolean)))
 
     #--- source ---#
     @property
     def source(self):
-        return self._pyvisa_instr.ask("TRIGger:SOURce?")
+        return self._instrument.ask("TRIGger:SOURce?")
 
     @source.setter
     def source(self, source):
         if not(isinstance(source, str) and source in ['imm', 'ext', 'tim', 'man', 'bus']):
             raise ValueError('source must be string with \'imm\', \'ext\', \'tim\', \'man\', \'bus\'.' )
 
-        self._pyvisa_instr.write("TRIGger:SOURce " + name.lower()[0:3])
+        self._instrument.write("TRIGger:SOURce " + name.lower()[0:3])
 
     #--- time ---#
     @property
     def timer(self):
-        return float(self._pyvisa_instr.ask("TRIGger:TIMer?"))
+        return float(self._instrument.ask("TRIGger:TIMer?"))
 
     @timer.setter
     def timer(self, seconds):
@@ -376,12 +376,12 @@ class _Keithley2000MultimeterSubsystemTrigger(object):
                 validate_stringlist(seconds, ['def', 'min', 'max'])):
             raise ValueError('timer must be int or float between 0.001s and 999999.999s or str with \'def\' = 0.1s, \'min\' = 0.001s, \'max\' = 999999.999s.')
 
-        self._pyvisa_instr.write("TRIGger:TIMer " + str(seconds))
+        self._instrument.write("TRIGger:TIMer " + str(seconds))
 
     #--- samples ---#
     @property
     def samples(self):
-        return int(self._pyvisa_instr.ask("SAMPle:COUNt?"))
+        return int(self._instrument.ask("SAMPle:COUNt?"))
 
     @samples.setter
     def samples(self, points):
@@ -392,43 +392,43 @@ class _Keithley2000MultimeterSubsystemTrigger(object):
         else:
             raise ValueError('samples must be a integer between 1 to 1024.')
 
-        self._pyvisa_instr.write("SAMPle:COUNt " + str(points))
+        self._instrument.write("SAMPle:COUNt " + str(points))
 
 
 class _Keithley2000MultimeterSubsystemBuffer(object):
 
-    def __init__(self, pyvisa_instr):
-        self._pyvisa_instr = pyvisa_instr
+    def __init__(self, instrument):
+        self._instrument = instrument
 
     def clear(self):
-        self._pyvisa_instr.write("TRACe:CLEar")
+        self._instrument.write("TRACe:CLEar")
 
     @property
     def free(self):
-        return self._pyvisa_instr.ask_for_values("TRACe:FREE?")
+        return self._instrument.ask_for_values("TRACe:FREE?")
 
     @property
     def points(self):
-        return int(self._pyvisa_instr.ask("TRACe:POINts?"))
+        return int(self._instrument.ask("TRACe:POINts?"))
 
     @points.setter
     def points(self, points):
         if not (validate_integer(points) and validate_limits(points, [2, 1024])):
             raise ValueError('points must be between 2 and 1024.')
 
-        self._pyvisa_instr.write("TRACe:POINts " + str(points))
+        self._instrument.write("TRACe:POINts " + str(points))
 
     @property
     def feed(self):
-        return self._pyvisa_instr.ask("TRACe:FEED?")
+        return self._instrument.ask("TRACe:FEED?")
 
     @feed.setter
     def feed(self, source):
-        self._pyvisa_instr.write("TRACe:FEED " + str(source))
+        self._instrument.write("TRACe:FEED " + str(source))
 
     @property
     def control(self):
-        control = self._pyvisa_instr.ask("TRACe:FEED:CONTrol?")
+        control = self._instrument.ask("TRACe:FEED:CONTrol?")
         if control == 'NEXT':
             return True
         else:
@@ -440,74 +440,74 @@ class _Keithley2000MultimeterSubsystemBuffer(object):
             raise ValueError('control must be bool, int with True == 1 or False == 0.')        
 
         if boolean:
-            self._pyvisa_instr.write("TRACe:FEED:CONTrol NEXT")
+            self._instrument.write("TRACe:FEED:CONTrol NEXT")
         else:
-            self._pyvisa_instr.write("TRACe:FEED:CONTrol NEVer")
+            self._instrument.write("TRACe:FEED:CONTrol NEVer")
 
     @property
     def data(self):
-        return self._pyvisa_instr.ask_for_values("TRACe:DATA?")
+        return self._instrument.ask_for_values("TRACe:DATA?")
 
 
 class _Keithley2000MultimeterSubsystemFormat(object):
 
-    def __init__(self, pyvisa_instr):
-        self._pyvisa_instr = pyvisa_instr
+    def __init__(self, instrument):
+        self._instrument = instrument
 
     #--- data ---#
     @property
     def data(self):
-        return self._pyvisa_instr.ask("FORMat:DATA?")
+        return self._instrument.ask("FORMat:DATA?")
 
     @data.setter
     def data(self, form):
-        self._pyvisa_instr.write("FORMat:DATA " + str(form))
+        self._instrument.write("FORMat:DATA " + str(form))
 
     #--- elements ---#
     @property
     def elements(self):
-        return self._pyvisa_instr.ask("FORMat:ELEMents?")
+        return self._instrument.ask("FORMat:ELEMents?")
 
     @elements.setter
     def elements(self, elements):
-        self._pyvisa_instr.write("FORMat:ELEMents " + str(elements))
+        self._instrument.write("FORMat:ELEMents " + str(elements))
 
     #--- boarder ---#
     @property
     def border(self):
-        return self._pyvisa_instr.ask("FORMat:BORDer?")
+        return self._instrument.ask("FORMat:BORDer?")
 
     @border.setter
     def border(self, border):
-        self._pyvisa_instr.write("FORMat:BORDer " + str(border))
+        self._instrument.write("FORMat:BORDer " + str(border))
 
 
 class _Keithley2000MultimeterSubsystemSystem(object):
 
-    def __init__(self, pyvisa_instr):
-        self._pyvisa_instr = pyvisa_instr
+    def __init__(self, instrument):
+        self._instrument = instrument
 
     @property
     def autozero(self):
-        return bool(int(self._pyvisa_instr.ask("SYSTem:AZERo:STATe?")))
+        return bool(int(self._instrument.ask("SYSTem:AZERo:STATe?")))
 
     @autozero.setter
     def autozero(self, autozero):
         if type(autozero) is bool:
-            self._pyvisa_instr.write("SYSTem:AZERo:STATe " +
-                                     str(int(autozero)))
+            self._instrument.write("SYSTem:AZERo:STATe " +
+                                    str(int(autozero)))
         else:
             raise TypeError('autozero must be True or False.')
 
     @property
     def version(self):
-        return self._pyvisa_instr.ask("SYSTem:Version?")
+        return self._instrument.ask("SYSTem:Version?")
 
     @property
     def errors(self):
         error_list = []
         while True:
-            error = self._pyvisa_instr.ask("SYSTem:ERRor?")
+            error = self._instrument.ask("SYSTem:ERRor?")
             error_list.append(error)
             if error == '0,"No error"':
                 break
@@ -516,32 +516,32 @@ class _Keithley2000MultimeterSubsystemSystem(object):
 
 class Keithley2000Multimeter(PyVisaInstrument):
 
-    def __init__(self, name, address, reset=True):
-        PyVisaInstrument.__init__(self, address)
+    def __init__(self, address, name='', reset=True):
+        PyVisaInstrument.__init__(self, address, name)
 
         # Subsystems
-        self.display = _Keithley2000MultimeterSubsystemDisplay(self._pyvisa_instr)
-        self.format = _Keithley2000MultimeterSubsystemFormat(self._pyvisa_instr)
-        self.trigger = _Keithley2000MultimeterSubsystemTrigger(self._pyvisa_instr)
-        self.buffer = _Keithley2000MultimeterSubsystemBuffer(self._pyvisa_instr)
-        self.system = _Keithley2000MultimeterSubsystemSystem(self._pyvisa_instr)
+        self.display = _Keithley2000MultimeterSubsystemDisplay(self._instrument)
+        self.format = _Keithley2000MultimeterSubsystemFormat(self._instrument)
+        self.trigger = _Keithley2000MultimeterSubsystemTrigger(self._instrument)
+        self.buffer = _Keithley2000MultimeterSubsystemBuffer(self._instrument)
+        self.system = _Keithley2000MultimeterSubsystemSystem(self._instrument)
 
         # Channels
-        volt_dc = _Keithley2000MultimeterChannelVoltageDC(self._pyvisa_instr)
+        volt_dc = _Keithley2000MultimeterChannelVoltageDC(self._instrument)
         self.__setitem__('voltage_dc', volt_dc)
 
-        curr_dc = _Keithley2000MultimeterChannelCurrentDC(self._pyvisa_instr)
+        curr_dc = _Keithley2000MultimeterChannelCurrentDC(self._instrument)
         self.__setitem__('current_dc', curr_dc)
 
-        res = _Keithley2000MultimeterChannelResistance(self._pyvisa_instr)
+        res = _Keithley2000MultimeterChannelResistance(self._instrument)
         self.__setitem__('resistance', res)
 
         if reset:
             self.reset()
 
     def reset(self):
-        self._pyvisa_instr.write("*RST")
-        self._pyvisa_instr.write("*CLS")
+        self._instrument.write("*RST")
+        self._instrument.write("*CLS")
 
         for channel in self.__iter__():
                 channel.factor = 1
@@ -549,4 +549,4 @@ class Keithley2000Multimeter(PyVisaInstrument):
 
     @property
     def identification(self):
-        return self._pyvisa_instr.ask("*IDN?")
+        return self._instrument.ask("*IDN?")
