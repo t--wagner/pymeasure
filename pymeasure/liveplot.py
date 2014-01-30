@@ -26,6 +26,7 @@ from matplotlib.figure import Figure
 from matplotlib.colors import SymLogNorm
 from matplotlib.backends.backend_tkagg import (FigureCanvasTkAgg,
                                                NavigationToolbar2TkAgg)
+from matplotlib.cm import get_cmap
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 from Queue import Queue
@@ -234,7 +235,7 @@ class DataplotBase(object):
 
 class Dataplot1d(DataplotBase):
 
-    def __init__(self, axes, length, continuously=False, **line_kwargs):
+    def __init__(self, axes, length, continuously=False):
         """Initiate Dataplot1d class.
 
         """
@@ -242,7 +243,7 @@ class Dataplot1d(DataplotBase):
         DataplotBase.__init__(self, axes)
 
         # Create emtpy line instance for axes
-        self._line, = self._axes.plot([], [], **line_kwargs)
+        self._line, = self._axes.plot([], [])
 
         # Attributes for displayed number of points
         self._length = length
@@ -369,7 +370,7 @@ class Dataplot1d(DataplotBase):
 
 class Dataplot2d(DataplotBase):
 
-    def __init__(self, figure, axes, length, **image_kwargs):
+    def __init__(self, figure, axes, length):
         DataplotBase.__init__(self, axes)
 
         self._length = length
@@ -378,16 +379,14 @@ class Dataplot2d(DataplotBase):
         self._data = [[]]
 
         # Draw an empty image
-        self._image = self._axes.imshow([[0]], aspect='auto',
-                                        norm=SymLogNorm(1e-10),
-                                        interpolation="nearest",
-                                        **image_kwargs)
+        self._image = self._axes.imshow([[0]])
+        self._image.set_interpoliation('none')
+
+        self._axes.set_aspect('auto')
 
         # Divide axes to fit colorbar (this works but don't aks me why)
         axes_divider = make_axes_locatable(self._axes)
-        axes = axes_divider.append_axes("right",
-                                        size="2.5%",
-                                        pad=0.05)
+        axes = axes_divider.append_axes("right", size="2.5%", pad=0.05)
 
         # Create colorbar and ignor warning caused because figure has only
         # one value.
@@ -408,6 +407,22 @@ class Dataplot2d(DataplotBase):
         """
 
         return self._colorbar
+
+    @property
+    def colormap(self):
+        return self._image.get_cmap().name
+
+    @colormap.setter
+    def colormap(self, colormap):
+        self._image.set_cmap(colormap)
+
+    @property
+    def zlabel(self):
+        return self._colorbar._label
+
+    @zlabel.setter
+    def zlabel(self, zlabel):
+        self._colorbar.set_label(zlabel)
 
     def add_data(self, data):
 
