@@ -19,7 +19,7 @@ sample['vxy'] = foo['cos']
 #Creat Graphs
 graph = LiveGraphTk()
 graph['vxx'] = Dataplot1d(graph.add_subplot(221), 101, False)
-graph['vxy'] = Dataplot1d(graph.add_subplot(222), 101, False, color='red')
+graph['vxy'] = Dataplot1d(graph.add_subplot(222), 101, False)
 graph['vxx2d'] = Dataplot2d(graph.figure, graph.add_subplot(223), 101)
 graph['vxy2d'] = Dataplot2d(graph.figure, graph.add_subplot(224), 101)
 graph.run()
@@ -37,10 +37,10 @@ def main():
             nr = '0' + str(nr)
         else:
             nr = str(nr)
-    for step0 in LinearSweep(sample['gate1'], 0, 4 * pi, 5):
+    for step0 in LinearSweep(sample['gate1'], 0, 4 * pi, 100):
 
-        file_str = path + nr + '_' + filename + '_' + str(*step0)
-        datafile = open(file_str + '.txt', 'w')
+        #file_str = path + nr + '_' + filename + '_' + str(*step0)
+        #datafile = open(file_str + '.txt', 'w')
 
         for step1 in LinearSweep(sample['gate2'], 0, 2 * pi, 101):
             dataline = []
@@ -55,12 +55,12 @@ def main():
             graph['vxy'].add_data(step1, cos_val)
             graph['vxy2d'].add_data(cos_val)
 
-            datafile.write(str(dataline)[1:-1] + '\n')
+            #datafile.write(str(dataline)[1:-1] + '\n')
             time.sleep(100e-3)
 
-        graph.snapshot(file_str + '.png')
+        #graph.snapshot(file_str + '.png')
 
-        datafile.close()
+        #datafile.close()
 
 # Main Programm muss als thread gestartet werden)
 t = Thread(target=main)

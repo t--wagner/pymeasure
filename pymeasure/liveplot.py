@@ -22,8 +22,7 @@ else:
 
 import warnings
 
-from matplotlib.figure import Figure
-from matplotlib.colors import SymLogNorm
+import matplotlib as mpl
 from matplotlib.backends.backend_tkagg import (FigureCanvasTkAgg,
                                                NavigationToolbar2TkAgg)
 from matplotlib.cm import get_cmap
@@ -50,7 +49,7 @@ class LiveGraphBase(IndexDict):
 
         # Define matplotlib Figure
         if not figure:
-            self._figure = Figure()
+            self._figure = mpl.figure.Figure()
         else:
             self._figure = figure
 
@@ -102,7 +101,7 @@ class LiveGraphBase(IndexDict):
         while not self._snapshot_path_queue.empty():
             pass
 
-    def update(self):
+    def _update(self):
         """Update all dataplots and redraw the canvas if necassary.
 
         Calls the update methods of all dataplots and makes requested
@@ -117,7 +116,7 @@ class LiveGraphBase(IndexDict):
 
         # Iterate through all subplots and check for updates
         for subplot in self.__iter__():
-            if not subplot.update():
+            if not subplot._update():
                 up_to_date = False
 
         # Save a snapshot if requested
@@ -167,7 +166,7 @@ class LiveGraphTk(LiveGraphBase):
         """
 
         # Call the update function
-        self.update()
+        self._update()
 
         # Call run again afer the delay time
         self._master.after(delay, self.run, delay)
@@ -229,7 +228,7 @@ class DataplotBase(object):
         pass
 
     @abc.abstractmethod
-    def update(self):
+    def _update(self):
         pass
 
 
@@ -254,12 +253,122 @@ class Dataplot1d(DataplotBase):
         self._ydata = list()
 
     @property
-    def line(self, line):
-        """matplotlib.lines.Line2D instance.
+    def linestyle(self):
+        return self._line.get_linestyle()
 
-        """
+    @linestyle.setter
+    def linestyle(self, linestyle):
 
-        self._line = line
+        # Handle wrong input to avoid crashing running liveplot
+        if not linestyle in self._line.lineStyles.keys():
+            raise ValueError('not a valid linestyle')
+
+        self._line.set_linestyle(linestyle)
+
+    @property
+    def drawstyle(self):
+        return self._line.get_drawstyle()
+
+    @drawstyle.setter
+    def drawstyle(self, drawstyle):
+
+        # Handle wrong input to avoid crashing running liveplot
+        if not drawstyle in self._line.drawStyleKeys:
+            raise ValueError('not a valid drawstyle')
+
+        self._line.set_drawstyle(drawstyle)
+
+    @property
+    def linecolor(self):
+        return self._line.get_color()
+
+    @linecolor.setter
+    def linecolor(self, color):
+
+        # Handle wrong input to avoid crashing running liveplot
+        if not mpl.colors.is_color_like(color):
+            raise ValueError('not a valid color')
+
+        self._line.set_color(color)
+
+    @property
+    def linewidth(self):
+        return self._line.get_linewidth()
+
+    @linewidth.setter
+    def linewidth(self, linewidth):
+
+        # Handle wrong input to avoid crashing running liveplot
+        linewidth = float(linewidth)
+        self._line.set_linewidth(linewidth)
+
+    @property
+    def marker(self):
+        marker = self._line.get_marker()
+
+        if marker == 'None':
+            marker = None
+
+        return marker
+
+    @marker.setter
+    def marker(self, marker):
+
+        # Handle wrong input to avoid crashing running liveplot
+        if marker in [None, False]:
+            marker = 'None'
+        elif not marker in self._line.markers.keys():
+            raise ValueError('not a valid marker')
+
+        self._line.set_marker(marker)
+
+    @property
+    def markerfacecolor(self):
+        return self._line.get_markerfacecolor()
+
+    @markerfacecolor.setter
+    def markerfacecolor(self, color):
+
+        # Handle wrong input to avoid crashing running liveplot
+        if not mpl.colors.is_color_like(color):
+            raise ValueError('not a valid color')
+
+        self._line.set_markerfacecolor(color)
+
+    @property
+    def markeredgecolor(self):
+        return self._line.get_markeredgecolor()
+
+    @markeredgecolor.setter
+    def markeredgecolor(self, color):
+
+        # Handle wrong input to avoid crashing running liveplot
+        if not mpl.colors.is_color_like(color):
+            raise ValueError('not a valid color')
+
+        self._line.set_markeredgecolor(color)
+
+    @property
+    def markersize(self):
+        return self._line.get_markersize()
+
+    @markersize.setter
+    def markersize(self, markersize):
+
+        # Handle wrong input to avoid crashing running liveplot
+        markersize = float(markersize)
+        self._line.set_markersize(markersize)
+
+    @property
+    def markerwidth(self):
+        return self._line.get_markerwidth()
+
+    @markerwidth.setter
+    def markerwidth(self, markerwidth):
+
+        # Handle wrong input to avoid crashing running liveplot
+        markerwidth = float(markerwidth)
+        self._line.set_markerwidth(markerwidth)
 
     @property
     def length(self):
@@ -298,7 +407,7 @@ class Dataplot1d(DataplotBase):
         # Put the incoming data into the data exchange queue
         self._exchange_queue.put([xdata, ydata])
 
-    def update(self):
+    def _update(self):
         """Update the dataplot with the incoming data.
 
         Process the added data, handle the maximum number of displayed
@@ -380,7 +489,7 @@ class Dataplot2d(DataplotBase):
 
         # Draw an empty image
         self._image = self._axes.imshow([[0]])
-        self._image.set_interpoliation('none')
+        self._image.set_interpolation('none')
 
         self._axes.set_aspect('auto')
 
@@ -434,7 +543,7 @@ class Dataplot2d(DataplotBase):
         # Put a 'next' meassage into the data exchange queue
         self._exchange_queue.put('next')
 
-    def update(self):
+    def _update(self):
 
         #Set up_to_date flag back to True
         up_to_date = True
