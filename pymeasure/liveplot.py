@@ -25,10 +25,10 @@ import warnings
 import matplotlib as mpl
 from matplotlib.backends.backend_tkagg import (FigureCanvasTkAgg,
                                                NavigationToolbar2TkAgg)
-from matplotlib.cm import get_cmap
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 from Queue import Queue
+from threading import Event
 
 
 class LiveGraphBase(IndexDict):
@@ -116,8 +116,10 @@ class LiveGraphBase(IndexDict):
 
         # Iterate through all subplots and check for updates
         for subplot in self.__iter__():
-            if not subplot._update():
+            subplot._update()
+            if subplot._request_update.is_set():
                 up_to_date = False
+                subplot._request_update.clear()
 
         # Save a snapshot if requested
         while not self._snapshot_path_queue.empty():
@@ -127,7 +129,7 @@ class LiveGraphBase(IndexDict):
 
         # Redraw the canvas
         if not up_to_date:
-            self.figure.canvas.draw()
+            self._figure.canvas.draw()
 
 
 class LiveGraphTk(LiveGraphBase):
@@ -182,14 +184,7 @@ class DataplotBase(object):
 
         self._axes = axes
         self._exchange_queue = Queue()
-
-    @property
-    def axes(self):
-        """The matplotlib.axes.Axes of Dataplot.
-
-        """
-
-        return self._axes
+        self._request_update = Event()
 
     @property
     def title(self):
@@ -198,6 +193,7 @@ class DataplotBase(object):
     @title.setter
     def title(self, string):
         self._axes.set_title(string)
+        self._request_update.set()
 
     @property
     def xlabel(self):
@@ -206,6 +202,7 @@ class DataplotBase(object):
     @xlabel.setter
     def xlabel(self, string):
         self._axes.set_xlabel(string)
+        self._request_update.set()
 
     @property
     def ylabel(self):
@@ -214,6 +211,7 @@ class DataplotBase(object):
     @ylabel.setter
     def ylabel(self, string):
         self._axes.set_ylabel(string)
+        self._request_update.set()
 
     def clear(self):
         """Clear the Dataplot immediately.
@@ -264,6 +262,7 @@ class Dataplot1d(DataplotBase):
             raise ValueError('not a valid linestyle')
 
         self._line.set_linestyle(linestyle)
+        self._request_update.set()
 
     @property
     def drawstyle(self):
@@ -277,6 +276,7 @@ class Dataplot1d(DataplotBase):
             raise ValueError('not a valid drawstyle')
 
         self._line.set_drawstyle(drawstyle)
+        self._request_update.set()
 
     @property
     def linecolor(self):
@@ -290,6 +290,7 @@ class Dataplot1d(DataplotBase):
             raise ValueError('not a valid color')
 
         self._line.set_color(color)
+        self._request_update.set()
 
     @property
     def linewidth(self):
@@ -301,6 +302,7 @@ class Dataplot1d(DataplotBase):
         # Handle wrong input to avoid crashing running liveplot
         linewidth = float(linewidth)
         self._line.set_linewidth(linewidth)
+        self._request_update.set()
 
     @property
     def marker(self):
@@ -321,6 +323,7 @@ class Dataplot1d(DataplotBase):
             raise ValueError('not a valid marker')
 
         self._line.set_marker(marker)
+        self._request_update.set()
 
     @property
     def markerfacecolor(self):
@@ -334,6 +337,7 @@ class Dataplot1d(DataplotBase):
             raise ValueError('not a valid color')
 
         self._line.set_markerfacecolor(color)
+        self._request_update.set()
 
     @property
     def markeredgecolor(self):
@@ -347,6 +351,7 @@ class Dataplot1d(DataplotBase):
             raise ValueError('not a valid color')
 
         self._line.set_markeredgecolor(color)
+        self._request_update.set()
 
     @property
     def markersize(self):
@@ -358,6 +363,7 @@ class Dataplot1d(DataplotBase):
         # Handle wrong input to avoid crashing running liveplot
         markersize = float(markersize)
         self._line.set_markersize(markersize)
+        self._request_update.set()
 
     @property
     def markerwidth(self):
@@ -369,6 +375,33 @@ class Dataplot1d(DataplotBase):
         # Handle wrong input to avoid crashing running liveplot
         markerwidth = float(markerwidth)
         self._line.set_markerwidth(markerwidth)
+        self._request_update.set()
+
+    @property
+    def xscale(self):
+        return self._axes.get_xscale()
+
+    @xscale.setter
+    def xscale(self, xscale):
+
+        if not xscale in ['linear', 'log', 'symlog']:
+            raise ValueError('not a valid scale')
+
+        self._axes.set_xscale(xscale)
+        self._request_update.set()
+
+    @property
+    def yscale(self):
+        return self._axes.get_yscale()
+
+    @yscale.setter
+    def yscale(self, yscale):
+
+        if not yscale in ['linear', 'log', 'symlog']:
+            raise ValueError('not a valid scale')
+
+        self._axes.set_yscale(yscale)
+        self._request_update.set()
 
     @property
     def length(self):
@@ -412,13 +445,10 @@ class Dataplot1d(DataplotBase):
 
         Process the added data, handle the maximum number of displayed
         datapoints and manage view limits.
-        The update method is called by the Gaph build method and should not be
+        The _update method is called by the Gaph build method and should not be
         called directly.
 
         """
-
-        # Set up_to_date flag back to False.
-        up_to_date = True
 
         # Keep going until the data exchange queue is empty.
         while not self._exchange_queue.empty():
@@ -459,10 +489,10 @@ class Dataplot1d(DataplotBase):
                     del self._ydata[:self._length]
 
             #Set the up_to_date flag to True for redrawing
-            up_to_date = False
+            self._request_update.set()
 
         # Update the line with the new data if available
-        if not up_to_date:
+        if self._request_update.is_set():
 
             # Update displayed data.
             self._line.set_data(self._xdata, self._ydata)
@@ -471,10 +501,10 @@ class Dataplot1d(DataplotBase):
             self._axes.relim()
 
             # Resacale the view limits using the previous computed data limit.
-            self._axes.autoscale_view()
-
-        # Return the update flag. If True it will cause a redraw of the canvas.
-        return up_to_date
+            try:
+                self._axes.autoscale_view()
+            except ValueError:
+                pass
 
 
 class Dataplot2d(DataplotBase):
@@ -490,32 +520,24 @@ class Dataplot2d(DataplotBase):
         # Draw an empty image
         self._image = self._axes.imshow([[0]])
         self._image.set_interpolation('none')
-
         self._axes.set_aspect('auto')
 
         # Divide axes to fit colorbar (this works but don't aks me why)
+        # http://matplotlib.org/examples/axes_grid/demo_axes_divider.html
         axes_divider = make_axes_locatable(self._axes)
-        axes = axes_divider.append_axes("right", size="2.5%", pad=0.05)
+        axes_cb = axes_divider.append_axes("right", size="2.5%", pad=0.05)
 
         # Create colorbar and ignor warning caused because figure has only
         # one value.
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            self._colorbar = figure.colorbar(self._image, axes)
+            self._colorbar = figure.colorbar(self._image, axes_cb)
 
-        self._axes.set_axis_off()
+        #self._axes.set_axis_off()
 
     @property
     def image(self):
         return self._image
-
-    @property
-    def colorbar(self):
-        """The matplotlib.colorbar.ColorBar of Dataplot2d.
-
-        """
-
-        return self._colorbar
 
     @property
     def colormap(self):
@@ -524,6 +546,7 @@ class Dataplot2d(DataplotBase):
     @colormap.setter
     def colormap(self, colormap):
         self._image.set_cmap(colormap)
+        self._request_update.set()
 
     @property
     def zlabel(self):
@@ -532,6 +555,7 @@ class Dataplot2d(DataplotBase):
     @zlabel.setter
     def zlabel(self, zlabel):
         self._colorbar.set_label(zlabel)
+        self._request_update.set()
 
     def add_data(self, data):
 
@@ -544,9 +568,6 @@ class Dataplot2d(DataplotBase):
         self._exchange_queue.put('next')
 
     def _update(self):
-
-        #Set up_to_date flag back to True
-        up_to_date = True
 
         # Check the queues for new data
         while not self._exchange_queue.empty():
@@ -565,7 +586,7 @@ class Dataplot2d(DataplotBase):
                 message = package
                 if message == 'clear':
                     self._data = [[]]
-                    up_to_date = False
+                    self._request_update.set()
                 elif message == 'next':
                     self._data.append([])
 
@@ -577,10 +598,10 @@ class Dataplot2d(DataplotBase):
                 self._data.append(split)
 
                 #Set the up_to_date flag to True for redrawing
-                up_to_date = False
+                self._request_update.set()
 
         # Update the image with the new data if available
-        if not up_to_date:
+        if self._request_update.is_set():
 
             # Try to set the new data
             try:
@@ -591,6 +612,3 @@ class Dataplot2d(DataplotBase):
 
             # Resacale the image
             self._image.autoscale()
-
-        # Return the update flag. If True it will cause a redraw of the canvas.
-        return up_to_date

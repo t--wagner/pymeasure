@@ -37,7 +37,8 @@ def main():
             nr = '0' + str(nr)
         else:
             nr = str(nr)
-    for step0 in LinearSweep(sample['gate1'], 0, 4 * pi, 100):
+
+    for step0 in LinearSweep(sample['gate1'], 0, 4 * pi, 101):
 
         #file_str = path + nr + '_' + filename + '_' + str(*step0)
         #datafile = open(file_str + '.txt', 'w')
@@ -45,12 +46,12 @@ def main():
         for step1 in LinearSweep(sample['gate2'], 0, 2 * pi, 101):
             dataline = []
 
-            sin_val = sample['vxx'].read()       
+            sin_val = [sample['vxx'].read()[0]**2]
             dataline += sin_val
             graph['vxx'].add_data(step1, [val**2 for val in sin_val])
             graph['vxx2d'].add_data(sin_val)
 
-            cos_val = sample['vxy'].read()
+            cos_val = [sample['vxy'].read()[0]**2]
             dataline += cos_val
             graph['vxy'].add_data(step1, cos_val)
             graph['vxy2d'].add_data(cos_val)
