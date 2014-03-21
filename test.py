@@ -5,6 +5,8 @@ from pymeasure.liveplot import LiveGraphTk, Dataplot1d, Dataplot2d
 from numpy import pi
 from threading import Thread
 import time
+import random
+from threading import Event
 
 # Create instruments
 foo = FooInstrument('foo')
@@ -29,6 +31,9 @@ filename = 'test'
 
 
 # Main Programm
+stop = Event()
+
+
 def main():
 
     for nr, step0 in enumerate(LinearSweep(sample['gate1'], 0, 4 * pi, 101)):
@@ -40,18 +45,15 @@ def main():
 
     for step0 in LinearSweep(sample['gate1'], 0, 4 * pi, 101):
 
-        #file_str = path + nr + '_' + filename + '_' + str(*step0)
-        #datafile = open(file_str + '.txt', 'w')
-
         for step1 in LinearSweep(sample['gate2'], 0, 2 * pi, 101):
             dataline = []
 
-            sin_val = [sample['vxx'].read()[0]**2]
+            sin_val = [(sample['vxx'].read()[0] + random.uniform(-0.1, 0.1))]
             dataline += sin_val
-            graph['vxx'].add_data(step1, [val**2 for val in sin_val])
+            graph['vxx'].add_data(step1, sin_val)
             graph['vxx2d'].add_data(sin_val)
 
-            cos_val = [sample['vxy'].read()[0]**2]
+            cos_val = [(sample['vxx'].read()[0] + random.uniform(-0.1, 0.1))]
             dataline += cos_val
             graph['vxy'].add_data(step1, cos_val)
             graph['vxy2d'].add_data(cos_val)
@@ -59,9 +61,10 @@ def main():
             #datafile.write(str(dataline)[1:-1] + '\n')
             time.sleep(100e-3)
 
-        #graph.snapshot(file_str + '.png')
+            if stop.is_set():
+                return
 
-        #datafile.close()
+        #graph.snapshot(file_str + '.png')
 
 # Main Programm muss als thread gestartet werden)
 t = Thread(target=main)

@@ -21,10 +21,11 @@ else:
     import tkinter as Tk
 
 import warnings
-
+import numpy as np
 import matplotlib as mpl
 from matplotlib.backends.backend_tkagg import (FigureCanvasTkAgg,
                                                NavigationToolbar2TkAgg)
+from matplotlib.colors import Normalize, LogNorm
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 from Queue import Queue
@@ -250,6 +251,9 @@ class Dataplot1d(DataplotBase):
         self._xdata = list()
         self._ydata = list()
 
+        # Data manipulation attributes
+        self._function = None
+
     @property
     def linestyle(self):
         return self._line.get_linestyle()
@@ -378,30 +382,59 @@ class Dataplot1d(DataplotBase):
         self._request_update.set()
 
     @property
-    def xscale(self):
-        return self._axes.get_xscale()
+    def log_xaxis(self):
+        if self._axes.get_xscale() == 'log':
+            return True
+        else:
+            return False
 
-    @xscale.setter
-    def xscale(self, xscale):
+    @log_xaxis.setter
+    def log_xaxis(self, log):
 
-        if not xscale in ['linear', 'log', 'symlog']:
-            raise ValueError('not a valid scale')
+        # Check for bool type
+        if not isinstance(log, bool):
+            raise TypeError('not bool')
 
-        self._axes.set_xscale(xscale)
+        if log:
+            log = 'log'
+        else:
+            log = 'linear'
+
+        self._axes.set_xscale(log)
         self._request_update.set()
 
     @property
-    def yscale(self):
-        return self._axes.get_yscale()
+    def log_yaxis(self):
+        if self._axes.get_yscale() == 'log':
+            return True
+        else:
+            return False
 
-    @yscale.setter
-    def yscale(self, yscale):
+    @log_yaxis.setter
+    def log_yaxis(self, log):
 
-        if not yscale in ['linear', 'log', 'symlog']:
-            raise ValueError('not a valid scale')
+        # Check for bool type
+        if not isinstance(log, bool):
+            raise TypeError('not bool')
 
-        self._axes.set_yscale(yscale)
+        if log:
+            log = 'log'
+        else:
+            log = 'linear'
+
+        self._axes.set_yscale(log)
         self._request_update.set()
+
+    @property
+    def function(self):
+        return self._function
+
+    @function.setter
+    def function(self, function):
+        if not function in ['diff', 'inv', None]:
+            return ValueError
+
+        self._function = function
 
     @property
     def length(self):
@@ -494,8 +527,31 @@ class Dataplot1d(DataplotBase):
         # Update the line with the new data if available
         if self._request_update.is_set():
 
+            # Prepare displayed xdata
+            if self.log_xaxis:
+                xdata = np.abs(self._xdata)
+            else:
+                xdata = np.array(self._xdata)
+
+            # Prepare displayed ydata
+            if self.log_yaxis:
+                ydata = np.abs(self._ydata)
+            else:
+                ydata = np.array(self._ydata)
+
+            # Calculate the data
+            if self._function:
+                if self._function == 'diff':
+                    try:
+                        ydata = np.divide(np.diff(ydata), np.diff(xdata))
+                        xdata = xdata[:-1]
+                    except ValueError:
+                        pass
+                elif self._function == 'inv':
+                    ydata = 1. / ydata
+
             # Update displayed data.
-            self._line.set_data(self._xdata, self._ydata)
+            self._line.set_data(xdata, ydata)
 
             # Recompute the data limits.
             self._axes.relim()
@@ -533,11 +589,26 @@ class Dataplot2d(DataplotBase):
             warnings.simplefilter("ignore")
             self._colorbar = figure.colorbar(self._image, axes_cb)
 
-        #self._axes.set_axis_off()
+        self._log = False
+        self._axes.set_axis_off()
 
     @property
-    def image(self):
-        return self._image
+    def log(self):
+        return self._log
+
+    @log.setter
+    def log(self, boolean):
+
+        if not isinstance(boolean, bool):
+            raise TypeError('is not bool')
+
+        if boolean:
+            self._image.set_norm(LogNorm())
+        else:
+            self._image.set_norm(Normalize())
+
+        self._log = boolean
+        self._request_update.set()
 
     @property
     def colormap(self):
@@ -603,10 +674,16 @@ class Dataplot2d(DataplotBase):
         # Update the image with the new data if available
         if self._request_update.is_set():
 
-            # Try to set the new data
+            # Prepare displayed data
+            data = np.array(self._data[:-1])
+
+            # Take absolute value if log scaled
+            if self._log:
+                data = np.abs(data)
+
+            # Set image data
             try:
-                self._image.set_data(self._data[:-1])
-            # If no data available plot an empty image
+                self._image.set_data(data)
             except TypeError:
                 self._image.set_data([[0]])
 
