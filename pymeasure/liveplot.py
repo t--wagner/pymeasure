@@ -130,6 +130,7 @@ class LiveGraphBase(IndexDict):
 
         # Redraw the canvas
         if not up_to_date:
+            self._figure.tight_layout()
             self._figure.canvas.draw()
 
 
@@ -187,33 +188,6 @@ class DataplotBase(object):
         self._exchange_queue = Queue()
         self._request_update = Event()
 
-    @property
-    def title(self):
-        return self._axes.get_title()
-
-    @title.setter
-    def title(self, string):
-        self._axes.set_title(string)
-        self._request_update.set()
-
-    @property
-    def xlabel(self):
-        return self._axes.get_xlabel()
-
-    @xlabel.setter
-    def xlabel(self, string):
-        self._axes.set_xlabel(string)
-        self._request_update.set()
-
-    @property
-    def ylabel(self):
-        return self._axes.get_ylabel()
-
-    @ylabel.setter
-    def ylabel(self, string):
-        self._axes.set_ylabel(string)
-        self._request_update.set()
-
     def clear(self):
         """Clear the Dataplot immediately.
 
@@ -229,6 +203,169 @@ class DataplotBase(object):
     @abc.abstractmethod
     def _update(self):
         pass
+
+
+class LabelProperties(object):
+
+    def __init__(self, axes, request_update):
+        self._axes = axes
+        self._request_update = request_update
+
+    @property
+    def title(self):
+        return self._axes.get_title()
+
+    @title.setter
+    def title(self, string):
+        self._axes.set_title(string)
+        self._request_update.set()
+
+    @property
+    def xaxis(self):
+        return self._axes.get_xlabel()
+
+    @xaxis.setter
+    def xaxis(self, string):
+        self._axes.set_xlabel(string)
+        self._request_update.set()
+
+    @property
+    def yaxis(self):
+        return self._axes.get_ylabel()
+
+    @yaxis.setter
+    def yaxis(self, string):
+        self._axes.set_ylabel(string)
+        self._request_update.set()
+
+
+class LineProperties(object):
+
+    def __init__(self, line, request_update):
+        self._line = line
+        self._request_update = request_update
+
+    @property
+    def style(self):
+        return self._line.get_linestyle()
+
+    @style.setter
+    def style(self, linestyle):
+
+        # Handle wrong input to avoid crashing running liveplot
+        if not linestyle in self._line.lineStyles.keys():
+            raise ValueError('not a valid linestyle')
+
+        self._line.set_linestyle(linestyle)
+        self._request_update.set()
+
+    @property
+    def draw(self):
+        return self._line.get_drawstyle()
+
+    @draw.setter
+    def draw(self, drawstyle):
+
+        # Handle wrong input to avoid crashing running liveplot
+        if not drawstyle in self._line.drawStyleKeys:
+            raise ValueError('not a valid drawstyle')
+
+        self._line.set_drawstyle(drawstyle)
+        self._request_update.set()
+
+    @property
+    def color(self):
+        return self._line.get_color()
+
+    @color.setter
+    def color(self, color):
+
+        # Handle wrong input to avoid crashing running liveplot
+        if not mpl.colors.is_color_like(color):
+            raise ValueError('not a valid color')
+
+        self._line.set_color(color)
+        self._request_update.set()
+
+    @property
+    def width(self):
+        return self._line.get_linewidth()
+
+    @width.setter
+    def width(self, linewidth):
+
+        # Handle wrong input to avoid crashing running liveplot
+        linewidth = float(linewidth)
+        self._line.set_linewidth(linewidth)
+        self._request_update.set()
+
+
+class MarkerProperties(object):
+
+    def __init__(self, line, request_update):
+        self._line = line
+        self._request_update = request_update
+
+    @property
+    def style(self):
+        marker = self._line.get_marker()
+
+        if marker == 'None':
+            marker = None
+
+        return marker
+
+    @style.setter
+    def style(self, marker):
+
+        # Handle wrong input to avoid crashing running liveplot
+        if marker in [None, False]:
+            marker = 'None'
+        elif not marker in self._line.markers.keys():
+            raise ValueError('not a valid marker')
+
+        self._line.set_marker(marker)
+        self._request_update.set()
+
+    @property
+    def facecolor(self):
+        return self._line.get_markerfacecolor()
+
+    @facecolor.setter
+    def facecolor(self, color):
+
+        # Handle wrong input to avoid crashing running liveplot
+        if not mpl.colors.is_color_like(color):
+            raise ValueError('not a valid color')
+
+        self._line.set_markerfacecolor(color)
+        self._request_update.set()
+
+    @property
+    def edgecolor(self):
+        return self._line.get_markeredgecolor()
+
+    @edgecolor.setter
+    def edgecolor(self, color):
+
+        # Handle wrong input to avoid crashing running liveplot
+        if not mpl.colors.is_color_like(color):
+            raise ValueError('not a valid color')
+
+        self._line.set_markeredgecolor(color)
+        self._request_update.set()
+
+    @property
+    def size(self):
+        return self._line.get_markersize()
+
+    @size.setter
+    def size(self, markersize):
+
+        # Handle wrong input to avoid crashing running liveplot
+        markersize = float(markersize)
+        self._line.set_markersize(markersize)
+        self._request_update.set()
 
 
 class Dataplot1d(DataplotBase):
@@ -251,135 +388,28 @@ class Dataplot1d(DataplotBase):
         self._xdata = list()
         self._ydata = list()
 
+        # Dataplot1d Options
+        self._line_properties = LineProperties(self._line,
+                                               self._request_update)
+        self._marker_properties = MarkerProperties(self._line,
+                                                   self._request_update)
+        self._label_properties = LabelProperties(self._axes,
+                                                 self._request_update)
+
         # Data manipulation attributes
         self._function = None
 
     @property
-    def linestyle(self):
-        return self._line.get_linestyle()
-
-    @linestyle.setter
-    def linestyle(self, linestyle):
-
-        # Handle wrong input to avoid crashing running liveplot
-        if not linestyle in self._line.lineStyles.keys():
-            raise ValueError('not a valid linestyle')
-
-        self._line.set_linestyle(linestyle)
-        self._request_update.set()
-
-    @property
-    def drawstyle(self):
-        return self._line.get_drawstyle()
-
-    @drawstyle.setter
-    def drawstyle(self, drawstyle):
-
-        # Handle wrong input to avoid crashing running liveplot
-        if not drawstyle in self._line.drawStyleKeys:
-            raise ValueError('not a valid drawstyle')
-
-        self._line.set_drawstyle(drawstyle)
-        self._request_update.set()
-
-    @property
-    def linecolor(self):
-        return self._line.get_color()
-
-    @linecolor.setter
-    def linecolor(self, color):
-
-        # Handle wrong input to avoid crashing running liveplot
-        if not mpl.colors.is_color_like(color):
-            raise ValueError('not a valid color')
-
-        self._line.set_color(color)
-        self._request_update.set()
-
-    @property
-    def linewidth(self):
-        return self._line.get_linewidth()
-
-    @linewidth.setter
-    def linewidth(self, linewidth):
-
-        # Handle wrong input to avoid crashing running liveplot
-        linewidth = float(linewidth)
-        self._line.set_linewidth(linewidth)
-        self._request_update.set()
+    def line(self):
+        return self._line_properties
 
     @property
     def marker(self):
-        marker = self._line.get_marker()
-
-        if marker == 'None':
-            marker = None
-
-        return marker
-
-    @marker.setter
-    def marker(self, marker):
-
-        # Handle wrong input to avoid crashing running liveplot
-        if marker in [None, False]:
-            marker = 'None'
-        elif not marker in self._line.markers.keys():
-            raise ValueError('not a valid marker')
-
-        self._line.set_marker(marker)
-        self._request_update.set()
+        return self._marker_properties
 
     @property
-    def markerfacecolor(self):
-        return self._line.get_markerfacecolor()
-
-    @markerfacecolor.setter
-    def markerfacecolor(self, color):
-
-        # Handle wrong input to avoid crashing running liveplot
-        if not mpl.colors.is_color_like(color):
-            raise ValueError('not a valid color')
-
-        self._line.set_markerfacecolor(color)
-        self._request_update.set()
-
-    @property
-    def markeredgecolor(self):
-        return self._line.get_markeredgecolor()
-
-    @markeredgecolor.setter
-    def markeredgecolor(self, color):
-
-        # Handle wrong input to avoid crashing running liveplot
-        if not mpl.colors.is_color_like(color):
-            raise ValueError('not a valid color')
-
-        self._line.set_markeredgecolor(color)
-        self._request_update.set()
-
-    @property
-    def markersize(self):
-        return self._line.get_markersize()
-
-    @markersize.setter
-    def markersize(self, markersize):
-
-        # Handle wrong input to avoid crashing running liveplot
-        markersize = float(markersize)
-        self._line.set_markersize(markersize)
-        self._request_update.set()
-
-    @property
-    def markerwidth(self):
-        return self._line.get_markerwidth()
-
-    @markerwidth.setter
-    def markerwidth(self, markerwidth):
-
-        # Handle wrong input to avoid crashing running liveplot
-        markerwidth = float(markerwidth)
-        self._line.set_markerwidth(markerwidth)
-        self._request_update.set()
+    def label(self):
+        return self._label_properties
 
     @property
     def log_xaxis(self):
