@@ -12,9 +12,9 @@
 
 """
 
+import sys
 from pymeasure.indexdict import IndexDict
 import abc
-import sys
 if sys.version_info[0] < 3:
     import Tkinter as Tk
 else:
@@ -205,7 +205,7 @@ class DataplotBase(object):
         pass
 
 
-class LabelProperties(object):
+class LabelOptions1d(object):
 
     def __init__(self, axes, request_update):
         self._axes = axes
@@ -239,7 +239,7 @@ class LabelProperties(object):
         self._request_update.set()
 
 
-class LineProperties(object):
+class LineOptions(object):
 
     def __init__(self, line, request_update):
         self._line = line
@@ -300,7 +300,7 @@ class LineProperties(object):
         self._request_update.set()
 
 
-class MarkerProperties(object):
+class MarkerOptions(object):
 
     def __init__(self, line, request_update):
         self._line = line
@@ -368,6 +368,113 @@ class MarkerProperties(object):
         self._request_update.set()
 
 
+class AxesProperties(object):
+
+    def __init__(self, axes, request_update):
+        self._axes = axes
+        self._request_update = request_update
+
+    @property
+    def autoscale(self):
+        return self._axes.get_autoscale_on()
+
+    @autoscale.setter
+    def autoscale(self, boolean):
+
+        # Check for bool type
+        if not isinstance(boolean, bool):
+            raise TypeError('not bool')
+
+        self._axes.set_autoscale_on(boolean)
+        self._request_update.set()
+
+
+class XaxisOptions(object):
+
+    def __init__(self, axes, request_update):
+        self._axes = axes
+        self._request_update = request_update
+
+    @property
+    def autoscale(self):
+        return self._axes.get_autoscalex_on()
+
+    @autoscale.setter
+    def autoscale(self, boolean):
+
+        # Check for bool type
+        if not isinstance(boolean, bool):
+            raise TypeError('not bool')
+
+        self._axes.set_autoscalex_on(boolean)
+        self._request_update.set()
+
+    @property
+    def log(self):
+        if self._axes.get_xscale() == 'log':
+            return True
+        else:
+            return False
+
+    @log.setter
+    def log(self, log):
+
+        # Check for bool type
+        if not isinstance(log, bool):
+            raise TypeError('not bool')
+
+        if log:
+            log = 'log'
+        else:
+            log = 'linear'
+
+        self._axes.set_xscale(log)
+        self._request_update.set()
+
+
+class YaxisOptions(object):
+
+    def __init__(self, axes, request_update):
+        self._axes = axes
+        self._request_update = request_update
+
+    @property
+    def autoscale(self):
+        return self._axes.get_autoscaley_on()
+
+    @autoscale.setter
+    def autoscale(self, boolean):
+
+        # Check for bool type
+        if not isinstance(boolean, bool):
+            raise TypeError('not bool')
+
+        self._axes.set_autoscaley_on(boolean)
+        self._request_update.set()
+
+    @property
+    def log(self):
+        if self._axes.get_yscale() == 'log':
+            return True
+        else:
+            return False
+
+    @log.setter
+    def log(self, log):
+
+        # Check for bool type
+        if not isinstance(log, bool):
+            raise TypeError('not bool')
+
+        if log:
+            log = 'log'
+        else:
+            log = 'linear'
+
+        self._axes.set_yscale(log)
+        self._request_update.set()
+
+
 class Dataplot1d(DataplotBase):
 
     def __init__(self, axes, length, continuously=False):
@@ -389,71 +496,33 @@ class Dataplot1d(DataplotBase):
         self._ydata = list()
 
         # Dataplot1d Options
-        self._line_properties = LineProperties(self._line,
-                                               self._request_update)
-        self._marker_properties = MarkerProperties(self._line,
-                                                   self._request_update)
-        self._label_properties = LabelProperties(self._axes,
-                                                 self._request_update)
-
+        self._line_options = LineOptions(self._line, self._request_update)
+        self._marker_options = MarkerOptions(self._line, self._request_update)
+        self._xaxis_options = XaxisOptions(self._axes, self._request_update)
+        self._yaxis_options = YaxisOptions(self._axes, self._request_update)
+        self._label_options = LabelOptions1d(self._axes, self._request_update)
         # Data manipulation attributes
         self._function = None
 
     @property
     def line(self):
-        return self._line_properties
+        return self._line_options
 
     @property
     def marker(self):
-        return self._marker_properties
+        return self._marker_options
+
+    @property
+    def xaxis(self):
+        return self._xaxis_options
+
+    @property
+    def yaxis(self):
+        return self._yaxis_options
 
     @property
     def label(self):
-        return self._label_properties
-
-    @property
-    def log_xaxis(self):
-        if self._axes.get_xscale() == 'log':
-            return True
-        else:
-            return False
-
-    @log_xaxis.setter
-    def log_xaxis(self, log):
-
-        # Check for bool type
-        if not isinstance(log, bool):
-            raise TypeError('not bool')
-
-        if log:
-            log = 'log'
-        else:
-            log = 'linear'
-
-        self._axes.set_xscale(log)
-        self._request_update.set()
-
-    @property
-    def log_yaxis(self):
-        if self._axes.get_yscale() == 'log':
-            return True
-        else:
-            return False
-
-    @log_yaxis.setter
-    def log_yaxis(self, log):
-
-        # Check for bool type
-        if not isinstance(log, bool):
-            raise TypeError('not bool')
-
-        if log:
-            log = 'log'
-        else:
-            log = 'linear'
-
-        self._axes.set_yscale(log)
-        self._request_update.set()
+        return self._label_options
 
     @property
     def function(self):
@@ -558,13 +627,13 @@ class Dataplot1d(DataplotBase):
         if self._request_update.is_set():
 
             # Prepare displayed xdata
-            if self.log_xaxis:
+            if self.xaxis.log:
                 xdata = np.abs(self._xdata)
             else:
                 xdata = np.array(self._xdata)
 
             # Prepare displayed ydata
-            if self.log_yaxis:
+            if self.yaxis.log:
                 ydata = np.abs(self._ydata)
             else:
                 ydata = np.array(self._ydata)
@@ -593,6 +662,62 @@ class Dataplot1d(DataplotBase):
                 pass
 
 
+class ColorbarProperties(object):
+
+    def __init__(self, image, colorbar, request_update):
+        self._image = image
+        self._colorbar = colorbar
+        self._request_update = request_update
+
+    @property
+    def colormap(self):
+        return self._image.get_cmap().name
+
+    @colormap.setter
+    def colormap(self, colormap):
+        self._image.set_cmap(colormap)
+        self._request_update.set()
+
+    @property
+    def log(self):
+        if isinstance(self._image.norm, LogNorm):
+            return True
+        else:
+            return False
+
+    @log.setter
+    def log(self, boolean):
+
+        if not isinstance(boolean, bool):
+            raise TypeError('is not bool')
+
+        if boolean:
+            self._colorbar.set_norm(LogNorm())
+            self._image.set_norm(LogNorm())
+        else:
+            self._colorbar.set_norm(Normalize())
+            self._image.set_norm(Normalize())
+
+        self._image.autoscale()
+        self._request_update.set()
+
+
+class LabelProperties2d(LabelOptions1d):
+
+    def __init__(self, axes, colorbar, request_update):
+        LabelOptions1d.__init__(self, axes, request_update)
+        self._colorbar = colorbar
+
+    @property
+    def zaxis(self):
+        return self._colorbar._label
+
+    @zaxis.setter
+    def zaxis(self, string):
+        self._colorbar.set_label(string)
+        self._request_update.set()
+
+
 class Dataplot2d(DataplotBase):
 
     def __init__(self, figure, axes, length):
@@ -619,44 +744,22 @@ class Dataplot2d(DataplotBase):
             warnings.simplefilter("ignore")
             self._colorbar = figure.colorbar(self._image, axes_cb)
 
-        self._log = False
         self._axes.set_axis_off()
 
-    @property
-    def log(self):
-        return self._log
-
-    @log.setter
-    def log(self, boolean):
-
-        if not isinstance(boolean, bool):
-            raise TypeError('is not bool')
-
-        if boolean:
-            self._image.set_norm(LogNorm())
-        else:
-            self._image.set_norm(Normalize())
-
-        self._log = boolean
-        self._request_update.set()
+        self._label_properties = LabelProperties2d(self._axes,
+                                                   self._colorbar,
+                                                   self._request_update)
+        self._colorbar_properties = ColorbarProperties(self._image,
+                                                       self._colorbar,
+                                                       self._request_update)
 
     @property
-    def colormap(self):
-        return self._image.get_cmap().name
-
-    @colormap.setter
-    def colormap(self, colormap):
-        self._image.set_cmap(colormap)
-        self._request_update.set()
+    def colorbar(self):
+        return self._colorbar_properties
 
     @property
-    def zlabel(self):
-        return self._colorbar._label
-
-    @zlabel.setter
-    def zlabel(self, zlabel):
-        self._colorbar.set_label(zlabel)
-        self._request_update.set()
+    def label(self):
+        return self._label_properties
 
     def add_data(self, data):
 
@@ -708,7 +811,7 @@ class Dataplot2d(DataplotBase):
             data = np.array(self._data[:-1])
 
             # Take absolute value if log scaled
-            if self._log:
+            if isinstance(self._image.norm, LogNorm):
                 data = np.abs(data)
 
             # Set image data

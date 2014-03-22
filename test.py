@@ -59,7 +59,7 @@ def main():
             graph['vxy2d'].add_data(cos_val)
 
             #datafile.write(str(dataline)[1:-1] + '\n')
-            time.sleep(100e-3)
+            time.sleep(1/20.)
 
             if stop.is_set():
                 return
