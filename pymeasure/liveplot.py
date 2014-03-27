@@ -410,14 +410,69 @@ class XaxisOptions(object):
         self._request_update.set()
 
     @property
-    def log(self):
+    def lim_left(self):
+        return self._axes.get_xlim()[0]
+
+    @lim_left.setter
+    def lim_left(self, limit):
+
+        if not isinstance(limit, (int, float)):
+            raise TypeError('not int or float')
+
+        if limit == self.lim_right:
+            raise ValueError('left and right limits are identical.')
+
+        self._axes.set_xlim(left=limit)
+        self._request_update.set()
+
+    @property
+    def lim_right(self):
+        return self._axes.get_xlim()[1]
+
+    @lim_right.setter
+    def lim_right(self, limit):
+
+        if not isinstance(limit, (int, float)):
+            raise TypeError('not int or float')
+
+        if limit == self.lim_left:
+            raise ValueError('left and right limits are identical.')
+
+        self._axes.set_xlim(right=limit)
+        self._request_update.set()
+
+    @property
+    def inverted(self):
+        return self.lim_left > self.lim_right
+
+    @inverted.setter
+    def inverted(self, boolean):
+
+        if boolean:
+            if self.inverted:
+                return
+        else:
+            if not self.inverted:
+                return
+
+        autoscale = self.autoscale
+        self._axes.invert_xaxis()
+        self.autoscale = autoscale
+        self._request_update.set()
+
+    @property
+    def ticks(self):
+        return self._axes.get_xticks()
+
+    @property
+    def log_scale(self):
         if self._axes.get_xscale() == 'log':
             return True
         else:
             return False
 
-    @log.setter
-    def log(self, log):
+    @log_scale.setter
+    def log_scale(self, log):
 
         # Check for bool type
         if not isinstance(log, bool):
@@ -453,14 +508,70 @@ class YaxisOptions(object):
         self._request_update.set()
 
     @property
-    def log(self):
+    def lim_botton(self):
+        return self._axes.get_ylim()[0]
+
+    @lim_botton.setter
+    def lim_botton(self, limit):
+
+        if not isinstance(limit, (int, float)):
+            raise TypeError('not int or float')
+
+        if limit == self.lim_top:
+            raise ValueError('bottom and top limits are identical.')
+
+        self._axes.set_ylim(bottom=limit)
+        self._request_update.set()
+
+    @property
+    def lim_top(self):
+        return self._axes.get_ylim()[1]
+
+    @lim_top.setter
+    def lim_top(self, limit):
+
+        if not isinstance(limit, (int, float)):
+            raise TypeError('not int or float')
+
+        if limit == self.lim_bottom:
+            raise ValueError('left and right limits are identical.')
+
+        self._axes.set_ylim(top=limit)
+        self._request_update.set()
+
+    @property
+    def inverted(self):
+        return self.lim_botton > self.lim_top
+
+    @inverted.setter
+    def inverted(self, boolean):
+
+        if boolean:
+            if self.inverted:
+                return
+        else:
+            if not self.inverted:
+                return
+
+        autoscale = self.autoscale
+        self._axes.invert_yaxis()
+        self.autoscale = autoscale
+
+        self._request_update.set()
+
+    @property
+    def ticks(self):
+        return self._axes.get_yticks()
+
+    @property
+    def log_scale(self):
         if self._axes.get_yscale() == 'log':
             return True
         else:
             return False
 
-    @log.setter
-    def log(self, log):
+    @log_scale.setter
+    def log_scale(self, log):
 
         # Check for bool type
         if not isinstance(log, bool):
@@ -627,13 +738,13 @@ class Dataplot1d(DataplotBase):
         if self._request_update.is_set():
 
             # Prepare displayed xdata
-            if self.xaxis.log:
+            if self.xaxis.log_scale:
                 xdata = np.abs(self._xdata)
             else:
                 xdata = np.array(self._xdata)
 
             # Prepare displayed ydata
-            if self.yaxis.log:
+            if self.yaxis.log_scale:
                 ydata = np.abs(self._ydata)
             else:
                 ydata = np.array(self._ydata)
@@ -679,14 +790,14 @@ class ColorbarProperties(object):
         self._request_update.set()
 
     @property
-    def log(self):
+    def log_scale(self):
         if isinstance(self._image.norm, LogNorm):
             return True
         else:
             return False
 
-    @log.setter
-    def log(self, boolean):
+    @log_scale.setter
+    def log_scale(self, boolean):
 
         if not isinstance(boolean, bool):
             raise TypeError('is not bool')

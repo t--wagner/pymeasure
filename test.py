@@ -20,8 +20,8 @@ sample['vxy'] = foo['cos']
 
 #Creat Graphs
 graph = LiveGraphTk()
-graph['vxx'] = Dataplot1d(graph.add_subplot(221), 101, False)
-graph['vxy'] = Dataplot1d(graph.add_subplot(222), 101, False)
+graph['vxx'] = Dataplot1d(graph.add_subplot(221), 11, False)
+graph['vxy'] = Dataplot1d(graph.add_subplot(222), 11, False)
 graph['vxx2d'] = Dataplot2d(graph.figure, graph.add_subplot(223), 101)
 graph['vxy2d'] = Dataplot2d(graph.figure, graph.add_subplot(224), 101)
 graph.run()
@@ -45,7 +45,7 @@ def main():
 
     for step0 in LinearSweep(sample['gate1'], 0, 4 * pi, 101):
 
-        for step1 in LinearSweep(sample['gate2'], 0, 2 * pi, 101):
+        for step1 in LinearSweep(sample['gate2'], 0, 2 * pi, 11):
             dataline = []
 
             sin_val = [(sample['vxx'].read()[0] + random.uniform(-0.1, 0.1))]
@@ -59,7 +59,7 @@ def main():
             graph['vxy2d'].add_data(cos_val)
 
             #datafile.write(str(dataline)[1:-1] + '\n')
-            time.sleep(1/20.)
+            time.sleep(1)
 
             if stop.is_set():
                 return
@@ -69,3 +69,9 @@ def main():
 # Main Programm muss als thread gestartet werden)
 t = Thread(target=main)
 t.start()
+
+
+# 1D properties
+# Axes bgcolor
+# Filling under the line
+# 
