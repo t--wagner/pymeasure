@@ -18,12 +18,15 @@ sample['gate2'] = foo['out1']
 sample['vxx'] = foo['sin']
 sample['vxy'] = foo['cos']
 
+pointsy = 101
+pointsx = 101
+
 #Creat Graphs
 graph = LiveGraphTk()
-graph['vxx'] = Dataplot1d(graph.add_subplot(221), 11, False)
-graph['vxy'] = Dataplot1d(graph.add_subplot(222), 11, False)
-graph['vxx2d'] = Dataplot2d(graph.figure, graph.add_subplot(223), 101)
-graph['vxy2d'] = Dataplot2d(graph.figure, graph.add_subplot(224), 101)
+graph['vxx'] = Dataplot1d(graph.add_subplot(221), pointsx, False)
+graph['vxy'] = Dataplot1d(graph.add_subplot(222), pointsx, False)
+graph['vxx2d'] = Dataplot2d(graph.figure, graph.add_subplot(223), pointsy)
+graph['vxy2d'] = Dataplot2d(graph.figure, graph.add_subplot(224), pointsy)
 graph.run()
 
 path = 'test/'
@@ -35,17 +38,10 @@ stop = Event()
 
 
 def main():
+    
+    for step0 in LinearSweep(sample['gate1'], 0, 4 * pi, pointsy):
 
-    for nr, step0 in enumerate(LinearSweep(sample['gate1'], 0, 4 * pi, 101)):
-
-        if nr < 10:
-            nr = '0' + str(nr)
-        else:
-            nr = str(nr)
-
-    for step0 in LinearSweep(sample['gate1'], 0, 4 * pi, 101):
-
-        for step1 in LinearSweep(sample['gate2'], 0, 2 * pi, 11):
+        for step1 in LinearSweep(sample['gate2'], 0, -2 * pi, pointsx):
             dataline = []
 
             sin_val = [(sample['vxx'].read()[0] + random.uniform(-0.1, 0.1))]
@@ -59,7 +55,7 @@ def main():
             graph['vxy2d'].add_data(cos_val)
 
             #datafile.write(str(dataline)[1:-1] + '\n')
-            time.sleep(1)
+            time.sleep(100e-3)
 
             if stop.is_set():
                 return

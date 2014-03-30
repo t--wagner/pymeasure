@@ -395,6 +395,8 @@ class XaxisOptions(object):
         self._axes = axes
         self._request_update = request_update
 
+        self._scale = 'linear'
+
     @property
     def autoscale(self):
         return self._axes.get_autoscalex_on()
@@ -465,25 +467,28 @@ class XaxisOptions(object):
         return self._axes.get_xticks()
 
     @property
-    def log_scale(self):
-        if self._axes.get_xscale() == 'log':
+    def scale(self):
+        return self._scale
+
+    @property
+    def log(self):
+        if self._scale == 'log':
             return True
         else:
             return False
 
-    @log_scale.setter
-    def log_scale(self, log):
+    @log.setter
+    def log(self, log):
 
         # Check for bool type
         if not isinstance(log, bool):
             raise TypeError('not bool')
 
         if log:
-            log = 'log'
+            self._scale = 'log'
         else:
-            log = 'linear'
+            self._scale = 'linear'
 
-        self._axes.set_xscale(log)
         self._request_update.set()
 
 
@@ -492,6 +497,7 @@ class YaxisOptions(object):
     def __init__(self, axes, request_update):
         self._axes = axes
         self._request_update = request_update
+        self._scale = 'linear'
 
     @property
     def autoscale(self):
@@ -564,25 +570,28 @@ class YaxisOptions(object):
         return self._axes.get_yticks()
 
     @property
-    def log_scale(self):
-        if self._axes.get_yscale() == 'log':
+    def scale(self):
+        return self._scale
+
+    @property
+    def log(self):
+        if self._scale == 'log':
             return True
         else:
             return False
 
-    @log_scale.setter
-    def log_scale(self, log):
+    @log.setter
+    def log(self, log):
 
         # Check for bool type
         if not isinstance(log, bool):
             raise TypeError('not bool')
 
         if log:
-            log = 'log'
+            self._scale = 'log'
         else:
-            log = 'linear'
+            self._scale = 'linear'
 
-        self._axes.set_yscale(log)
         self._request_update.set()
 
 
@@ -737,17 +746,16 @@ class Dataplot1d(DataplotBase):
         # Update the line with the new data if available
         if self._request_update.is_set():
 
+            xdata = np.array(self._xdata)
+            ydata = np.array(self._ydata)
+
             # Prepare displayed xdata
-            if self.xaxis.log_scale:
+            if self.xaxis.log:
                 xdata = np.abs(self._xdata)
-            else:
-                xdata = np.array(self._xdata)
 
             # Prepare displayed ydata
-            if self.yaxis.log_scale:
+            if self.yaxis.log:
                 ydata = np.abs(self._ydata)
-            else:
-                ydata = np.array(self._ydata)
 
             # Calculate the data
             if self._function:
@@ -765,6 +773,19 @@ class Dataplot1d(DataplotBase):
 
             # Recompute the data limits.
             self._axes.relim()
+
+            # Set the axis scale
+            xscale = self.xaxis.scale
+            try:
+                self._axes.set_xscale(xscale)
+            except ValueError:
+                    pass
+
+            yscale = self.yaxis.scale
+            try:
+                self._axes.set_yscale(yscale)
+            except ValueError:
+                    pass
 
             # Resacale the view limits using the previous computed data limit.
             try:
