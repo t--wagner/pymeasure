@@ -774,13 +774,14 @@ class Dataplot1d(DataplotBase):
             # Recompute the data limits.
             self._axes.relim()
 
-            # Set the axis scale
+            # Set the xaxis scale
             xscale = self.xaxis.scale
             try:
                 self._axes.set_xscale(xscale)
             except ValueError:
                     pass
 
+            # Set the yaxis scale
             yscale = self.yaxis.scale
             try:
                 self._axes.set_yscale(yscale)
@@ -800,6 +801,7 @@ class ColorbarProperties(object):
         self._image = image
         self._colorbar = colorbar
         self._request_update = request_update
+        self._scale = 'linear'
 
     @property
     def colormap(self):
@@ -811,26 +813,28 @@ class ColorbarProperties(object):
         self._request_update.set()
 
     @property
-    def log_scale(self):
-        if isinstance(self._image.norm, LogNorm):
+    def scale(self):
+        return self._scale
+
+    @property
+    def log(self):
+
+        if self._scale == 'log':
             return True
         else:
             return False
 
-    @log_scale.setter
-    def log_scale(self, boolean):
+    @log.setter
+    def log(self, log):
 
-        if not isinstance(boolean, bool):
+        if not isinstance(log, bool):
             raise TypeError('is not bool')
 
-        if boolean:
-            self._colorbar.set_norm(LogNorm())
-            self._image.set_norm(LogNorm())
+        if log:
+            self._scale = 'log'
         else:
-            self._colorbar.set_norm(Normalize())
-            self._image.set_norm(Normalize())
+            self._scale = 'linear'
 
-        self._image.autoscale()
         self._request_update.set()
 
 
@@ -943,14 +947,29 @@ class Dataplot2d(DataplotBase):
             data = np.array(self._data[:-1])
 
             # Take absolute value if log scaled
-            if isinstance(self._image.norm, LogNorm):
+            if self.colorbar.log:
                 data = np.abs(data)
 
+            
             # Set image data
             try:
                 self._image.set_data(data)
             except TypeError:
                 self._image.set_data([[0]])
 
+         
+
+            if self.colorbar.scale == 'linear':
+                self._colorbar.set_norm(Normalize())
+                self._image.set_norm(Normalize())
+            #elif self.colorbar.scale == 'log':
+            #    self._colorbar.set_norm(LogNorm())
+            #    self._image.set_norm(LogNorm())
+            else:
+                pass
+
+
             # Resacale the image
             self._image.autoscale()
+
+

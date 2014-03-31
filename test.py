@@ -41,7 +41,7 @@ def main():
     
     for step0 in LinearSweep(sample['gate1'], 0, 4 * pi, pointsy):
 
-        for step1 in LinearSweep(sample['gate2'], 0, -2 * pi, pointsx):
+        for step1 in LinearSweep(sample['gate2'], 0, 2 * pi, pointsx):
             dataline = []
 
             sin_val = [(sample['vxx'].read()[0] + random.uniform(-0.1, 0.1))]
