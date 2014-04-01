@@ -950,26 +950,20 @@ class Dataplot2d(DataplotBase):
             if self.colorbar.log:
                 data = np.abs(data)
 
-            
             # Set image data
             try:
                 self._image.set_data(data)
             except TypeError:
                 self._image.set_data([[0]])
 
-         
-
             if self.colorbar.scale == 'linear':
                 self._colorbar.set_norm(Normalize())
                 self._image.set_norm(Normalize())
-            #elif self.colorbar.scale == 'log':
-            #    self._colorbar.set_norm(LogNorm())
-            #    self._image.set_norm(LogNorm())
+            elif self.colorbar.scale == 'log':
+                self._colorbar.set_norm(LogNorm())
+                #self._image.set_norm(LogNorm())
             else:
                 pass
 
-
             # Resacale the image
             self._image.autoscale()
-
-
