@@ -139,7 +139,7 @@ def k2000_ext_triggered(nr_of_triggers):
     k2000.buffer.control = True
     
     # Set up the trigger, the source is usally external
-    k2000.trigger.source = 'EXT'
+    k2000.trigger.source = 'ext'
     k2000.trigger.count = nr_of_triggers
 
     # Initiate the measurment and wait for trigger signals 
@@ -154,7 +154,7 @@ def k2000_ext_triggered(nr_of_triggers):
         # See in the Keithley 2000 manual section A-11 for optimizing measurment speed.
     #    time.sleep(1)    
     
-    #return k2000[0].read(False)      
+    return k2000[0].read(False)      
                 
         
         

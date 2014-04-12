@@ -363,7 +363,7 @@ class _Keithley2000MultimeterSubsystemTrigger(object):
         if not(isinstance(source, str) and source in ['imm', 'ext', 'tim', 'man', 'bus']):
             raise ValueError('source must be string with \'imm\', \'ext\', \'tim\', \'man\', \'bus\'.' )
 
-        self._instrument.write("TRIGger:SOURce " + name.lower()[0:3])
+        self._instrument.write("TRIGger:SOURce " + source)
 
     #--- time ---#
     @property

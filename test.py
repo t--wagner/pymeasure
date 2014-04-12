@@ -22,11 +22,18 @@ pointsy = 101
 pointsx = 101
 
 #Creat Graphs
+
+class Graph(LiveGraphTk):
+
+    def __init__(self):
+        LiveGraphTk.__init__(self)
+
+
 graph = LiveGraphTk()
-graph['vxx'] = Dataplot1d(graph.add_subplot(221), pointsx, False)
-graph['vxy'] = Dataplot1d(graph.add_subplot(222), pointsx, False)
-graph['vxx2d'] = Dataplot2d(graph.figure, graph.add_subplot(223), pointsy)
-graph['vxy2d'] = Dataplot2d(graph.figure, graph.add_subplot(224), pointsy)
+graph['vxx'] = Dataplot1d(graph, graph.add_subplot(221), pointsx, False)
+graph['vxy'] = Dataplot1d(graph, graph.add_subplot(222), pointsx, False)
+graph['vxx2d'] = Dataplot2d(graph, graph.add_subplot(223), pointsy)
+graph['vxy2d'] = Dataplot2d(graph, graph.add_subplot(224), pointsy)
 graph.run()
 
 path = 'test/'
@@ -37,11 +44,15 @@ filename = 'test'
 stop = Event()
 
 
-def main():
-    
-    for step0 in LinearSweep(sample['gate1'], 0, 4 * pi, pointsy):
+sweep0 = LinearSweep(sample['gate1'], 0, 4 * pi, pointsy)
+sweep1 = LinearSweep(sample['gate2'], 0, 2 * pi, pointsx)
 
-        for step1 in LinearSweep(sample['gate2'], 0, 2 * pi, pointsx):
+
+def main():
+
+    for step0 in sweep0:
+
+        for step1 in sweep1:
             dataline = []
 
             sin_val = [(sample['vxx'].read()[0] + random.uniform(-0.1, 0.1))]
@@ -60,14 +71,30 @@ def main():
             if stop.is_set():
                 return
 
+        graph['vxx2d'].image.extent = [sweep1.start, sweep1.stop,
+                                       step0[0], sweep0.start]
+        graph['vxy2d'].image.extent = [sweep1.start, sweep1.stop,
+                                       step0[0], sweep0.start]
         #graph.snapshot(file_str + '.png')
 
+
+def f():
+    b = True
+    while True:
+        time.sleep(0.1)
+        graph[2].colorbar.log = b
+        if b:
+            b = False
+        else:
+            b = True
+
 # Main Programm muss als thread gestartet werden)
-t = Thread(target=main)
-t.start()
+t1 = Thread(target=main)
+t2 = Thread(target=f)
+t1.start()
+
 
 
 # 1D properties
 # Axes bgcolor
 # Filling under the line
-# 

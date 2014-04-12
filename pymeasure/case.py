@@ -108,7 +108,7 @@ def RampDecorator(cls):
                 stepsize = float(stop - start) / steps
                 steptime = abs(stepsize / float(self._ramprate))
 
-            # Handle exception if steptime and ramprate are None from 
+            # Handle exception if steptime and ramprate are None from
             # pymeasure.case import Instrument
             except (TypeError, ZeroDivisionError):
                 stepsize = (stop - start)
@@ -189,7 +189,7 @@ class Rack(IndexDict):
         if isinstance(instrument, Instrument):
             IndexDict.__setitem__(self, key, instrument)
         else:
-            raise TypeError('item must be a Instrument')
+            raise TypeError('item must be an Instrument')
 
     def instruments(self):
         return self._odict.values()

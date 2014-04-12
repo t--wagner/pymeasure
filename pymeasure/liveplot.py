@@ -59,6 +59,7 @@ class LiveGraphBase(IndexDict):
 
         #self._clear_request = threading.event()
         self._snapshot_path_queue = Queue()
+        self._tasks = Queue()
 
     def __setitem__(self, key, dataplot):
         """x.__setitem__(key, dataplot) <==> x['key'] = dataplot
@@ -70,13 +71,6 @@ class LiveGraphBase(IndexDict):
             IndexDict.__setitem__(self, key, dataplot)
         else:
             raise TypeError('item must be a Dataplot.')
-
-    @property
-    def figure(self):
-        """The matplotlib.figure.Figure of Graph.
-
-        """
-        return self._figure
 
     def dataplots(self):
         """Return a list of (index, key) pairs in Graph.
@@ -102,6 +96,12 @@ class LiveGraphBase(IndexDict):
         while not self._snapshot_path_queue.empty():
             pass
 
+    def _add_task(self, function, *args, **kargs):
+        """Add a task function(*args, **kwargs) to the task queue.
+
+        """
+        self._tasks.put((function, args, kargs))
+
     def _update(self):
         """Update all dataplots and redraw the canvas if necassary.
 
@@ -121,6 +121,12 @@ class LiveGraphBase(IndexDict):
             if subplot._request_update.is_set():
                 up_to_date = False
                 subplot._request_update.clear()
+
+        # Process all tasks
+        while not self._tasks.empty():
+            func, args, kargs = self._tasks.get()
+            func(*args, **kargs)
+            self._tasks.task_done()
 
         # Save a snapshot if requested
         while not self._snapshot_path_queue.empty():
@@ -179,11 +185,12 @@ class LiveGraphTk(LiveGraphBase):
 class DataplotBase(object):
     __metaclass__ = abc.ABCMeta
 
-    def __init__(self, axes):
+    def __init__(self, graph, axes):
         """Initiate DataplotBase class.
 
         """
 
+        self._graph = graph
         self._axes = axes
         self._exchange_queue = Queue()
         self._request_update = Event()
@@ -205,11 +212,11 @@ class DataplotBase(object):
         pass
 
 
-class LabelOptions1d(object):
+class LabelConf1d(object):
 
-    def __init__(self, axes, request_update):
+    def __init__(self, graph, axes):
+        self._graph = graph
         self._axes = axes
-        self._request_update = request_update
 
     @property
     def title(self):
@@ -217,8 +224,7 @@ class LabelOptions1d(object):
 
     @title.setter
     def title(self, string):
-        self._axes.set_title(string)
-        self._request_update.set()
+        self._graph._add_task(self._axes.set_title, string)
 
     @property
     def xaxis(self):
@@ -226,8 +232,7 @@ class LabelOptions1d(object):
 
     @xaxis.setter
     def xaxis(self, string):
-        self._axes.set_xlabel(string)
-        self._request_update.set()
+        self._graph._add_task(self._axes.set_xlabel, string)
 
     @property
     def yaxis(self):
@@ -235,15 +240,14 @@ class LabelOptions1d(object):
 
     @yaxis.setter
     def yaxis(self, string):
-        self._axes.set_ylabel(string)
-        self._request_update.set()
+        self._graph._add_task(self._axes.set_ylabel, string)
 
 
-class LineOptions(object):
+class LineConf(object):
 
-    def __init__(self, line, request_update):
+    def __init__(self, graph, line):
+        self._graph = graph
         self._line = line
-        self._request_update = request_update
 
     @property
     def style(self):
@@ -256,8 +260,7 @@ class LineOptions(object):
         if not linestyle in self._line.lineStyles.keys():
             raise ValueError('not a valid linestyle')
 
-        self._line.set_linestyle(linestyle)
-        self._request_update.set()
+        self._graph._add_task(self._line.set_linestyle, linestyle)
 
     @property
     def draw(self):
@@ -270,8 +273,7 @@ class LineOptions(object):
         if not drawstyle in self._line.drawStyleKeys:
             raise ValueError('not a valid drawstyle')
 
-        self._line.set_drawstyle(drawstyle)
-        self._request_update.set()
+        self._graph._add_task(self._line.set_drawstyle, drawstyle)
 
     @property
     def color(self):
@@ -284,8 +286,7 @@ class LineOptions(object):
         if not mpl.colors.is_color_like(color):
             raise ValueError('not a valid color')
 
-        self._line.set_color(color)
-        self._request_update.set()
+        self._graph._add_task(self._line.set_color, color)
 
     @property
     def width(self):
@@ -296,15 +297,14 @@ class LineOptions(object):
 
         # Handle wrong input to avoid crashing running liveplot
         linewidth = float(linewidth)
-        self._line.set_linewidth(linewidth)
-        self._request_update.set()
+        self._graph._add_task(self._line.set_linewidth, linewidth)
 
 
-class MarkerOptions(object):
+class MarkerConf(object):
 
-    def __init__(self, line, request_update):
+    def __init__(self, graph, line):
+        self._graph = graph
         self._line = line
-        self._request_update = request_update
 
     @property
     def style(self):
@@ -324,8 +324,7 @@ class MarkerOptions(object):
         elif not marker in self._line.markers.keys():
             raise ValueError('not a valid marker')
 
-        self._line.set_marker(marker)
-        self._request_update.set()
+        self._graph._add_task(self._line.set_marker, marker)
 
     @property
     def facecolor(self):
@@ -338,8 +337,7 @@ class MarkerOptions(object):
         if not mpl.colors.is_color_like(color):
             raise ValueError('not a valid color')
 
-        self._line.set_markerfacecolor(color)
-        self._request_update.set()
+        self._graph._add_task(self._line.set_markerfacecolor, color)
 
     @property
     def edgecolor(self):
@@ -352,8 +350,7 @@ class MarkerOptions(object):
         if not mpl.colors.is_color_like(color):
             raise ValueError('not a valid color')
 
-        self._line.set_markeredgecolor(color)
-        self._request_update.set()
+        self._graph._add_task(self._line.set_markeredgecolor, color)
 
     @property
     def size(self):
@@ -364,32 +361,11 @@ class MarkerOptions(object):
 
         # Handle wrong input to avoid crashing running liveplot
         markersize = float(markersize)
-        self._line.set_markersize(markersize)
-        self._request_update.set()
+
+        self._graph._add_task(self._line.set_markersize, markersize)
 
 
-class AxesProperties(object):
-
-    def __init__(self, axes, request_update):
-        self._axes = axes
-        self._request_update = request_update
-
-    @property
-    def autoscale(self):
-        return self._axes.get_autoscale_on()
-
-    @autoscale.setter
-    def autoscale(self, boolean):
-
-        # Check for bool type
-        if not isinstance(boolean, bool):
-            raise TypeError('not bool')
-
-        self._axes.set_autoscale_on(boolean)
-        self._request_update.set()
-
-
-class XaxisOptions(object):
+class XaxisConf(object):
 
     def __init__(self, axes, request_update):
         self._axes = axes
@@ -466,6 +442,11 @@ class XaxisOptions(object):
     def ticks(self):
         return self._axes.get_xticks()
 
+    @ticks.setter
+    def ticks(self, ticks):
+        self._axes.set_xticks(ticks)
+        self._request_update.set()
+
     @property
     def scale(self):
         return self._scale
@@ -492,7 +473,7 @@ class XaxisOptions(object):
         self._request_update.set()
 
 
-class YaxisOptions(object):
+class YaxisConf(object):
 
     def __init__(self, axes, request_update):
         self._axes = axes
@@ -569,6 +550,11 @@ class YaxisOptions(object):
     def ticks(self):
         return self._axes.get_yticks()
 
+    @ticks.setter
+    def ticks(self, ticks):
+        self._axes.set_yticks(ticks)
+        self._request_update.set()
+
     @property
     def scale(self):
         return self._scale
@@ -597,12 +583,12 @@ class YaxisOptions(object):
 
 class Dataplot1d(DataplotBase):
 
-    def __init__(self, axes, length, continuously=False):
+    def __init__(self, graph, axes, length, continuously=False):
         """Initiate Dataplot1d class.
 
         """
 
-        DataplotBase.__init__(self, axes)
+        DataplotBase.__init__(self, graph, axes)
 
         # Create emtpy line instance for axes
         self._line, = self._axes.plot([], [])
@@ -616,44 +602,50 @@ class Dataplot1d(DataplotBase):
         self._ydata = list()
 
         # Dataplot1d Options
-        self._line_options = LineOptions(self._line, self._request_update)
-        self._marker_options = MarkerOptions(self._line, self._request_update)
-        self._xaxis_options = XaxisOptions(self._axes, self._request_update)
-        self._yaxis_options = YaxisOptions(self._axes, self._request_update)
-        self._label_options = LabelOptions1d(self._axes, self._request_update)
-        # Data manipulation attributes
-        self._function = None
+        self._line_conf = LineConf(self._graph, self._line)
+        self._marker_conf = MarkerConf(self._graph, self._line)
+        self._xaxis_conf = XaxisConf(self._axes, self._request_update)
+        self._yaxis_conf = YaxisConf(self._axes, self._request_update)
+        self._label_conf = LabelConf1d(self._graph, self._axes)
 
     @property
     def line(self):
-        return self._line_options
+        """Line options.
+
+        """
+        return self._line_conf
 
     @property
     def marker(self):
-        return self._marker_options
+        """Marker options.
+
+        """
+
+        return self._marker_conf
 
     @property
     def xaxis(self):
-        return self._xaxis_options
+        """Xaxis options.
+
+        """
+
+        return self._xaxis_conf
 
     @property
     def yaxis(self):
-        return self._yaxis_options
+        """Yaxis options.
+
+        """
+
+        return self._yaxis_conf
 
     @property
     def label(self):
-        return self._label_options
+        """Label options.
 
-    @property
-    def function(self):
-        return self._function
+        """
 
-    @function.setter
-    def function(self, function):
-        if not function in ['diff', 'inv', None]:
-            return ValueError
-
-        self._function = function
+        return self._label_conf
 
     @property
     def length(self):
@@ -666,10 +658,6 @@ class Dataplot1d(DataplotBase):
         """
         return self._length
 
-    @length.setter
-    def length(self, points):
-        self._length = points
-
     @property
     def continuously(self):
         """Set continuously plotting True or False.
@@ -679,10 +667,6 @@ class Dataplot1d(DataplotBase):
 
         """
         return self._continuously
-
-    @continuously.setter
-    def continuously(self, boolean):
-        self._continuously = boolean
 
     def add_data(self, xdata, ydata):
         """Add a list of data to the plot.
@@ -757,17 +741,6 @@ class Dataplot1d(DataplotBase):
             if self.yaxis.log:
                 ydata = np.abs(self._ydata)
 
-            # Calculate the data
-            if self._function:
-                if self._function == 'diff':
-                    try:
-                        ydata = np.divide(np.diff(ydata), np.diff(xdata))
-                        xdata = xdata[:-1]
-                    except ValueError:
-                        pass
-                elif self._function == 'inv':
-                    ydata = 1. / ydata
-
             # Update displayed data.
             self._line.set_data(xdata, ydata)
 
@@ -795,7 +768,59 @@ class Dataplot1d(DataplotBase):
                 pass
 
 
-class ColorbarProperties(object):
+class ImageConf(object):
+
+    def __init__(self, image, request_update):
+        self._image = image
+        self._request_update = request_update
+        self._auto_extent = True
+
+    @property
+    def interpolation(self):
+        """Set the interpolation method the image uses when resizing.
+
+        ACCEPTS: ['nearest' | 'bilinear' | 'bicubic' | 'spline16' |
+                  'spline36' | 'hanning' | 'hamming' | 'hermite' | 'kaiser' |
+                  'quadric' | 'catrom' | 'gaussian' | 'bessel' | 'mitchell' |
+                  'sinc' | 'lanczos' | 'none' |]
+
+        """
+
+        return self._image.get_interpolation()
+
+    @interpolation.setter
+    def interpolation(self, interpolation):
+
+        if interpolation not in self._image._interpd:
+            raise ValueError('Illegal interpolation string')
+
+        self._image.set_interpolation(interpolation)
+        self._request_update.set()
+
+    @property
+    def auto_extent(self):
+        return self._auto_extent
+
+    @auto_extent.setter
+    def auto_extent(self, boolean):
+
+        if not isinstance(boolean, bool):
+            raise TypeError('not bool')
+
+        self._auto_extent = boolean
+
+    @property
+    def extent(self):
+        return self._image.get_extent()
+
+    @extent.setter
+    def extent(self, extent):
+        self._auto_extent = False
+        self._image.set_extent(extent)
+        self._request_update.set()
+
+
+class ColorbarConf(object):
 
     def __init__(self, image, colorbar, request_update):
         self._image = image
@@ -818,6 +843,9 @@ class ColorbarProperties(object):
 
     @property
     def log(self):
+        """Set colorbar to logarithmic scale.
+
+        """
 
         if self._scale == 'log':
             return True
@@ -838,10 +866,10 @@ class ColorbarProperties(object):
         self._request_update.set()
 
 
-class LabelProperties2d(LabelOptions1d):
+class LabelConf2d(LabelConf1d):
 
-    def __init__(self, axes, colorbar, request_update):
-        LabelOptions1d.__init__(self, axes, request_update)
+    def __init__(self, graph, axes, colorbar, request_update):
+        LabelConf1d.__init__(self, graph, axes)
         self._colorbar = colorbar
 
     @property
@@ -856,8 +884,8 @@ class LabelProperties2d(LabelOptions1d):
 
 class Dataplot2d(DataplotBase):
 
-    def __init__(self, figure, axes, length):
-        DataplotBase.__init__(self, axes)
+    def __init__(self, graph, axes, length):
+        DataplotBase.__init__(self, graph, axes)
 
         self._length = length
 
@@ -865,8 +893,7 @@ class Dataplot2d(DataplotBase):
         self._data = [[]]
 
         # Draw an empty image
-        self._image = self._axes.imshow([[0]])
-        self._image.set_interpolation('none')
+        self._image = self._axes.imshow([[np.nan]])
         self._axes.set_aspect('auto')
 
         # Divide axes to fit colorbar (this works but don't aks me why)
@@ -878,24 +905,35 @@ class Dataplot2d(DataplotBase):
         # one value.
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            self._colorbar = figure.colorbar(self._image, axes_cb)
+            self._colorbar = self._graph._figure.colorbar(self._image, axes_cb)
 
-        self._axes.set_axis_off()
+        #self._axes.set_axis_off()
 
-        self._label_properties = LabelProperties2d(self._axes,
-                                                   self._colorbar,
-                                                   self._request_update)
-        self._colorbar_properties = ColorbarProperties(self._image,
-                                                       self._colorbar,
-                                                       self._request_update)
+        self._image_conf = ImageConf(self._image, self._request_update)
+        self._label_conf = LabelConf2d(self._graph, self._axes, self._colorbar,
+                                       self._request_update)
+        self._colorbar_conf = ColorbarConf(self._image, self._colorbar,
+                                           self._request_update)
+
+    @property
+    def image(self):
+        return self._image_conf
 
     @property
     def colorbar(self):
-        return self._colorbar_properties
+        """Colorbar options.
+
+        """
+
+        return self._colorbar_conf
 
     @property
     def label(self):
-        return self._label_properties
+        """Label options.
+
+        """
+
+        return self._label_conf
 
     def add_data(self, data):
 
@@ -950,20 +988,28 @@ class Dataplot2d(DataplotBase):
             if self.colorbar.log:
                 data = np.abs(data)
 
-            # Set image data
-            try:
-                self._image.set_data(data)
-            except TypeError:
-                self._image.set_data([[0]])
-
             if self.colorbar.scale == 'linear':
                 self._colorbar.set_norm(Normalize())
                 self._image.set_norm(Normalize())
             elif self.colorbar.scale == 'log':
-                self._colorbar.set_norm(LogNorm())
-                #self._image.set_norm(LogNorm())
-            else:
-                pass
+                    self._colorbar.set_norm(LogNorm())
+
+            # Set image data
+            try:
+                self._image.set_data(data)
+
+                # Extent image automaticaly
+                if self.image.auto_extent:
+                    extent = [0, self._length, len(data), 0]
+                    self._image.set_extent(extent)
+
+            except TypeError:
+                self._image.set_data([[np.nan]])
+                self._axes.set_xticks([])
+                self._axes.set_yticks([])
 
             # Resacale the image
-            self._image.autoscale()
+            try:
+                self._image.autoscale()
+            except ValueError:
+                pass
