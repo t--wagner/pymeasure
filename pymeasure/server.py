@@ -6,7 +6,6 @@ class TaskError(object):
     def __init__(self, message):
         self.message = message
 
-
 class Answer(object):
 
     def __init__(self, queue):
@@ -39,12 +38,19 @@ class Task(object):
 
         """
 
-        try:
-            answer = self._function(*self._args, **self._kwargs)
-        except Exception, exception:
-            answer = TaskError(repr(exception))
-
+        answer = self._function(*self._args, **self._kwargs)
         self._answer.put(answer)
+
+
+class ConnectionBase(object):
+
+    def __init__(self, server):
+        self._server = server
+
+    def ask(self, function):
+
+        q = self._server.add_task(function, 2)
+        return q
 
 
 class Server(Process):
@@ -54,38 +60,34 @@ class Server(Process):
 
         """
 
+        # Init multprocessing.Process
         Process.__init__(self)
 
+        # Create multiprocessing.Manger
         if not manager:
             manager = Manager()
-
         self._manager = manager
+
         self._tasks = Queue()
-        self._stop = Event()
+        self._connections = dict()
 
     def stop(self):
         """Stop the running server.
 
         """
 
-        self._stop.set()
+        self._tasks.put('MSG:STOP_SERVER')
 
     def add_task(self, function, *args, **kwargs):
         """Add a new task.
 
         """
 
-        #if not isinstance(task, Task):
-        #    raise TypeError('not a Task.')
-
-        if self._stop.is_set():
-            raise ValueError('Server stopped.')
-
-        result = self._manager.Queue()
-        task = Task(function, result, *args, **kwargs)
+        answer = self._manager.Queue()
+        task = Task(function, answer, *args, **kwargs)
         self._tasks.put(task)
 
-        return Answer(result)
+        return Answer(answer)
 
     def run(self):
         """Code to be executed when start is called.
@@ -94,13 +96,15 @@ class Server(Process):
 
         while True:
             # Process all tasks in the queue
-            while not self._tasks.empty():
-                task = self._tasks.get()
+            task = self._tasks.get()
+            try:
                 task()
+            except Exception, exception:
+                if isinstance(task, str):
+                    if task == 'MSG:STOP_SERVER':
+                        return
 
-            # Stop server if requested
-            if self._stop.is_set():
-                return
+                #self._tasks._answer.put(TaskError(repr(exception)))
 
 
 if __name__ == '__main__':
@@ -111,10 +115,6 @@ if __name__ == '__main__':
     # Create nd start server
     p = Server()
     p.start()
-    q0 = p.add_task(pot, 2)
-    q1 = p.add_task(pot, 'a')
-    q2 = p.add_task(pot, 8)
-    print q0.get()
-    print q1.get()
-    print q2.get()
-    p.stop()
+    q = p.add_task(pot, 2)
+    print q.get()
+    #p.stop()
