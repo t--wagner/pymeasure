@@ -1,61 +1,9 @@
-from multiprocessing import Process, Manager, Queue, Event
-import time
-
-
-class TaskError(object):
-    def __init__(self, message):
-        self.message = message
-
-class Answer(object):
-
-    def __init__(self, queue):
-        self._queue = queue
-
-    def get(self):
-        answer = self._queue.get()
-
-        # Look for Errors
-        if isinstance(answer, TaskError):
-            raise Exception(answer.message)
-
-        return answer
-
-
-class Task(object):
-
-    def __init__(self, function, answer, *args, **kwargs):
-        """Create and initialize attributes.
-
-        """
-
-        self._function = function
-        self._answer = answer
-        self._args = args
-        self._kwargs = kwargs
-
-    def __call__(self):
-        """Call the function.
-
-        """
-
-        answer = self._function(*self._args, **self._kwargs)
-        self._answer.put(answer)
-
-
-class ConnectionBase(object):
-
-    def __init__(self, server):
-        self._server = server
-
-    def ask(self, function):
-
-        q = self._server.add_task(function, 2)
-        return q
+from multiprocessing import Process, Queue, Manager
 
 
 class Server(Process):
 
-    def __init__(self, manager=None):
+    def __init__(self):
         """Create and initialize attributes.
 
         """
@@ -63,31 +11,21 @@ class Server(Process):
         # Init multprocessing.Process
         Process.__init__(self)
 
-        # Create multiprocessing.Manger
-        if not manager:
-            manager = Manager()
-        self._manager = manager
+        self._manger = Manager()
+        self._calls = Queue()
+        self._instrument = dict()
 
-        self._tasks = Queue()
-        self._connections = dict()
+    def connect(self, key, instrument):
+        self._instrument[key] = instrument
+        return Transmitter(self._manger, key, self._calls)
 
     def stop(self):
         """Stop the running server.
 
         """
 
-        self._tasks.put('MSG:STOP_SERVER')
-
-    def add_task(self, function, *args, **kwargs):
-        """Add a new task.
-
-        """
-
-        answer = self._manager.Queue()
-        task = Task(function, answer, *args, **kwargs)
-        self._tasks.put(task)
-
-        return Answer(answer)
+        # Send poison pill
+        self._calls.put(None)
 
     def run(self):
         """Code to be executed when start is called.
@@ -95,26 +33,57 @@ class Server(Process):
         """
 
         while True:
-            # Process all tasks in the queue
-            task = self._tasks.get()
-            try:
-                task()
-            except Exception, exception:
-                if isinstance(task, str):
-                    if task == 'MSG:STOP_SERVER':
-                        return
+            # Get next task in queue
+            call = self._calls.get()
 
-                #self._tasks._answer.put(TaskError(repr(exception)))
+            # Look for poison pill
+            if call is None:
+                return
+
+            try:
+                #Process the task
+                key, val, answer = call
+                instrument = self._instrument[key]
+                val = instrument.ask(val)
+                answer.put(val)
+            except Exception, exception:
+                print repr(exception)
+
+
+class Transmitter(object):
+
+    def __init__(self, manager, key, question):
+        self._manger = manager
+        self._key = key
+        self._question = question
+
+    def ask(self, string):
+        answer = self._manger.Queue()
+        self._question.put([self._key, string, answer])
+        return answer
+    
+
+class VirtualDevice(object):
+    
+    def ask(self, val):
+        return val
+
+    def write(self, val):
+        pass
 
 
 if __name__ == '__main__':
 
-    def pot(val):
-        return val**2
+    # Create and start server
+    m = Manager()
+    s = Server()
+    c1 = s.connect('v0', VirtualDevice())
+    c0 = s.connect('v1', VirtualDevice())
 
-    # Create nd start server
-    p = Server()
-    p.start()
-    q = p.add_task(pot, 2)
-    print q.get()
-    #p.stop()
+    s.start()
+    a = c0.ask('hallo')
+    b = c0.ask('du')
+    print b.get()
+    print b.get()
+    
+    s.stop()
