@@ -4,8 +4,7 @@ sys.path.append(path)
 
 from SimpleXMLRPCServer import SimpleXMLRPCServer
 from pymeasure.backends import PyVisaBackend
-from pymeasure.instruments.keithley2000_multimeter2 import Keithley2000Multimeter
-
+from pymeasure.instruments.foo_instrument2 import FooBackend
 def ping ():
     return True
 

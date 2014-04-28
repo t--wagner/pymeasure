@@ -52,8 +52,8 @@ class _Keithley2000MultimeterChannel(Channel):
         self._backend = backend
         self._measf = measurment_function
         self._buffering = False
-        #self._factor = 1
-        self._backend.set_attr(self._measf, 'factor', 1)
+        self._backend.set_ary(self._measf, 'buffering', False)
+        self._backend.set_ary(self._measf, 'factor', 1)
 
     #--- factor ---#
     @property
@@ -65,7 +65,7 @@ class _Keithley2000MultimeterChannel(Channel):
     def factor(self, factor):
         try:
             if factor:
-                self._backend.set_attr(self._measf, 'factor', float(factor))
+                self._backend.set_ary(self._measf, 'factor', float(factor))
             else:
                 raise ValueError
         except:
@@ -109,14 +109,14 @@ class _Keithley2000MultimeterChannel(Channel):
     #--- buffering ---#
     @property
     def buffering(self):
-        return self._buffering
+        return self._backend.get_ary(self._measf, 'buffering')
 
     @buffering.setter
     def buffering(self, boolean):
         if not (isinstance(boolean, int) and boolean in [0, 1]):
             raise ValueError('buffering must be bool, int with True = 1 or False = 0.')
 
-        self._buffering = bool(boolean)
+        self._backend.set_ary(self._measf, 'buffering', bool(boolean)
 
     #--- read ---#
     def read(self):
