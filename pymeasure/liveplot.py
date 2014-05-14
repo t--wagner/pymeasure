@@ -12,22 +12,32 @@
 
 """
 
-import sys
+# Pymeasure
 from pymeasure.indexdict import IndexDict
+
+# Abc
 import abc
+
+# System
+import sys
 if sys.version_info[0] < 3:
     import Tkinter as Tk
 else:
     import tkinter as Tk
 
 import warnings
+
+#Numpy
 import numpy as np
+
+# Matplotlib
 import matplotlib as mpl
 from matplotlib.backends.backend_tkagg import (FigureCanvasTkAgg,
                                                NavigationToolbar2TkAgg)
 from matplotlib.colors import Normalize, LogNorm
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
+# Threading stuff
 from Queue import Queue
 from threading import Event
 
@@ -57,9 +67,9 @@ class LiveGraphBase(IndexDict):
         # Set the number of colums
         self._columns = 1
 
-        #self._clear_request = threading.event()
-        self._snapshot_path_queue = Queue()
+        # Task queue
         self._tasks = Queue()
+        self._tight_layout = True
 
     def __setitem__(self, key, dataplot):
         """x.__setitem__(key, dataplot) <==> x['key'] = dataplot
@@ -86,16 +96,6 @@ class LiveGraphBase(IndexDict):
 
         return self._figure.add_subplot(*args, **kwargs)
 
-    def snapshot(self, filename):
-        """Make a snapshot and save it as filename.
-
-        """
-
-        self._snapshot_path_queue.put(filename)
-
-        while not self._snapshot_path_queue.empty():
-            pass
-
     def _add_task(self, function, *args, **kargs):
         """Add a task function(*args, **kwargs) to the task queue.
 
@@ -119,25 +119,45 @@ class LiveGraphBase(IndexDict):
         for subplot in self.__iter__():
             subplot._update()
             if subplot._request_update.is_set():
-                up_to_date = False
                 subplot._request_update.clear()
+                up_to_date = False
 
         # Process all tasks
         while not self._tasks.empty():
             func, args, kargs = self._tasks.get()
             func(*args, **kargs)
             self._tasks.task_done()
-
-        # Save a snapshot if requested
-        while not self._snapshot_path_queue.empty():
-            path = self._snapshot_path_queue.get()
-            self._snapshot_path_queue.task_done()
-            self._figure.savefig(path)
+            up_to_date = False
 
         # Redraw the canvas
         if not up_to_date:
-            self._figure.tight_layout()
+
+            # Use tight layout
+            if self._tight_layout:
+                self._figure.tight_layout()
+
+            # Redraw the graph
             self._figure.canvas.draw()
+
+    @property
+    def tight_layout(self):
+        return self._tight_layout
+
+    @tight_layout.setter
+    def tight_layout(self, boolean):
+
+        # Check for bool type
+        if not isinstance(boolean, bool):
+            raise TypeError('not bool')
+
+        self._tight_layout = boolean
+
+    def snapshot(self, filename):
+        """Make a snapshot and save it as filename.
+
+        """
+
+        self._add_task(self._figure.savefig, filename)
 
 
 class LiveGraphTk(LiveGraphBase):
@@ -327,6 +347,19 @@ class MarkerConf(object):
         self._graph._add_task(self._line.set_marker, marker)
 
     @property
+    def color(self):
+        return [self.facecolor, self.edgecolor]
+
+    @color.setter
+    def color(self, color):
+        if not mpl.colors.is_color_like(color):
+            raise ValueError('not a valid color')
+
+        self.facecolor = color
+        self.edgecolor = color
+
+
+    @property
     def facecolor(self):
         return self._line.get_markerfacecolor()
 
@@ -367,10 +400,9 @@ class MarkerConf(object):
 
 class XaxisConf(object):
 
-    def __init__(self, axes, request_update):
+    def __init__(self, graph, axes):
+        self._graph = graph
         self._axes = axes
-        self._request_update = request_update
-
         self._scale = 'linear'
 
     @property
@@ -384,8 +416,7 @@ class XaxisConf(object):
         if not isinstance(boolean, bool):
             raise TypeError('not bool')
 
-        self._axes.set_autoscalex_on(boolean)
-        self._request_update.set()
+        self._graph._add_task(self._axes.set_autoscalex_on, boolean)
 
     @property
     def lim_left(self):
@@ -400,8 +431,7 @@ class XaxisConf(object):
         if limit == self.lim_right:
             raise ValueError('left and right limits are identical.')
 
-        self._axes.set_xlim(left=limit)
-        self._request_update.set()
+        self._graph._add_task(self._axes.set_xlim, left=limit)
 
     @property
     def lim_right(self):
@@ -416,8 +446,7 @@ class XaxisConf(object):
         if limit == self.lim_left:
             raise ValueError('left and right limits are identical.')
 
-        self._axes.set_xlim(right=limit)
-        self._request_update.set()
+        self._graph._add_task(self._axes.set_xlim, right=limit)
 
     @property
     def inverted(self):
@@ -434,9 +463,8 @@ class XaxisConf(object):
                 return
 
         autoscale = self.autoscale
-        self._axes.invert_xaxis()
-        self.autoscale = autoscale
-        self._request_update.set()
+        self._graph._add_task(self._axes.invert_xaxis)
+        self._graph._add_task(self._axes.set_autoscalex_on, autoscale)
 
     @property
     def ticks(self):
@@ -444,8 +472,7 @@ class XaxisConf(object):
 
     @ticks.setter
     def ticks(self, ticks):
-        self._axes.set_xticks(ticks)
-        self._request_update.set()
+        self._graph._add_task(self._axes.set_xticks, ticks)
 
     @property
     def scale(self):
@@ -475,9 +502,9 @@ class XaxisConf(object):
 
 class YaxisConf(object):
 
-    def __init__(self, axes, request_update):
+    def __init__(self, graph, axes):
+        self._graph = graph
         self._axes = axes
-        self._request_update = request_update
         self._scale = 'linear'
 
     @property
@@ -491,15 +518,14 @@ class YaxisConf(object):
         if not isinstance(boolean, bool):
             raise TypeError('not bool')
 
-        self._axes.set_autoscaley_on(boolean)
-        self._request_update.set()
+        self._graph._add_task(self._axes.set_autoscaley_on, boolean)
 
     @property
-    def lim_botton(self):
+    def lim_bottom(self):
         return self._axes.get_ylim()[0]
 
-    @lim_botton.setter
-    def lim_botton(self, limit):
+    @lim_bottom.setter
+    def lim_bottom(self, limit):
 
         if not isinstance(limit, (int, float)):
             raise TypeError('not int or float')
@@ -507,8 +533,7 @@ class YaxisConf(object):
         if limit == self.lim_top:
             raise ValueError('bottom and top limits are identical.')
 
-        self._axes.set_ylim(bottom=limit)
-        self._request_update.set()
+        self._graph._add_task(self._axes.set_ylim, bottom=limit)
 
     @property
     def lim_top(self):
@@ -523,12 +548,11 @@ class YaxisConf(object):
         if limit == self.lim_bottom:
             raise ValueError('left and right limits are identical.')
 
-        self._axes.set_ylim(top=limit)
-        self._request_update.set()
+        self._graph._add_task(self._axes.set_ylim, top=limit)
 
     @property
     def inverted(self):
-        return self.lim_botton > self.lim_top
+        return self.lim_bottom > self.lim_top
 
     @inverted.setter
     def inverted(self, boolean):
@@ -541,10 +565,8 @@ class YaxisConf(object):
                 return
 
         autoscale = self.autoscale
-        self._axes.invert_yaxis()
-        self.autoscale = autoscale
-
-        self._request_update.set()
+        self._graph._add_task(self._axes.invert_yaxis)
+        self._graph._add_task(self._axes.set_autoscaley_on, autoscale)
 
     @property
     def ticks(self):
@@ -552,8 +574,7 @@ class YaxisConf(object):
 
     @ticks.setter
     def ticks(self, ticks):
-        self._axes.set_yticks(ticks)
-        self._request_update.set()
+        self._graph._add_task(self._axes.set_yticks, ticks)
 
     @property
     def scale(self):
@@ -578,8 +599,6 @@ class YaxisConf(object):
         else:
             self._scale = 'linear'
 
-        self._request_update.set()
-
 
 class Dataplot1d(DataplotBase):
 
@@ -601,11 +620,11 @@ class Dataplot1d(DataplotBase):
         self._xdata = list()
         self._ydata = list()
 
-        # Dataplot1d Options
+        # Dataplot1d Configs
         self._line_conf = LineConf(self._graph, self._line)
         self._marker_conf = MarkerConf(self._graph, self._line)
-        self._xaxis_conf = XaxisConf(self._axes, self._request_update)
-        self._yaxis_conf = YaxisConf(self._axes, self._request_update)
+        self._xaxis_conf = XaxisConf(self._graph, self._axes)
+        self._yaxis_conf = YaxisConf(self._graph, self._axes)
         self._label_conf = LabelConf1d(self._graph, self._axes)
 
     @property
@@ -770,9 +789,9 @@ class Dataplot1d(DataplotBase):
 
 class ImageConf(object):
 
-    def __init__(self, image, request_update):
+    def __init__(self, graph, image):
+        self._graph = graph
         self._image = image
-        self._request_update = request_update
         self._auto_extent = True
 
     @property
@@ -794,8 +813,7 @@ class ImageConf(object):
         if interpolation not in self._image._interpd:
             raise ValueError('Illegal interpolation string')
 
-        self._image.set_interpolation(interpolation)
-        self._request_update.set()
+        self._graph._add_task(self._image.set_interpolation, interpolation)
 
     @property
     def auto_extent(self):
@@ -804,6 +822,7 @@ class ImageConf(object):
     @auto_extent.setter
     def auto_extent(self, boolean):
 
+        # Check for bool type
         if not isinstance(boolean, bool):
             raise TypeError('not bool')
 
@@ -816,16 +835,15 @@ class ImageConf(object):
     @extent.setter
     def extent(self, extent):
         self._auto_extent = False
-        self._image.set_extent(extent)
-        self._request_update.set()
+        self._graph._add_task(self._image.set_extent, extent)
 
 
 class ColorbarConf(object):
 
-    def __init__(self, image, colorbar, request_update):
+    def __init__(self, graph, image, colorbar):
+        self._graph = graph
         self._image = image
         self._colorbar = colorbar
-        self._request_update = request_update
         self._scale = 'linear'
 
     @property
@@ -834,8 +852,7 @@ class ColorbarConf(object):
 
     @colormap.setter
     def colormap(self, colormap):
-        self._image.set_cmap(colormap)
-        self._request_update.set()
+        self._graph._add_task(self._image.set_cmap, colormap)
 
     @property
     def scale(self):
@@ -863,12 +880,10 @@ class ColorbarConf(object):
         else:
             self._scale = 'linear'
 
-        self._request_update.set()
-
 
 class LabelConf2d(LabelConf1d):
 
-    def __init__(self, graph, axes, colorbar, request_update):
+    def __init__(self, graph, axes, colorbar):
         LabelConf1d.__init__(self, graph, axes)
         self._colorbar = colorbar
 
@@ -878,8 +893,7 @@ class LabelConf2d(LabelConf1d):
 
     @zaxis.setter
     def zaxis(self, string):
-        self._colorbar.set_label(string)
-        self._request_update.set()
+        self._graph._add_task(self._colorbar.set_label, string)
 
 
 class Dataplot2d(DataplotBase):
@@ -909,11 +923,10 @@ class Dataplot2d(DataplotBase):
 
         #self._axes.set_axis_off()
 
-        self._image_conf = ImageConf(self._image, self._request_update)
-        self._label_conf = LabelConf2d(self._graph, self._axes, self._colorbar,
-                                       self._request_update)
-        self._colorbar_conf = ColorbarConf(self._image, self._colorbar,
-                                           self._request_update)
+        self._image_conf = ImageConf(self._graph, self._image)
+        self._label_conf = LabelConf2d(self._graph, self._axes, self._colorbar)
+        self._colorbar_conf = ColorbarConf(self._graph, self._image,
+                                           self._colorbar)
 
     @property
     def image(self):

@@ -21,14 +21,6 @@ sample['vxy'] = foo['cos']
 pointsy = 101
 pointsx = 101
 
-#Creat Graphs
-
-class Graph(LiveGraphTk):
-
-    def __init__(self):
-        LiveGraphTk.__init__(self)
-
-
 graph = LiveGraphTk()
 graph['vxx'] = Dataplot1d(graph, graph.add_subplot(221), pointsx, False)
 graph['vxy'] = Dataplot1d(graph, graph.add_subplot(222), pointsx, False)
@@ -36,8 +28,6 @@ graph['vxx2d'] = Dataplot2d(graph, graph.add_subplot(223), pointsy)
 graph['vxy2d'] = Dataplot2d(graph, graph.add_subplot(224), pointsy)
 graph.run()
 
-path = 'test/'
-filename = 'test'
 
 
 # Main Programm
@@ -71,30 +61,12 @@ def main():
             if stop.is_set():
                 return
 
-        graph['vxx2d'].image.extent = [sweep1.start, sweep1.stop,
-                                       step0[0], sweep0.start]
-        graph['vxy2d'].image.extent = [sweep1.start, sweep1.stop,
-                                       step0[0], sweep0.start]
-        #graph.snapshot(file_str + '.png')
+        #graph.snapshot('hallo' + '.png')
 
 
-def f():
-    b = True
-    while True:
-        time.sleep(0.1)
-        graph[2].colorbar.log = b
-        if b:
-            b = False
-        else:
-            b = True
 
 # Main Programm muss als thread gestartet werden)
 t1 = Thread(target=main)
-t2 = Thread(target=f)
 t1.start()
 
-
-
-# 1D properties
-# Axes bgcolor
-# Filling under the line
+g = graph['vxx2d']
