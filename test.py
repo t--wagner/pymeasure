@@ -18,17 +18,17 @@ sample['gate2'] = foo['out1']
 sample['vxx'] = foo['sin']
 sample['vxy'] = foo['cos']
 
-pointsy = 101
 pointsx = 101
+pointsy = 101
 
 graph = LiveGraphTk()
 graph['vxx'] = Dataplot1d(graph, graph.add_subplot(221), pointsx, False)
 graph['vxy'] = Dataplot1d(graph, graph.add_subplot(222), pointsx, False)
-graph['vxx2d'] = Dataplot2d(graph, graph.add_subplot(223), pointsy)
-graph['vxy2d'] = Dataplot2d(graph, graph.add_subplot(224), pointsy)
+graph['vxx2d'] = Dataplot2d(graph, graph.add_subplot(223), pointsx)
+graph['vxy2d'] = Dataplot2d(graph, graph.add_subplot(224), pointsx)
 graph.run()
 
-
+import numpy as np
 
 # Main Programm
 stop = Event()
@@ -38,29 +38,49 @@ sweep0 = LinearSweep(sample['gate1'], 0, 4 * pi, pointsy)
 sweep1 = LinearSweep(sample['gate2'], 0, 2 * pi, pointsx)
 
 
+
+
 def main():
+    data = False
+    trace = []
 
     for step0 in sweep0:
+        print step0
 
+        #time.sleep(10e-3)
+        del trace[:]
+        
         for step1 in sweep1:
-            dataline = []
+            
+            time.sleep(10e-3)            
+            
+            point = []
 
             sin_val = [(sample['vxx'].read()[0] + random.uniform(-0.1, 0.1))]
-            dataline += sin_val
+            point += sin_val
             graph['vxx'].add_data(step1, sin_val)
             graph['vxx2d'].add_data(sin_val)
 
             cos_val = [(sample['vxx'].read()[0] + random.uniform(-0.1, 0.1))]
-            dataline += cos_val
+            point += cos_val
             graph['vxy'].add_data(step1, cos_val)
             graph['vxy2d'].add_data(cos_val)
 
+            trace.append(point)
+
+        if isinstance(data, bool):
+            data = np.array(trace)
+        else:
+            data = np.vstack((data, trace))
+            
+            
+
             #datafile.write(str(dataline)[1:-1] + '\n')
-            time.sleep(100e-3)
 
-            if stop.is_set():
-                return
 
+
+        if stop.is_set():
+            return
         #graph.snapshot('hallo' + '.png')
 
 
@@ -68,5 +88,3 @@ def main():
 # Main Programm muss als thread gestartet werden)
 t1 = Thread(target=main)
 t1.start()
-
-g = graph['vxx2d']

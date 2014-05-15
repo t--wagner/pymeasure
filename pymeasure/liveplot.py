@@ -754,14 +754,15 @@ class Dataplot1d(DataplotBase):
 
             # Prepare displayed xdata
             if self.xaxis.log:
-                xdata = np.abs(self._xdata)
+                xdata = np.abs(xdata)
 
             # Prepare displayed ydata
             if self.yaxis.log:
-                ydata = np.abs(self._ydata)
+                ydata = np.abs(ydata)
 
             # Update displayed data.
             self._line.set_data(xdata, ydata)
+            self._line.set_data(self._xdata, self._ydata)
 
             # Recompute the data limits.
             self._axes.relim()
@@ -904,7 +905,9 @@ class Dataplot2d(DataplotBase):
         self._length = length
 
         self._exchange_queue = Queue()
-        self._data = [[]]
+        self._trace = []
+        self._data = np.array([[]])
+
 
         # Draw an empty image
         self._image = self._axes.imshow([[np.nan]])
@@ -970,23 +973,29 @@ class Dataplot2d(DataplotBase):
             # Try to add data to plotting list
             try:
                 for datapoint in package.pop():
-                    self._data[-1].append(datapoint)
+                    self._trace.append(datapoint)
 
             # Look for a clearing request if the pop() attribute failed
             except:
                 message = package
                 if message == 'clear':
-                    self._data = [[]]
+                    del self._trace[:]
                     self._request_update.set()
-                elif message == 'next':
-                    self._data.append([])
+                # Fix it later
+                #elif message == 'next':
+                #    self._data.append([])
 
             # Handle the maximum number of displayed points.
-            while len(self._data[-1]) >= self._length:
+            while len(self._trace) >= self._length:
 
-                split = self._data[-1][self._length:]
-                del self._data[-1][self._length:]
-                self._data.append(split)
+                trace = self._trace[:self._length]
+                del self._trace[:self._length]
+
+                if self._data.size:
+                    self._data = np.vstack((self._data, trace))
+                else:
+                    self._data = np.array(trace)
+                
 
                 #Set the up_to_date flag to True for redrawing
                 self._request_update.set()
@@ -995,7 +1004,7 @@ class Dataplot2d(DataplotBase):
         if self._request_update.is_set():
 
             # Prepare displayed data
-            data = np.array(self._data[:-1])
+            data = self._data
 
             # Take absolute value if log scaled
             if self.colorbar.log:
@@ -1010,7 +1019,7 @@ class Dataplot2d(DataplotBase):
             # Set image data
             try:
                 self._image.set_data(data)
-
+                
                 # Extent image automaticaly
                 if self.image.auto_extent:
                     extent = [0, self._length, len(data), 0]
