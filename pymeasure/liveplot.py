@@ -990,7 +990,7 @@ class Dataplot2d(DataplotBase):
 
                 trace = self._trace[:self._length]
                 del self._trace[:self._length]
-
+                
                 if self._data.size:
                     self._data = np.vstack((self._data, trace))
                 else:

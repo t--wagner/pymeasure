@@ -18,7 +18,7 @@ sample['gate2'] = foo['out1']
 sample['vxx'] = foo['sin']
 sample['vxy'] = foo['cos']
 
-pointsx = 101
+pointsx = 1001
 pointsy = 101
 
 graph = LiveGraphTk()
@@ -52,7 +52,7 @@ def main():
         
         for step1 in sweep1:
             
-            time.sleep(10e-3)            
+            time.sleep(1e-3)            
             
             point = []
 

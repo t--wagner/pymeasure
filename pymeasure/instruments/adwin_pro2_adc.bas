@@ -13,38 +13,46 @@
 #Include ADwinPro_All.INC
 
 ' Define the ADC module number
-#Define adc_module 1
-#Define trigger Par_2
-
-
-' Define sampling Rate
-Dim sampling_rate As Long
-
-#Define integration_time FPar_1 
-#Define integration_points Par_1 
+#Define ADC_MODULE 1
+#define ADC_OFFSET 8388608
+#Define INTEGRATION_TIME FPar_1 
+#Define INTEGRATION_POINTS Par_1 
 
 Dim running_index As Long
+Dim factor As Float
  
 Dim adc_values[8] As Long
-Dim sum[8] As Long
-Dim i As Long
-Dim voltages[8] As Long
-Dim val As Long
+Dim sampling_rate As Long
+
+Dim average1 As Float
+Dim average2 As Float
+Dim average3 As Float
+Dim average4 As Float
+Dim average5 As Float
+Dim average6 As Float
+Dim average7 As Float
+Dim average8 As Float
 
 
-#Define dword_devider 13107.15
-#Define bit_shift 6
 
 Init:
   ' Set sampling rate  
-  integration_time = 0.02
+  sampling_rate = 400e3
+  INTEGRATION_TIME = 0.02
   
-  
-  ProcessDelay = 300e6 / 500e3
-  integration_points = 500e3 * integration_time
-  
+  ProcessDelay = 300e6 / sampling_rate
+  INTEGRATION_POINTS = sampling_rate * INTEGRATION_TIME
   
   running_index = 1
+    
+  average1  = 0
+  average2  = 0
+  average3  = 0
+  average4  = 0
+  average5  = 0
+  average6  = 0
+  average7  = 0
+  average8  = 0
   
   ' Activate timer-modus for continous sampling
   P2_ADCF_Mode(adc_module, 1)
@@ -53,45 +61,47 @@ Init:
   P2_Start_ConvF(adc_module, 011111111b)
   
 Event:
-  P2_Read_ADCF8_24B(adc_module, adc_values, 1)  
+  P2_Read_ADCF8_24B(ADC_MODULE, adc_values, 1)  
   
-
-  Par_11 = Par_11  + Shift_Right(adc_values[1], 6)
-  Par_12 = Par_12  + Shift_Right(adc_values[2], 6)
-  Par_13 = Par_13  + Shift_Right(adc_values[3], 6)
-  Par_14 = Par_14  + Shift_Right(adc_values[4], 6)
-  Par_15 = Par_15  + Shift_Right(adc_values[5], 6)
-  Par_16 = Par_16  + Shift_Right(adc_values[6], 6)
-  Par_17 = Par_17  + Shift_Right(adc_values[7], 6)
-  Par_18 = Par_18  + Shift_Right(adc_values[8], 6)
-
-  If (running_index >= integration_points) Then
+  ' Running average
+  factor = 1 - 1 / running_index
+  average1 = average1 * factor + adc_values[1] / running_index
+  average2 = average2 * factor + adc_values[2] / running_index
+  average3 = average3 * factor + adc_values[3] / running_index
+  average4 = average4 * factor + adc_values[4] / running_index
+  average5 = average5 * factor + adc_values[5] / running_index
+  average6 = average6 * factor + adc_values[6] / running_index
+  average7 = average7 * factor + adc_values[7] / running_index
+  average8 = average8 * factor + adc_values[8] / running_index
+      
+  
+  If (running_index >= INTEGRATION_POINTS) Then
     
     ' Put out the average channel value
-    FPar_11 = Par_11 / integration_points / dword_devider - 10
-    FPar_12 = Par_12 / integration_points / dword_devider - 10
-    FPar_13 = Par_13 / integration_points / dword_devider - 10
-    FPar_14 = Par_14 / integration_points / dword_devider - 10
-    FPar_15 = Par_15 / integration_points / dword_devider - 10
-    FPar_16 = Par_16 / integration_points / dword_devider - 10
-    FPar_17 = Par_17 / integration_points / dword_devider - 10
-    FPar_18 = Par_18 / integration_points / dword_devider - 10
-    
+    FPar_11 = (average1 / ADC_OFFSET - 1) * 10
+    FPar_12 = (average2 / ADC_OFFSET - 1) * 10
+    FPar_13 = (average3 / ADC_OFFSET - 1) * 10
+    FPar_14 = (average4 / ADC_OFFSET - 1) * 10
+    FPar_15 = (average5 / ADC_OFFSET - 1) * 10
+    FPar_16 = (average6 / ADC_OFFSET - 1) * 10
+    FPar_17 = (average7 / ADC_OFFSET - 1) * 10
+    FPar_18 = (average8 / ADC_OFFSET - 1) * 10
+  
     ' Set back running_index
     running_index = 0
         
-    Par_11 = 0
-    Par_12 = 0
-    Par_13 = 0
-    Par_14 = 0
-    Par_15 = 0
-    Par_16 = 0
-    Par_17 = 0
-    Par_18 = 0
-    
+    average1  = 0
+    average2  = 0
+    average3  = 0
+    average4  = 0
+    average5  = 0
+    average6  = 0
+    average7  = 0
+    average8  = 0
+      
   EndIf
   
   ' Increase the running index
   Inc(running_index)
   
-  integration_points = 300e6  / ProcessDelay *  integration_time
+  'integration_points = 300e6  / ProcessDelay *  integration_time

@@ -90,23 +90,25 @@ class _Ad5791DacChannel(Channel):
 
     #--- read ---#
     def read(self):
-        level = self._instrument.ask_for_values("CHAN " + self._channel + ";"
-                                                "VOLT?")
-        return [level[0] / float(self._factor)]
+        level_d = self._instrument.ask_for_values("CHAN " + self._channel + ";"
+                                                  "DWORD?")
+        level = 1/52428.7 * level_d[0]
+        return [level / float(self._factor)]
 
-    #--- write ---#
+    #--- write ---#            
     def write(self, level):
         if self._limit[0] <= level or self._limit[0] is None:
             if level <= self._limit[1] or self._limit[1] is None:
+                
+                level_d = int(524287 * level  * self._factor / 10)
                 self._instrument.write("CHAN " + self._channel + ";" +
-                                       "VOLT " + str(level * self._factor))
-        time.sleep(0.010)
-
+                                       "DWORD " + str(level_d))
+                                       
         if self._readback:
             return self.read()
         else:
             return [level]
-
+            
     #--- ramp ---#
     def ramp(self, start, stop, points, frequency, delay, verbose=False):
 
