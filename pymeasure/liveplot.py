@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*
+
 """
     pymeasure.liveplotting
     ----------------------
@@ -990,12 +992,12 @@ class Dataplot2d(DataplotBase):
 
                 trace = self._trace[:self._length]
                 del self._trace[:self._length]
-                
+
                 if self._data.size:
                     self._data = np.vstack((self._data, trace))
                 else:
                     self._data = np.array(trace)
-                
+
 
                 #Set the up_to_date flag to True for redrawing
                 self._request_update.set()
@@ -1019,7 +1021,7 @@ class Dataplot2d(DataplotBase):
             # Set image data
             try:
                 self._image.set_data(data)
-                
+
                 # Extent image automaticaly
                 if self.image.auto_extent:
                     extent = [0, self._length, len(data), 0]

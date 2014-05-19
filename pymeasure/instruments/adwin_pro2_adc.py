@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*
+
 from pymeasure.case import Channel, Instrument, RampDecorator
 import ADwin
 

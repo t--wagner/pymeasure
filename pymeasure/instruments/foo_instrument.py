@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*
+
 from pymeasure.case import Channel, RampDecorator, Instrument
 import random
 import numpy as np

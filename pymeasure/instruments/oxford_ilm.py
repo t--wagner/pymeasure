@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*
+
 from pyvisa_instrument import PyVisaInstrument
 from pymeasure.case import Channel
 import time

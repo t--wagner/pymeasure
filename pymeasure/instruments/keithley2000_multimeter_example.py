@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*
+
 import time
 
 # Import the Keithley2000 class

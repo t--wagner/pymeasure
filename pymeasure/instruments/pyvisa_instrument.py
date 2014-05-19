@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*
+
 from pymeasure.case import Instrument
 import visa
 import pyvisa.vpp43 as vpp43
