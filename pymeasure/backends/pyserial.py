@@ -31,7 +31,7 @@ class PySerialBackend(object):
         return self.read_values()
 
 
-class PYSerialSubsystem(object):
+class PySerialSubsystem(object):
 
     def __init__(self):
         pass
