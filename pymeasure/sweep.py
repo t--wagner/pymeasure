@@ -5,7 +5,7 @@ import time
 
 class LinearSweep(object):
 
-    def __init__(self, channels, start, stop, points):
+    def __init__(self, channels, start, stop, points, waiting_time=0):
         if isinstance(channels, (list, tuple)):
             self._channels = channels
         else:
@@ -14,12 +14,17 @@ class LinearSweep(object):
         self._start = start
         self._stop = stop
         self._points = points
+        self._waiting_time = waiting_time
 
     def __iter__(self):
         for step in self.steps:
             step_list = []
             for channel in self._channels:
                 step_list += channel.write(step)
+
+            if self._waiting_time:
+                time.sleep(self._waiting_time)
+
             yield step_list
 
     @property
