@@ -360,7 +360,6 @@ class MarkerConf(object):
         self.facecolor = color
         self.edgecolor = color
 
-
     @property
     def facecolor(self):
         return self._line.get_markerfacecolor()
