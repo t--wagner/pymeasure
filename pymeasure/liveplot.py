@@ -909,7 +909,6 @@ class Dataplot2d(DataplotBase):
         self._trace = []
         self._data = np.array([[]])
 
-
         # Draw an empty image
         self._image = self._axes.imshow([[np.nan]])
         self._axes.set_aspect('auto')
@@ -996,7 +995,6 @@ class Dataplot2d(DataplotBase):
                     self._data = np.vstack((self._data, trace))
                 else:
                     self._data = np.array(trace)
-
 
                 #Set the up_to_date flag to True for redrawing
                 self._request_update.set()
