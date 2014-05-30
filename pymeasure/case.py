@@ -20,7 +20,7 @@
 
 """
 
-from indexdict import IndexDict
+from pymeasure.indexdict import IndexDict
 import abc
 import time
 from functools import wraps

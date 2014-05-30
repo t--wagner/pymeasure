@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*
 
-from pyvisa_instrument import PyVisaInstrument
+from pymeasure.instruments.pyvisa_instrument import PyVisaInstrument
 from pymeasure.case import Channel, RampDecorator
 
 

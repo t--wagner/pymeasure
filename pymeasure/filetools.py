@@ -1,12 +1,18 @@
 # -*- coding: utf-8 -*-
 
+import os
+from os import mkdir as create_directory
+from os import makedirs as create_directory_tree
 
-def new_folder(self, path='./'):
-    pass
 
+def create_file(self, filename, path=None, override=False):
+    if path:
+        filename = path + filename
 
-def new_create(self, filename, path='./', filetype='', ):
-    pass
+    if not override and os.path.exists(filename):
+        raise OSError('file exists.')
+
+    return open(filename)
 
 
 def index_str(positions, index):
@@ -20,7 +26,7 @@ def index_str(positions, index):
     return zero_str + val_str
 
 
-class FileIndex(object):
+class FileIndexer(object):
 
     def __init__(self, filename, path='./', filetype='', positions=3, start=0,
                  increment=1, override=False):
