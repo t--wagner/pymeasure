@@ -66,6 +66,9 @@ class LinearSweep(object):
     def stepsize(self, stepsize):
         self._points = int(float((self._stop) - self._start) / stepsize) + 1
 
+    def __str__(self):
+        pass
+
 
 class TimeSweep(object):
 

@@ -98,6 +98,16 @@ class LiveGraphBase(IndexDict):
 
         return self._figure.add_subplot(*args, **kwargs)
 
+    def subplot_grid(self, ysubs, xsubs):
+        """ Create a grid of subplots and return all axes in a list.
+
+        """
+
+        axes = []
+        for nr in range(1, ysubs * xsubs + 1):
+            axes.append(self.add_subplot(ysubs, xsubs, nr))
+        return axes
+
     def _add_task(self, function, *args, **kargs):
         """Add a task function(*args, **kwargs) to the task queue.
 
@@ -213,6 +223,8 @@ class DataplotBase(object):
         """
 
         self._graph = graph
+        if isinstance(axes, int):
+            axes = self._graph.add_subplot(axes)
         self._axes = axes
         self._exchange_queue = Queue()
         self._request_update = Event()
@@ -773,14 +785,14 @@ class Dataplot1d(DataplotBase):
             try:
                 self._axes.set_xscale(xscale)
             except ValueError:
-                    pass
+                pass
 
             # Set the yaxis scale
             yscale = self.yaxis.scale
             try:
                 self._axes.set_yscale(yscale)
             except ValueError:
-                    pass
+                pass
 
             # Resacale the view limits using the previous computed data limit.
             try:
@@ -1013,7 +1025,7 @@ class Dataplot2d(DataplotBase):
                 self._colorbar.set_norm(Normalize())
                 self._image.set_norm(Normalize())
             elif self.colorbar.scale == 'log':
-                    self._colorbar.set_norm(LogNorm())
+                self._colorbar.set_norm(LogNorm())
 
             # Set image data
             try:
