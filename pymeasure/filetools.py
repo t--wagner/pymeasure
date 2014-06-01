@@ -1,88 +1,102 @@
 # -*- coding: utf-8 -*-
 
 import os
-from os import mkdir as create_directory
-from os import makedirs as create_directory_tree
+from os import makedirs as create_directory
 
 
-def create_file(self, filename, path=None, override=False):
-    if path:
-        filename = path + filename
+def create_file(filename, override=False):
+    """Create all directories and open new file.
 
-    if not override and os.path.exists(filename):
-        raise OSError('file exists.')
+    """
 
-    return open(filename)
+    # Create directory if it does not exit
+    directory = os.path.dirname(filename)
+    if directory:
+        if not os.path.exists(directory):
+            create_directory(directory)
+
+    #  Check for existing file if overide is False
+    if not override:
+        if os.path.exists(filename):
+            raise OSError('file exists.')
+
+    # Return file object
+    return open(filename, 'w')
 
 
 def index_str(positions, index):
+    """Return an index string with a number of positions.
+
+    """
+
+    # Make index value to string
     val_str = str(index)
 
+    # Check if index is out of position range
     if len(val_str) > positions:
         raise ValueError('index out of position range')
 
+    # Get the pre zeros
     zero_str = '0' * (positions - len(val_str))
 
+    # Return index string
     return zero_str + val_str
 
 
-class FileIndexer(object):
+class FilenameIndexer(object):
 
-    def __init__(self, filename, path='./', filetype='', positions=3, start=0,
-                 increment=1, override=False):
+    def __init__(self, filename, positions=3, start=0, increment=1):
 
-        self._path = path
-        self._filename = filename
-        self._filetype = filetype
-        self._suffix = ''
-
-        self._value = start
+        # Extract path and filename from it
+        self._path = os.path.dirname(filename)
+        self._basename = os.path.basename(filename)
         self._positions = positions
+        self._start = start
+        self._value = start
+        self._increment = increment
 
-        self._override = override
-        self._current_fobj = None
+    def __iter__(self):
+        return self
 
-    def create(self):
+    def next(self):
 
-        index = index_str(self._positions, self._value)
-        file_str = self._path + index + '_' + self._filename + self._filetype
-        fileobj = open(file_str, 'w')
+        # Create index string
+        try:
+            index = index_str(self._positions, self._value)
+        except ValueError:
+            raise StopIteration
 
-        # Incremnt teh index value
+        # Put filename together
+        filename = index + '_' + self._basename
+        if self._path:
+            filename = self._path + '/' + filename
+
+        # Increment the index value
         self._value += 1
 
-        return fileobj
+        # Return fileobject
+        return filename
 
     @property
     def path(self):
         return self._path
 
     @property
-    def fielname(self):
-        return self._filename
-
-    @property
-    def filetype(self):
-        return self._filetype
-
-    @property
-    def suffix(self):
-        return self._suffix
-
-    @suffix.setter
-    def suffix(self, string):
-        self._suffix = string
-
-    @property
-    def value(self):
-        return self._value
+    def basename(self):
+        return self._basename
 
     @property
     def positions(self):
         return self._positions
 
     @property
-    def ovverride(self):
-        return self._override
+    def start(self):
+        return self._start
 
+    @property
+    def value(self):
+        return self._value
 
+    @property
+    def increment(self):
+        return self._increment
