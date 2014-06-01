@@ -8,37 +8,37 @@ class MeasurmentError(Exception):
     pass
 
 
-class MeasurenmtBase():
+class MeasurmentBase():
     __metaclass__ = abc.ABCMeta
 
-    def __init__(self, pickle=True):
+    def __init__(self):
 
         self._thread = None
 
+        self._pause = Event()
+        self._pause.set()
+        self._stop = Event()
+
+        self._step = []
+
         self._data = []
-        self._pickle = pickle
-
-        self._pause_event = Event()
-        self._pause_event.set()
-        self._stop_event = Event()
-
-        self._current_step = []
+        self._comment = ''
 
     @property
-    def pickle(self):
-        return self._pickle
-
-    @pickle.setter
-    def pickle(self, boolean):
-        self._pickle = boolean
-
-    @property
-    def current_step(self):
-        return self._current_step
+    def step(self):
+        return self._step
 
     @property
     def data(self):
         return self._data
+
+    @property
+    def comment(self):
+        return self._comment
+
+    @comment.setter
+    def comment(self, string):
+        self._comment = string
 
     @property
     def is_running(self):
@@ -49,13 +49,13 @@ class MeasurenmtBase():
 
     def pause(self):
 
-        if self._pause_event.is_set():
-            self._pause_event.clear()
+        if self._pause.is_set():
+            self._pause.clear()
         else:
-            self._pause_event.set()
+            self._pause.set()
 
     def stop(self):
-        self._stop_event.set()
+        self._stop.set()
 
     def start(self):
 
@@ -67,21 +67,17 @@ class MeasurenmtBase():
         self._thread.start()
 
     @abc.abstractmethod
-    def _acquire(self):
-        pass
-
-    @abc.abstractmethod
-    def _run(self):
+    def run(self):
         pass
 
 
-class Measurment1d(MeasurenmtBase):
+class Measurment1d(MeasurmentBase):
 
-    def __init__(self, sweep=None):
+    def __init__(self):
 
-        MeasurenmtBase.__init__(self)
+        MeasurmentBase.__init__(self)
 
-        self._sweep = sweep
+        self._sweep = None
 
     @property
     def sweep(self):
@@ -91,33 +87,31 @@ class Measurment1d(MeasurenmtBase):
     def sweep(self, sweep):
         self._sweep = sweep
 
-    def _run(self):
+    def _loop(self):
+        for step in self.sweep:
+            self._step[0] = step
 
-        for step in self._sweep:
+            yield step
 
-            self._current_step = step
+            self._pause.wait()
 
-            self._acquire()
-
-            self._pause_event.wait()
-
-            if self._stop_event.is_set():
-                self._stop_event.clear()
-                break
+            if self._stop.is_set():
+                self._stop.clear()
+                raise StopIteration
 
 
-class Measurment2d(MeasurenmtBase):
+class Measurment2d(MeasurmentBase):
 
-    def __init__(self, sweep0=None, sweep1=None):
+    def __init__(self):
 
-        MeasurenmtBase.__init__(self)
+        MeasurmentBase.__init__(self)
 
-        self._sweep0 = sweep0
-        self._sweep1 = sweep1
+        self._sweep0 = None
+        self._sweep1 = None
 
-        self._hold_event = Event()
+        self._hold = Event()
 
-        self._current_step = [[], []]
+        self._step = [[], []]
 
     @property
     def sweep0(self):
@@ -127,6 +121,23 @@ class Measurment2d(MeasurenmtBase):
     def sweep0(self, sweep):
         self._sweep0 = sweep
 
+    def hold(self):
+        self._hold.set()
+
+    def _loop0(self):
+        for step0 in self._sweep0:
+            self._step[0] = step0
+
+            yield step0
+
+            if self._hold.is_set():
+                self._hold.clear()
+                raise StopIteration
+
+            if self._stop.is_set():
+                self._stop.clear()
+                raise StopIteration
+
     @property
     def sweep1(self):
         return self._sweep1
@@ -135,30 +146,13 @@ class Measurment2d(MeasurenmtBase):
     def sweep1(self, sweep):
         self._sweep1 = sweep
 
-    def hold(self):
-        self._hold_event.set()
+    def _loop1(self):
+        for step1 in self._sweep1:
+            self._step[1] = step1
 
-    def _run(self):
+            yield step1
 
-        for step0 in self._sweep0:
+            self._pause.wait()
 
-            self._current_step[0] = step0
-
-            for step1 in self._sweep1:
-
-                self._current_step[1] = step1
-
-                self._acquire()
-
-                self._pause_event.wait()
-
-                if self._stop_event.is_set():
-                    break
-
-            if self._stop_event.is_set():
-                self._stop_event.clear()
-                break
-
-            if self._hold_event.is_set():
-                self._hold_event.clear()
-                break
+            if self._stop.is_set():
+                raise StopIteration
