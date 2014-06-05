@@ -43,7 +43,11 @@ def index_str(positions, index):
     return zero_str + val_str
 
 
-class FilenameIndexer(object):
+class DirectoryIndexer(object):
+    pass
+
+
+class BasenameIndexer(object):
 
     def __init__(self, filename, positions=3, start=0, increment=1):
 
