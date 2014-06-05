@@ -1,10 +1,12 @@
 # -*- coding: utf-8 -*
 
-import pymeasure.instruments
 import pymeasure.backends
+import pymeasure.instruments
 from pymeasure.case import Instrument, Rack
-from pymeasure.liveplot import LiveGraphTk, Dataplot1d, Dataplot2d
-from pymeasure.measurment import Measurment1d, Measurment2d
-from pymeasure.sweep import LinearSweep, TimeSweep
 from pymeasure.filetools import (create_directory, create_file, index_str,
-                                 FilenameIndexer)
+                                 BasenameIndexer)
+from pymeasure.liveplot import LiveGraphTk, Dataplot1d, Dataplot2d
+from pymeasure.loop import Loop, NestedLoop
+from pymeasure.measurment import Measurment
+from pymeasure.sweep import LinearSweep, TimeSweep
+

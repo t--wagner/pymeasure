@@ -14,21 +14,26 @@ sample['vxy'] = foo['cos']
 sample['random'] = foo['random']
 
 
-class MyMeasurment(pym.Measurment2d):
+class MyMeasurment(pym.Measurment):
 
-    def __init__(self):
+    def __init__(self, sweep0=None, sweep1=None):
         """Initialize the measurment.
 
         """
-        pym.Measurment2d.__init__(self)
+
+        # Call Measurment constructor
+        pym.Measurment.__init__(self)
+
+        # Make loop out of sweep
+        self.sweep0 = sweep0
+        self.sweep1 = sweep1
 
         # Create Graph
         self.graph = pym.LiveGraphTk()
-        ax1, ax2, ax3, ax4 = self.graph.subplot_grid(2, 2)
-        self.graph['vxx1d'] = pym.Dataplot1d(self.graph, ax1, 1001)
-        self.graph['vxy1d'] = pym.Dataplot1d(self.graph, ax2, 1001)
-        self.graph['vxx2d'] = pym.Dataplot2d(self.graph, ax3, 1001)
-        self.graph['vxy2d'] = pym.Dataplot2d(self.graph, ax4, 1001)
+        self.graph['vxx1d'] = pym.Dataplot1d(self.graph, 221, 1001)
+        self.graph['vxy1d'] = pym.Dataplot1d(self.graph, 222, 1001)
+        self.graph['vxx2d'] = pym.Dataplot2d(self.graph, 223, 1001)
+        self.graph['vxy2d'] = pym.Dataplot2d(self.graph, 224, 1001)
         self.graph.run()
 
     def _run(self):
@@ -36,13 +41,18 @@ class MyMeasurment(pym.Measurment2d):
 
         """
 
-        findexer = pym.FilenameIndexer('test/test/test.dat')
+        # Create nested loop and activate start and stop method
+        nloop = pym.NestedLoop(self.sweep0, self.sweep1)
+        self.pause = nloop.pause
+        self.stop = nloop.stop
 
-        for filename, step0 in self._loop0():
+        findexer = pym.BasenameIndexer('test/test/test.dat')
 
-            fobj = pym.create_file(findexer.next())
+        for step0 in nloop[0]:
 
-            for step1 in self._loop1():
+            fobj = pym.create_file(findexer.next(), override=True)
+
+            for step1 in nloop[1]:
 
                 vxx = sample['vxx'].read()
                 self.graph['vxx1d'].add_data(step1, vxx)
@@ -56,9 +66,9 @@ class MyMeasurment(pym.Measurment2d):
 
             fobj.close()
 
-
 if __name__ == '__main__':
+
     meas2d = MyMeasurment()
-    meas2d.sweep0 = pym.LinearSweep(sample['gate1'], 0, 6, 10001)
+    meas2d.sweep0 = pym.LinearSweep(sample['gate1'], 0, 6, 101)
     meas2d.sweep1 = pym.LinearSweep(sample['gate2'], 0, 6, 1001, 0.02)
-    meas2d.start()
+    #meas2d.start()
