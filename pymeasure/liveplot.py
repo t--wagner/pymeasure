@@ -991,7 +991,7 @@ class Dataplot2d(DataplotBase):
             except:
                 message = package
                 if message == 'clear':
-                    del self._trace[:]
+                    self._data = np.array([[]])
                     self._request_update.set()
                 # Fix it later
                 #elif message == 'next':
