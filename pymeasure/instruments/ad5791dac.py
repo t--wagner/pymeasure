@@ -2,8 +2,42 @@
 
 from pymeasure.instruments.pyvisa_instrument import PyVisaInstrument
 from pymeasure.case import Channel, RampDecorator
+from pymeasure.sweep import LinearSweep
 import time
+from math import ceil
 
+class LinearSweepAd5791Dac(LinearSweep):
+
+    def __init__(self, channels, start, stop, points):
+
+
+        if points < 2:
+            raise ValueError('points are smaller than 2.')
+
+        # Calculate the dwords
+        dstart = int(524287 * start / 10.)
+        dstop =  int(524287 * stop / 10.)
+
+        if dstart == dstop:
+            raise ValueError('start and stop are the equal.')
+
+        # Calculate the stepsize
+        difference = dstop - dstart
+
+        if difference > 0:
+            dstepsize = int(difference / float(points - 1)) + 1
+        else:
+            dstepsize = int(difference / float(points - 1)) - 1
+
+        points = int(ceil(abs(difference / float(dstepsize))) + 1)
+        dstop = dstart + points * dstepsize
+
+
+        stop = dstop * 10 / 524287.
+        start = dstart * 10 / 524287.
+
+        LinearSweep.__init__(self, channels, start, stop, points)
+    
 
 @RampDecorator
 class _Ad5791DacChannel(Channel):
