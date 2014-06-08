@@ -3,7 +3,6 @@
 import os
 from os import makedirs as create_directory
 
-
 def create_file(filename, override=False):
     """Create all directories and open new file.
 
@@ -22,6 +21,26 @@ def create_file(filename, override=False):
 
     # Return file object
     return open(filename, 'w')
+
+
+def cut_filetype(filename):
+    """Split type extension from filename.
+
+    Extension is everything from the last dot to the end, ignoring leading
+    dots.
+    """
+
+    return os.path.splitext(filename)[0]
+
+
+def get_filetype(filename):
+    """Get type extension from filename.
+
+    Extension is everything from the last dot to the end, ignoring leading
+    dots. Extension may be empty.
+    """
+
+    return os.path.splitext(filename)[1]
 
 
 def index_str(positions, index):
@@ -43,11 +62,7 @@ def index_str(positions, index):
     return zero_str + val_str
 
 
-class DirectoryIndexer(object):
-    pass
-
-
-class BasenameIndexer(object):
+class _IndexerBase(object):
 
     def __init__(self, filename, positions=3, start=0, increment=1):
 
@@ -63,23 +78,7 @@ class BasenameIndexer(object):
         return self
 
     def next(self):
-
-        # Create index string
-        try:
-            index = index_str(self._positions, self._value)
-        except ValueError:
-            raise StopIteration
-
-        # Put filename together
-        filename = index + '_' + self._basename
-        if self._path:
-            filename = self._path + '/' + filename
-
-        # Increment the index value
-        self._value += 1
-
-        # Return fileobject
-        return filename
+        pass
 
     @property
     def path(self):
@@ -104,3 +103,53 @@ class BasenameIndexer(object):
     @property
     def increment(self):
         return self._increment
+
+
+class DirectoryIndexer(_IndexerBase):     
+        
+    def next(self):
+
+        # Create index string
+        try:
+            index = index_str(self._positions, self._value)
+        except ValueError:
+            raise StopIteration
+
+        # Split path
+        split = self._path.split('/')
+        
+        # Add index to last folder        
+        split[-1] = index +  '_' + split[-1] 
+        
+        # Put everything back together
+        path = ''
+        for part in split:
+            path = path + part + '/'
+                
+        
+        # Increment the index value
+        self._value += 1
+
+        # Return filename
+        return path + self._basename
+
+class BasenameIndexer(_IndexerBase):
+
+    def next(self):
+
+        # Create index string
+        try:
+            index = index_str(self._positions, self._value)
+        except ValueError:
+            raise StopIteration
+
+        # Put filename together
+        filename = index + '_' + self._basename
+        if self._path:
+            filename = self._path + '/' + filename
+
+        # Increment the index value
+        self._value += 1
+
+        # Return filename
+        return filename

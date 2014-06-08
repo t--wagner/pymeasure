@@ -16,7 +16,7 @@ sample['random'] = foo['random']
 
 class MyMeasurment(pym.Measurment):
 
-    def __init__(self, sweep0=None, sweep1=None):
+    def __init__(self, sweep0=None, sweep1=None, sweep2=None):
         """Initialize the measurment.
 
         """
@@ -27,13 +27,17 @@ class MyMeasurment(pym.Measurment):
         # Make loop out of sweep
         self.sweep0 = sweep0
         self.sweep1 = sweep1
+        self.sweep2 = sweep2
 
         # Create Graph
         self.graph = pym.LiveGraphTk()
-        self.graph['vxx1d'] = pym.Dataplot1d(self.graph, 221, 1001)
-        self.graph['vxy1d'] = pym.Dataplot1d(self.graph, 222, 1001)
-        self.graph['vxx2d'] = pym.Dataplot2d(self.graph, 223, 1001)
-        self.graph['vxy2d'] = pym.Dataplot2d(self.graph, 224, 1001)
+        self.graph['vxx1d'] = pym.Dataplot1d(self.graph, 231, 101)
+        self.graph['vxy1d'] = pym.Dataplot1d(self.graph, 232, 101)
+        self.graph['random1d'] = pym.Dataplot1d(self.graph, 233, 101)
+        
+        self.graph['vxx2d'] = pym.Dataplot2d(self.graph, 234, 101)
+        self.graph['vxy2d'] = pym.Dataplot2d(self.graph, 235, 101)      
+        self.graph['random2d'] = pym.Dataplot2d(self.graph, 236, 101)
         self.graph.run()
 
     def _run(self):
@@ -42,33 +46,64 @@ class MyMeasurment(pym.Measurment):
         """
 
         # Create nested loop and activate start and stop method
-        nloop = pym.NestedLoop(self.sweep0, self.sweep1)
+        nloop = pym.NestedLoop(self.sweep0, self.sweep1, self.sweep2)
         self.pause = nloop.pause
         self.stop = nloop.stop
-
-        findexer = pym.BasenameIndexer('test/test/test.dat')
-
-        for step0 in nloop[0]:
-
-            fobj = pym.create_file(findexer.next(), override=True)
-
+        
+        findexer = pym.BasenameIndexer('test2/test.dat')        
+        
+        for step0 in nloop[0]:        
+             
+            for subplot in self.graph:
+                subplot.clear()
+                
             for step1 in nloop[1]:
+    
+                fobj = pym.create_file(findexer.next(), override=True)
+    
+                for step2 in nloop[2]:
+                    
+                    print step0 + step1 + step2
+                    
+                    datapoint = []
+    
+                    r = sample['random'].read() 
+                    self.graph['random1d'].add_data(step2, r)
+                    self.graph['random2d'].add_data(r)
+                    datapoint += r
+    
+                    vxx = [sample['vxx'].read()[0] + r[0] / 5.] 
+                    self.graph['vxx1d'].add_data(step2, vxx)
+                    self.graph['vxx2d'].add_data(vxx)
+                    datapoint += vxx                    
+                    
+                    vxy = [sample['vxy'].read()[0] + r[0] / 5.] 
+                    self.graph['vxy1d'].add_data(step2, vxy)
+                    self.graph['vxy2d'].add_data(vxy)
+                    datapoint += vxy
+                
+                
+                    fobj.write(str(datapoint)[1:-1] + '\n')
+                    fobj.flush()
+                
+                
+                fobj.close()
 
-                vxx = sample['vxx'].read()
-                self.graph['vxx1d'].add_data(step1, vxx)
-                self.graph['vxx2d'].add_data(vxx)
 
-                vxy = sample['vxy'].read()
-                self.graph['vxy1d'].add_data(step1, vxy)
-                self.graph['vxy2d'].add_data(vxy)
-
-                fobj.write(str(vxx + vxy) + '\n')
-
-            fobj.close()
 
 if __name__ == '__main__':
-
+    
+    g1 = 'gate1'
+    g2 = 'gate2'    
+    
     meas2d = MyMeasurment()
-    meas2d.sweep0 = pym.LinearSweep(sample['gate1'], 0, 6, 101)
-    meas2d.sweep1 = pym.LinearSweep(sample['gate2'], 0, 6, 1001, 0.02)
-    #meas2d.start()
+    meas2d.sweep0 = pym.LinearSweep(sample[g1], 0, 6, 11)
+    meas2d.sweep1 = pym.LinearSweep(sample[g2], 0, 6, 11)
+    meas2d.sweep2 = pym.LinearSweep(sample[g2], 0, 6, 101, 0.02)
+    
+    for subplot in meas2d.graph:
+        subplot.label.title = 'geile Messung'
+        subplot.label.yaxis = g1
+        subplot.label.xaxis = g2
+    
+    meas2d.start()

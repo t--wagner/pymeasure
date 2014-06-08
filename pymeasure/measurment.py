@@ -15,9 +15,6 @@ class Measurment():
 
         self._thread = None
 
-        self._data = []
-        self._comment = ''
-
     @property
     def data(self):
         return self._data
