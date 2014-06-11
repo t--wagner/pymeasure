@@ -3,6 +3,7 @@
 import os
 from os import makedirs as create_directory
 
+
 def create_file(filename, override=False):
     """Create all directories and open new file.
 
@@ -105,8 +106,8 @@ class _IndexerBase(object):
         return self._increment
 
 
-class DirectoryIndexer(_IndexerBase):     
-        
+class DirectoryIndexer(_IndexerBase):
+
     def next(self):
 
         # Create index string
@@ -117,21 +118,21 @@ class DirectoryIndexer(_IndexerBase):
 
         # Split path
         split = self._path.split('/')
-        
-        # Add index to last folder        
-        split[-1] = index +  '_' + split[-1] 
-        
+
+        # Add index to last folder
+        split[-1] = index + '_' + split[-1]
+
         # Put everything back together
         path = ''
         for part in split:
             path = path + part + '/'
-                
-        
+
         # Increment the index value
         self._value += 1
 
         # Return filename
         return path + self._basename
+
 
 class BasenameIndexer(_IndexerBase):
 
