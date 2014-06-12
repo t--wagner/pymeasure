@@ -5,44 +5,51 @@ Created on Wed Jun 11 00:10:01 2014
 @author: konsolenheld
 """
 
-import pandas as pd
-import numpy as np
-from numpy.random import randn
-import string
+import pandas
 
-abc = string.ascii_lowercase
-ABC = string.ascii_uppercase
+class Data2d(object):
 
+    def __init__(self):
 
-cols = 5
-rows = 10
+        self._df = pandas.DataFrame()
+        self._mcol = []
 
-df = pd.DataFrame(randn(rows, cols))
+    def __repr__(self):
+        return self._df.__repr__()
 
-# Create column MultiIndex
-col_tuple = zip(cols * [0], abc[:cols], ABC[:cols])
-col_index = pd.MultiIndex.from_tuples(col_tuple)
+    def __str__(self):
+        return self._df.__str__()
 
-# Create row MultiIndex
-row_tuple = zip(range(-1 * rows, 0), abc[-1 * rows:], ABC[-1 * rows:])
-row_index = pd.MultiIndex.from_tuples(row_tuple)
+    def head(self, rows=5):
+        return self._df.head(rows)
 
-# Set column and row index
-df.index = row_index
-df.columns = col_index
+    def tail(self, rows=5):
+        return self._df.tail(rows)
 
-print df
-print '\n\n'
+    @property
+    def shape(self):
+        return self._df.shape
 
-df2 = pd.DataFrame(randn(10, 2))
-new_col = pd.Series(randn(rows), index=randn(rows))
+    @property
+    def row_len(self):
+        return self._df.shape[0]
 
+    @property
+    def col_len(self):
+        return self._df.shape[1]
 
-data = np.concatenate((df.values, df2.values), axis=1)
-#print pd.DataFrame(data)
+    @property
+    def row_names(self):
+        return list(self._df.index.names)
 
-print '\n\n'
+    @property
+    def col_names(self):
+        return list(self._df.columns.names)
 
-df3 = pd.concat(100000 * [df], axis=1, ignore_index=False)
-print 'test'
-df4 = pd.concat([df3, df], axis=1, ignore_index=False)
+    def add_trace(self, trace, row_index, col_index):
+
+        row_index = pandas.Index(row_index)
+        col_index = pandas.MultiIndex.from_tuples([col_index])
+        df_trace = pandas.DataFrame(trace, row_index, col_index)
+        
+        self._df = pandas.concat([self._df, df_trace], axis=1)
