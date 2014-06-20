@@ -8,7 +8,7 @@ from math import ceil
 
 class LinearSweepAd5791Dac(LinearSweep):
 
-    def __init__(self, channels, start, stop, points):
+    def __init__(self, channels, start, stop, points, waiting_time=0):
 
 
         if points < 2:
@@ -36,7 +36,7 @@ class LinearSweepAd5791Dac(LinearSweep):
         stop = dstop * 10 / 524287.
         start = dstart * 10 / 524287.
 
-        LinearSweep.__init__(self, channels, start, stop, points)
+        LinearSweep.__init__(self, channels, start, stop, points, waiting_time)
     
 
 @RampDecorator
