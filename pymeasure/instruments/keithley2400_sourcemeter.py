@@ -67,11 +67,11 @@ class _Keithley2400SourceMeterChannelSource(Channel):
     @property
     def autorange(self):
         cmd = "SOURce:" + str(self._srcf) + ":RANGe:AUTO?"
-        return self._instrument.ask(cmd)
+        return bool(self._instrument.ask(cmd))
 
     @autorange.setter
     def autorange(self, autorange):
-        cmd = "SOURce:" + str(self._srcf) + ":RANGe:AUTO " + str(autorange)
+        cmd = "SOURce:" + str(self._srcf) + ":RANGe:AUTO " + str(int(autorange))
         self._instrument.write(cmd)
 
     #--- read ---#
@@ -165,11 +165,11 @@ class _Keithley2400SourceMeterChannelMeasure(Channel):
     @property
     def autorange(self):
         cmd = "SENSe:" + str(self._measf) + ":RANGe:AUTO?"
-        return self._instrument.ask(cmd)
+        return bool(self._instrument.ask(cmd))
 
     @autorange.setter
     def autorange(self, autorange):
-        cmd = "SENSe:" + str(self._measf) + ":RANGe:AUTO " + str(autorange)
+        cmd = "SENSe:" + str(self._measf) + ":RANGe:AUTO " + str(int(autorange))
         self._instrument.write(cmd)
 
     #--- speed ---#
@@ -286,7 +286,7 @@ class Keithley2400SourceMeter(PyVisaInstrument):
     #--- output ---#
     @property
     def output(self):
-        return bool(self._instrument.ask("OUTPut:STATe?"))
+        return bool(int(self._instrument.ask("OUTPut:STATe?")))
 
     @output.setter
     def output(self, boolean):
