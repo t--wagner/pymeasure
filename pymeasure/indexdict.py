@@ -32,21 +32,6 @@ class IndexDict(object):
 
         self._odict = OrderedDict()
 
-    def __getattr__(self, attr):
-        """x.__getattr__(attr) <==> x._odict.attr
-
-        The __getattr__() magic method implements access to all attributes of
-        the ordered dict while hiding them from tab completion.
-
-        """
-
-        try:
-            return self._odict.__getattribute__(attr)
-        except AttributeError:
-            name = self.__class__.__name__
-            msg = '\'' + name + '\' object has no attribute \'' + attr + '\''
-            raise AttributeError(msg)
-
     def __iter__(self):
         """x.__iter__() <==> iter(x)
 
