@@ -29,13 +29,21 @@ class Measurment():
 
     @property
     def is_running(self):
+        """Check if Measurment is running.
+
+        """
+
         if self._thread is None:
             return False
         else:
             return self._thread.is_alive()
 
     def start(self):
+        """Start the Measurment thread.
 
+        """
+
+        # Check if Measurment is already running
         if self._thread is not None:
             if self._thread.is_alive():
                 raise MeasurmentError('Measurment is running.')

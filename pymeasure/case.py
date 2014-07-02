@@ -33,8 +33,10 @@ class Channel(object):
     """
     __metaclass__ = abc.ABCMeta
 
-    def __init__(self):
+    def __init__(self, name='', unit=''):
         self._attributes = list()
+        self.name = name
+        self.unit = unit
 
     def __call__(self, *values, **kw):
         """x.__call__(*values) <==> x(*values)
@@ -52,17 +54,127 @@ class Channel(object):
         else:
             return self.read()
 
-    def config(self, load=None, save=None):
-        if load is not None:
-            pass
-        elif save is not None:
-            pass
-        else:
-            for attribute in self._attributes:
-                print attribute + " = " + str(self.__getattribute__(attribute))
+    def config(self, save=True):
+        for attribute in self._attributes:
+            print attribute + " = " + str(self.__getattribute__(attribute))
 
     @abc.abstractmethod
     def read(self):
+        pass
+
+    # --- name --- #
+    @property
+    def name(self):
+        return self._name
+
+    @name.setter
+    def name(self, name):
+        self._name = str(name)
+
+    # --- unit --- #
+    @property
+    def unit(self):
+        return self._unit
+
+    @unit.setter
+    def unit(self, unit):
+        self._unit = str(unit)
+
+
+class ChannelRead(Channel):
+
+    def __init__(self, name, unit=''):
+
+        # Call Channel constructor
+        Channel.__init__(self, name, unit)
+
+        self.factor = None
+
+    # --- factor --- #
+    @property
+    def factor(self):
+        return self._factor
+
+    @factor.setter
+    def factor(self, factor):
+        try:
+            if factor:
+                self._factor = float(factor)
+            elif factor is None:
+                self._factor = None
+            elif factor is False:
+                self._factor = None
+            else:
+                raise ValueError
+        except:
+            raise ValueError('factor must be a nonzero number or None, False.')
+
+    @classmethod
+    def _readmethod(self, readmethod):
+        def read(self):
+            return [value / self._factor for value in readmethod(self)]
+        return read
+
+    @abc.abstractmethod
+    def read(self):
+        pass
+
+
+class ChannelWrite(ChannelRead):
+
+    def __init__(self, name, unit=''):
+
+        ChannelRead.__init__(self, name, unit)
+
+        self.limit = (None, None)
+
+    # --- limit --- #
+    @property
+    def limit(self):
+        return self._limit
+
+    @limit.setter
+    def limit(self, limit):
+        limit = tuple(limit)
+
+        if not len(limit) == 2:
+            raise ValueError('limit needs lower and upper value.')
+
+        # ake None out of False
+        if limit[0] is False:
+            limit[0] = None
+        if limit[1] is False:
+            limit[1] = None
+
+        # Switch limit order if necessary
+        if limit[0] > limit[1]:
+            limit = tuple(limit[1], limit[0])
+
+        #Finally set the limits
+        self._limit = tuple(limit)
+
+    @classmethod
+    def _writemethod(self, writemethod):
+
+        def write(self, value):
+
+            #Check if value is out of limit
+            if not ((self._limit[0] <= value or self._limit[0] is None) and
+                    (self._limit[1] >= value or self._limit[1] is None)):
+                msg = str(value) + ' is out of limit=' + str(self._limit)
+                raise ValueError(msg)
+
+            #Multiply the value with the factor if defined
+            if self.factor:
+                value *= self.factor
+
+            # Execute the decorated write method
+            writemethod(self, value)
+
+        return write
+
+    @abc.abstractmethod
+    def write(self):
         pass
 
 
