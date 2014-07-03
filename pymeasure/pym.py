@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*
 
 #import pymeasure.backends
-import pymeasure.instruments
 from pymeasure.case import Instrument, Rack
 #from pymeasure.data import Data
 from pymeasure.filetools import (create_directory, create_file, index_str,

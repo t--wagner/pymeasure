@@ -1,75 +1,79 @@
 # -*- coding: utf-8 -*
 
-from pymeasure.case import Channel, RampDecorator, Instrument
+from pymeasure.case import ReadChannel, WriteChannel, RampDecorator, Instrument
 import random
 import numpy as np
 
 
-class _FooInstrumentChannelRandom(Channel):
+class _FooRandomChannel(ReadChannel):
 
     def __init__(self):
-        Channel.__init__(self)
+        ReadChannel.__init__(self)
 
-        self._minimum = 0
-        self._maximum = 1
+        self._samples = 1
+        self._min = -1
+        self._max = 1
+
+    @property
+    def samples(self):
+        return self._samples
+
+    @samples.setter
+    def samples(self, samples):
+        self._samples = int(samples)
 
     @property
     def minimum(self):
-        return self._minimum
+        return self._min
 
     @minimum.setter
     def minimum(self, minimum):
-        self._minimum = minimum
+        self._min = minimum
 
     @property
     def maximum(self):
-        return self._maximum
+        return self._max
 
     @maximum.setter
     def maximum(self, maximum):
-        self._maximum = maximum
+        self._max = maximum
 
+    @ReadChannel._readmethod
     def read(self):
-        return [random.uniform(self._minimum, self._maximum)]
+        return [random.uniform(self._min, self._max)
+                for sample in range(self._samples)]
 
 
-@RampDecorator
-class _FooInstrumentChannelOutput(Channel):
+#@RampDecorator
+class FooBaseChannel(object):
+
+    _value = 0
+
+
+class _FooOutputChannel(FooBaseChannel, WriteChannel):
 
     def __init__(self):
-        Channel.__init__(self)
+        WriteChannel.__init__(self)
 
-        self._period = 2 * np.pi
-        self._value = 0
 
-    @property
-    def period(self):
-        return self._period
-
-    @period.setter
-    def period(self, period):
-        self._period = period
-
+    @WriteChannel._readmethod
     def read(self):
-        return [self._value]
+        return [FooBaseChannel._value]
 
+    @WriteChannel._writemethod
     def write(self, value):
-        self._value = value
-        return [self._value]
+        FooBaseChannel._value = value
 
 
-class _FooInstrumentChannelFunction(Channel):
+class _FooInputChannel(FooBaseChannel, ReadChannel):
 
-    def __init__(self, function, output1, output2):
-        Channel.__init__(self)
+    def __init__(self):
+        WriteChannel.__init__(self)
 
-        self._function = function
-        self._output1 = output1
-        self._output2 = output2
 
+    @WriteChannel._readmethod
     def read(self):
-
-        return [self._function(self._output1()[0] + self._output2()[0])]
+        return [FooBaseChannel._value]
 
 
 class FooInstrument(Instrument):
@@ -77,19 +81,9 @@ class FooInstrument(Instrument):
     def __init__(self, reset=True):
         Instrument.__init__(self)
 
-        chan_out1 = _FooInstrumentChannelOutput()
-        self.__setitem__('out0', chan_out1)
-
-        chan_out2 = _FooInstrumentChannelOutput()
-        self.__setitem__('out1', chan_out2)
-
-        sin_chan = _FooInstrumentChannelFunction(np.sin, chan_out1, chan_out2)
-        self.__setitem__('sin', sin_chan)
-
-        cos_chan = _FooInstrumentChannelFunction(np.cos, chan_out1, chan_out2)
-        self.__setitem__('cos', cos_chan)
-
-        self.__setitem__('random', _FooInstrumentChannelRandom())
+        self.__setitem__('random', _FooRandomChannel())
+        self.__setitem__('out0', _FooOutputChannel())
+        self.__setitem__('in0', _FooOutputChannel())
 
         if reset is True:
             self.reset()

@@ -81,9 +81,9 @@ class Channel(object):
         self._unit = str(unit)
 
 
-class ChannelRead(Channel):
+class ReadChannel(Channel):
 
-    def __init__(self, name, unit=''):
+    def __init__(self, name='', unit=''):
 
         # Call Channel constructor
         Channel.__init__(self, name, unit)
@@ -111,8 +111,13 @@ class ChannelRead(Channel):
 
     @classmethod
     def _readmethod(self, readmethod):
+
         def read(self):
-            return [value / self._factor for value in readmethod(self)]
+            values = readmethod(self)
+            if self._factor:
+                values = [value / self._factor for value in values]
+            return values
+
         return read
 
     @abc.abstractmethod
@@ -120,11 +125,11 @@ class ChannelRead(Channel):
         pass
 
 
-class ChannelWrite(ChannelRead):
+class WriteChannel(ReadChannel):
 
-    def __init__(self, name, unit=''):
+    def __init__(self, name='', unit=''):
 
-        ChannelRead.__init__(self, name, unit)
+        ReadChannel.__init__(self, name, unit)
 
         self.limit = (None, None)
 
@@ -135,20 +140,13 @@ class ChannelWrite(ChannelRead):
 
     @limit.setter
     def limit(self, limit):
-        limit = tuple(limit)
-
-        if not len(limit) == 2:
-            raise ValueError('limit needs lower and upper value.')
+        limit = list(limit)
 
         # ake None out of False
         if limit[0] is False:
             limit[0] = None
         if limit[1] is False:
             limit[1] = None
-
-        # Switch limit order if necessary
-        if limit[0] > limit[1]:
-            limit = tuple(limit[1], limit[0])
 
         #Finally set the limits
         self._limit = tuple(limit)
