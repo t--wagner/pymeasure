@@ -2,21 +2,21 @@
 
 from pymeasure.instruments.pyvisa_instrument import PyVisaInstrument
 from pymeasure.case import Channel, RampDecorator
-from pymeasure.sweep import LinearSweep
+from pymeasure.sweep import SweepLinear
 import time
 from math import ceil
 
-class LinearSweepAd5791Dac(LinearSweep):
+
+class LinearSweepAd5791Dac(SweepLinear):
 
     def __init__(self, channels, start, stop, points, waiting_time=0):
-
 
         if points < 2:
             raise ValueError('points are smaller than 2.')
 
         # Calculate the dwords
         dstart = int(524287 * start / 10.)
-        dstop =  int(524287 * stop / 10.)
+        dstop = int(524287 * stop / 10.)
 
         if dstart == dstop:
             raise ValueError('start and stop are the equal.')
@@ -32,12 +32,11 @@ class LinearSweepAd5791Dac(LinearSweep):
         points = int(ceil(abs(difference / float(dstepsize))) + 1)
         dstop = dstart + points * dstepsize
 
-
         stop = dstop * 10 / 524287.
         start = dstart * 10 / 524287.
 
-        LinearSweep.__init__(self, channels, start, stop, points, waiting_time)
-    
+        SweepLinear.__init__(self, channels, start, stop, points, waiting_time)
+
 
 @RampDecorator
 class _Ad5791DacChannel(Channel):
@@ -55,7 +54,7 @@ class _Ad5791DacChannel(Channel):
 
         self._attributes = ['unit', 'factor', 'limit', 'readback', 'output']
 
-    #--- unit ----#
+    # --- unit ---- #
     @property
     def unit(self):
         return self._unit
@@ -64,7 +63,7 @@ class _Ad5791DacChannel(Channel):
     def unit(self, unit):
         self._unit = unit
 
-    #--- factor ---#
+    # --- factor --- #
     @property
     def factor(self):
         return self._factor
@@ -79,7 +78,7 @@ class _Ad5791DacChannel(Channel):
         except:
             raise ValueError('Factor must be a nonzero number.')
 
-    #--- limit ----#
+    # --- limit ---- #
     @property
     def limit(self):
         return self._limit
@@ -88,7 +87,7 @@ class _Ad5791DacChannel(Channel):
     def limit(self, limit):
         self._limit = limit
 
-    #--- readback ---#
+    # --- readback --- #
     @property
     def readback(self):
         return bool(self._readback)
@@ -104,7 +103,7 @@ class _Ad5791DacChannel(Channel):
         except:
             raise ValueError('Readback must be True or False')
 
-    #--- output ---#
+    # --- output ---#
     @property
     def output(self):
         return bool(self._output)
@@ -124,28 +123,28 @@ class _Ad5791DacChannel(Channel):
         except:
             raise ValueError('ouput must be True or False.')
 
-    #--- read ---#
+    # --- read --- #
     def read(self):
         level_d = self._instrument.ask_for_values("CHAN " + self._channel + ";"
                                                   "DWORD?")
         level = 1/52428.7 * level_d[0]
         return [level / float(self._factor)]
 
-    #--- write ---#            
+    # --- write --- #
     def write(self, level):
         if self._limit[0] <= level or self._limit[0] is None:
             if level <= self._limit[1] or self._limit[1] is None:
-                
+
                 level_d = int(524287 * level  * self._factor / 10)
                 self._instrument.write("CHAN " + self._channel + ";" +
                                        "DWORD " + str(level_d))
-                                       
+
         if self._readback:
             return self.read()
         else:
             return [level]
-            
-    #--- ramp ---#
+
+    # --- ramp --- #
     def ramp(self, start, stop, points, frequency, delay, verbose=False):
 
         # Set dac to start position

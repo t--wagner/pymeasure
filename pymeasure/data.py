@@ -47,9 +47,9 @@ class Data2d(object):
         row_index = pandas.Index(row_index)
         col_index = pandas.MultiIndex.from_tuples([col_index])
         df_trace = pandas.DataFrame(trace, row_index, col_index)
-        
-        self._df = pandas.concat([self._df, df_trace], axis=1)        
-        
+
+        self._df = pandas.concat([self._df, df_trace], axis=1)
+
         return self._df
 
 
