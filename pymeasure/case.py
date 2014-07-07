@@ -110,12 +110,12 @@ class ReadChannel(Channel):
             raise ValueError('factor must be a nonzero number or None, False.')
 
     @classmethod
-    def _readmethod(self, readmethod):
+    def _readmethod(cls, readmethod):
 
         def read(self):
             values = readmethod(self)
-            if self._factor:
-                values = [value / self._factor for value in values]
+            if self.factor:
+                values = [value / self.factor for value in values]
             return values
 
         return read
@@ -152,14 +152,14 @@ class WriteChannel(ReadChannel):
         self._limit = tuple(limit)
 
     @classmethod
-    def _writemethod(self, writemethod):
+    def _writemethod(cls, writemethod):
 
         def write(self, value):
 
             #Check if value is out of limit
-            if not ((self._limit[0] <= value or self._limit[0] is None) and
-                    (self._limit[1] >= value or self._limit[1] is None)):
-                msg = str(value) + ' is out of limit=' + str(self._limit)
+            if not ((self.limit[0] <= value or self.limit[0] is None) and
+                    (self.limit[1] >= value or self.limit[1] is None)):
+                msg = str(value) + ' is out of limit=' + str(self.limit)
                 raise ValueError(msg)
 
             #Multiply the value with the factor if defined

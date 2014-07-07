@@ -16,10 +16,6 @@ class Measurment():
         self._thread = None
 
     @property
-    def data(self):
-        return self._data
-
-    @property
     def comment(self):
         return self._comment
 

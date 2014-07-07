@@ -63,10 +63,7 @@ class NestedLoop(object):
 
         """
 
-        self._loop_list = []
-        for sweep in sweeps:
-            loop = Loop(sweep)
-            self._loop_list.append(loop)
+        self._loop_list = [Loop(sweep) for sweep in sweeps]
 
         cls.step = self.step
         cls.pause = self.pause
@@ -98,8 +95,10 @@ class NestedLoop(object):
 
         """
 
+        # Get inner loop
         loop = self._loop_list[-1]
 
+        # Set or clear pause Event of inner loop
         if loop._pause.is_set():
             loop._pause.clear()
         else:
@@ -116,5 +115,6 @@ class NestedLoop(object):
         else:
             loop_nr += 1
 
+        # Set all loops above loop_nr to stop
         for loop in self._loop_list[:loop_nr]:
             loop.stop()

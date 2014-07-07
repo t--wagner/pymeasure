@@ -4,12 +4,8 @@ import pymeasure as pym
 
 foo = pym.instruments.FooInstrument()
 
-sweep = pym.SweepTime(11, 0.55, readback=True)
+sweep = pym.SweepLinear(foo[1], 0, 10, 11, 0.01, 'both', True)
 
-for step in sweep:
-    print step
-
-sweep = pym.SweepTime(11, 0.55, readback=False)
-
-for step in sweep:
+zsweep = pym.SweepZip(sweep, sweep, sweep, sweep)
+for step in zsweep:
     print step

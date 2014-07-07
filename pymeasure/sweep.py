@@ -56,7 +56,7 @@ class SweepSteps(Sweep):
 
     def __init__(self, channel, steps, waiting_time=0, readback=False):
 
-        Sweep.__init__(self, channel, waiting_time=0, readback=False)
+        Sweep.__init__(self, channel, waiting_time, readback)
 
         self._steps = steps
 
@@ -67,19 +67,40 @@ class SweepSteps(Sweep):
 
 class SweepLinear(Sweep):
 
-    def __init__(self, channel, start, stop, points, waiting_time=0,
-                 readback=False):
+    def __init__(self, channel, start, stop, points,
+                 waiting_time=0, direction='one', readback=False):
 
         Sweep.__init__(self, channel, waiting_time, readback)
 
+        # Set start and stop values
         self._start = start
         self._stop = stop
-        self._points = points
+
+        # Check and set points
+        if not isinstance(points, int) or (points < 2):
+            raise ValueError('points must be int >= 2.')
+        self._points = int(points)
+
+        # Calculate stepsize
         self._stepsize = (self._stop - self._start) / float(self._points - 1)
+
+        # Check and set sweep direction
+        if direction not in ['one', 'both']:
+            raise ValueError('direction must be one or both.')
+        self._direction = direction
 
     @property
     def steps(self):
-        return (self.stepsize * n + self._start for n in xrange(self._points))
+
+        # Create generator expressions for up and down sweep
+        up = (self.start + n * self.stepsize for n in xrange(self.points))
+        down = (self.stop - n * self.stepsize for n in xrange(self.points))
+
+        # Return genorator for the sweep direction
+        if self.direction == 'one':
+            return up
+        elif self.direction == 'both':
+            return itertools.chain(up, down)
 
     @property
     def start(self):
@@ -96,6 +117,14 @@ class SweepLinear(Sweep):
     @property
     def stepsize(self):
         return self._stepsize
+
+    @property
+    def direction(self):
+        return self._direction
+
+    def reverse(self):
+        return SweepLinear(self._channel, self.stop, self.start, self.points,
+                           self.waiting_time, self.direction, self.readback)
 
 
 class SweepTime(Sweep):
@@ -125,5 +154,25 @@ class SweepTime(Sweep):
         return self._points
 
 
-def sweep_zip(*sweeps):
-    return itertools.izip(*sweeps)
+class SweepZip(object):
+
+    def __init__(self, *sweeps):
+        self._sweeps = sweeps
+
+    def __getitem__(self, index):
+        return self._sweeps[index]
+
+    def __iter__(self):
+        return itertools.izip(*self._sweeps)
+
+    @property
+    def sweeps(self):
+        return self._sweeps
+
+    @property
+    def steps(self):
+        steps = []
+        for sweep in self._sweeps:
+            steps.append(sweep.steps)
+
+        return itertools.izip(*steps)

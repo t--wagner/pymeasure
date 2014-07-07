@@ -9,4 +9,4 @@ from pymeasure.filetools import (create_directory, create_file, index_str,
 from pymeasure.liveplot import LiveGraphTk, Dataplot1d, Dataplot2d
 from pymeasure.loop import Loop, NestedLoop
 from pymeasure.measurment import Measurment
-from pymeasure.sweep import Sweep, SweepLinear, SweepTime, sweep_zip
+from pymeasure.sweep import SweepSteps, SweepLinear, SweepTime, SweepZip

@@ -20,8 +20,6 @@ class IndexDict(object):
     ipython shell. The indices give easy access to the items while the keys
     allow a description of the content. IndexDict is compareable to a table
     which has an caption for each column.
-    Although all attributes from the wrapped OrderedDict are directly
-    accessible, they will not show up in tab completion tools.
 
     """
 
