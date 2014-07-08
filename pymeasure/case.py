@@ -81,6 +81,78 @@ class Channel(object):
         self._unit = str(unit)
 
 
+class Factor(object):
+
+    def __init__(self, constant=None):
+        self._constant = constant
+
+    @property
+    def constant(self):
+        return self._constant
+
+    @constant.setter
+    def constant(self, constant):
+        try:
+            if constant:
+                self._constant = float(constant)
+            elif constant is None:
+                self._constant = None
+            elif constant is False:
+                self._constant = None
+            else:
+                raise ValueError
+        except:
+            raise ValueError('factor must be a nonzero number or None, False.')
+
+    def read(self, *values):
+        return [value / self._constant for value in values]
+
+    def write(self, *values):
+        return [value * self._constant for value in values]
+
+
+class Limit(object):
+
+    def __init__(self, high=None, low=None):
+
+        self.values = (high, low)
+
+    @property
+    def values(self):
+        return self._values
+
+    @values.setter
+    def values(self, values):
+        values = list(values)
+
+        # ake None out of False
+        if values[0] is False:
+            values[0] = None
+        if values[1] is False:
+            values[1] = None
+
+        #Finally set the limits
+        self._values = tuple(values)
+
+    @property
+    def high(self):
+        return self._values[-1]
+
+    @property
+    def low(self):
+        return self._values[0]
+
+    def check(self, *values):
+
+        for value in values:
+
+            if not ((self.values[0] <= value or self.values[0] is None) and
+                    (self.values[1] >= value or self.values[1] is None)):
+                return False
+
+        return True
+
+
 class ReadChannel(Channel):
 
     def __init__(self, name='', unit=''):
@@ -88,34 +160,26 @@ class ReadChannel(Channel):
         # Call Channel constructor
         Channel.__init__(self, name, unit)
 
-        self.factor = None
+        self._factor = Factor()
 
     # --- factor --- #
     @property
     def factor(self):
-        return self._factor
+        return self._factor.constant
 
     @factor.setter
-    def factor(self, factor):
-        try:
-            if factor:
-                self._factor = float(factor)
-            elif factor is None:
-                self._factor = None
-            elif factor is False:
-                self._factor = None
-            else:
-                raise ValueError
-        except:
-            raise ValueError('factor must be a nonzero number or None, False.')
+    def factor(self, constant):
+        self._factor.constant = constant
 
     @classmethod
     def _readmethod(cls, readmethod):
 
         def read(self):
             values = readmethod(self)
+
             if self.factor:
-                values = [value / self.factor for value in values]
+                values = self._factor.read(*values)
+
             return values
 
         return read
@@ -127,47 +191,39 @@ class ReadChannel(Channel):
 
 class WriteChannel(ReadChannel):
 
+
     def __init__(self, name='', unit=''):
 
         ReadChannel.__init__(self, name, unit)
 
-        self.limit = (None, None)
+        self._limit = Limit()
 
     # --- limit --- #
     @property
     def limit(self):
-        return self._limit
+        return self._limit.values
 
     @limit.setter
-    def limit(self, limit):
-        limit = list(limit)
-
-        # ake None out of False
-        if limit[0] is False:
-            limit[0] = None
-        if limit[1] is False:
-            limit[1] = None
-
-        #Finally set the limits
-        self._limit = tuple(limit)
+    def limit(self, values):
+        self._limit.values = values
 
     @classmethod
     def _writemethod(cls, writemethod):
 
-        def write(self, value):
+        def write(self, *values):
 
-            #Check if value is out of limit
-            if not ((self.limit[0] <= value or self.limit[0] is None) and
-                    (self.limit[1] >= value or self.limit[1] is None)):
-                msg = str(value) + ' is out of limit=' + str(self.limit)
+            # Check if value is out of limit
+            if not self._limit.check(*values):
+                msg = str(values) + ' is out of limit=' + \
+                      str(self.limit.values)
                 raise ValueError(msg)
 
-            #Multiply the value with the factor if defined
+            # Multiply the value with the factor if defined
             if self.factor:
-                value *= self.factor
+                values = self._factor.write(*values)
 
             # Execute the decorated write method
-            writemethod(self, value)
+            writemethod(self, *values)
 
         return write
 
