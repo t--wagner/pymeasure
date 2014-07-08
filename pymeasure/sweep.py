@@ -76,15 +76,17 @@ class SweepLinear(Sweep):
         self._start = start
         self._stop = stop
 
-        # Check and set points
+        # Points input validation and setting
         if not isinstance(points, int) or (points < 2):
             raise ValueError('points must be int >= 2.')
-        self._points = int(points)
+        self._points = points
 
-        # Calculate stepsize
-        self._stepsize = (self._stop - self._start) / float(self._points - 1)
+        # Stepsize calculation
+        steps = float(self._points - 1)
+        diff = (self._stop - self._start)
+        self._stepsize = diff / steps
 
-        # Check and set sweep direction
+        # Sweep direction validation and setting
         if direction not in ['one', 'both']:
             raise ValueError('direction must be one or both.')
         self._direction = direction
@@ -126,6 +128,51 @@ class SweepLinear(Sweep):
         return SweepLinear(self._channel, self.stop, self.start, self.points,
                            self.waiting_time, self.direction, self.readback)
 
+
+class SweepStepsize(Sweep):
+
+    def __init__(self, channel, start, stop, stepsize,
+                 waiting_time=0, direction='one', readback=False):
+
+        Sweep.__init__(self, channel, waiting_time, readback)
+
+        # Set start and stop values
+        self._start = start
+        self._stop = stop
+        self._stepsize = float(stepsize)
+
+        # Sweep direction validation and setting
+        if direction not in ['one', 'both']:
+            raise ValueError('direction must be one or both.')
+        self._direction = direction
+
+    @property
+    def steps(self):
+        pass
+
+    @property
+    def start(self):
+        return self._start
+
+    @property
+    def stop(self):
+        return self._stop
+
+    @property
+    def points(self):
+        return self._points
+
+    @property
+    def stepsize(self):
+        return self._stepsize
+
+    @property
+    def direction(self):
+        return self._direction
+
+
+class SweepBits(Sweep):
+    pass
 
 class SweepTime(Sweep):
 
