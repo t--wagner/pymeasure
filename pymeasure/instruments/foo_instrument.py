@@ -1,14 +1,14 @@
 # -*- coding: utf-8 -*
 
-from pymeasure.case import ReadChannel, WriteChannel, RampDecorator, Instrument
+from pymeasure.case import ChannelRead, ChannelWrite, RampDecorator, Instrument
 import random
 import numpy as np
 
 
-class _FooRandomChannel(ReadChannel):
+class _FooRandomChannel(ChannelRead):
 
     def __init__(self):
-        ReadChannel.__init__(self)
+        ChannelRead.__init__(self)
 
         self._samples = 1
         self._min = -1
@@ -38,7 +38,7 @@ class _FooRandomChannel(ReadChannel):
     def maximum(self, maximum):
         self._max = maximum
 
-    @ReadChannel._readmethod
+    @ChannelRead._readmethod
     def read(self):
         return [random.uniform(self._min, self._max)
                 for sample in range(self._samples)]
@@ -50,28 +50,28 @@ class FooBaseChannel(object):
     _value = 0
 
 
-class _FooOutputChannel(FooBaseChannel, WriteChannel):
+class _FooOutputChannel(FooBaseChannel, ChannelWrite):
 
     def __init__(self):
-        WriteChannel.__init__(self)
+        ChannelWrite.__init__(self)
 
 
-    @WriteChannel._readmethod
+    @ChannelWrite._readmethod
     def read(self):
         return [FooBaseChannel._value]
 
-    @WriteChannel._writemethod
+    @ChannelWrite._writemethod
     def write(self, value):
         FooBaseChannel._value = value
 
 
-class _FooInputChannel(FooBaseChannel, ReadChannel):
+class _FooInputChannel(FooBaseChannel, ChannelRead):
 
     def __init__(self):
-        WriteChannel.__init__(self)
+        ChannelWrite.__init__(self)
 
 
-    @WriteChannel._readmethod
+    @ChannelWrite._readmethod
     def read(self):
         return [FooBaseChannel._value]
 
