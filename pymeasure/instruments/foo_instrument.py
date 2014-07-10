@@ -2,7 +2,6 @@
 
 from pymeasure.case import ChannelRead, ChannelWrite, RampDecorator, Instrument
 import random
-import numpy as np
 
 
 class _FooRandomChannel(ChannelRead):
@@ -13,6 +12,8 @@ class _FooRandomChannel(ChannelRead):
         self._samples = 1
         self._min = -1
         self._max = 1
+
+        self._config += ['samples', 'minimum', 'maximum']
 
     @property
     def samples(self):
@@ -44,7 +45,7 @@ class _FooRandomChannel(ChannelRead):
                 for sample in range(self._samples)]
 
 
-#@RampDecorator
+# @RampDecorator
 class FooBaseChannel(object):
 
     _value = 0
@@ -54,7 +55,6 @@ class _FooOutputChannel(FooBaseChannel, ChannelWrite):
 
     def __init__(self):
         ChannelWrite.__init__(self)
-
 
     @ChannelWrite._readmethod
     def read(self):
@@ -69,7 +69,6 @@ class _FooInputChannel(FooBaseChannel, ChannelRead):
 
     def __init__(self):
         ChannelWrite.__init__(self)
-
 
     @ChannelWrite._readmethod
     def read(self):

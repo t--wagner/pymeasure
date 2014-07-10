@@ -1,11 +1,29 @@
 # -*- coding: utf-8 -*
 
-import pymeasure as pym
 
-foo = pym.instruments.FooInstrument()
+class TestBase(object):
 
-sweep = pym.SweepLinear(foo[1], 0, 10, 11, 0.01, 'both', True)
+    def __init__(self):
+        self._factor = 1
 
-zsweep = pym.SweepZip(sweep, sweep, sweep, sweep)
-for step in zsweep:
-    print step
+    @property
+    def factor(self):
+        return self._factor
+
+    def read(self):
+        pass
+
+    def write(*values):
+        pass
+
+class Test(TestBase):
+
+    def __dir__(self):
+        return []
+
+if __name__ == '__main__':
+    tb = TestBase()
+    print dir(tb)
+
+    t = Test()
+    print dir(t)

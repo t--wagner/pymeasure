@@ -25,6 +25,7 @@ import abc
 import time
 from functools import wraps
 from math import ceil
+import cPickle as pickle
 
 
 class Channel(object):
@@ -34,32 +35,13 @@ class Channel(object):
     __metaclass__ = abc.ABCMeta
 
     def __init__(self, name='', unit=''):
-        self._attributes = list()
         self.name = name
         self.unit = unit
 
-    def __call__(self, *values, **kw):
-        """x.__call__(*values) <==> x(*values)
-
-        With optional *values the write method gets called
-            x.__call__(*values) <==> x(*values) <==> x.read(*values)
-        otherwise the write method
-            x.__call__() <==> x() <==> x.read()
-
-        """
-
-        # Check for optional *values and call read or wirte
-        if len(values):
-            return self.write(*values, **kw)
-        else:
-            return self.read()
-
-    def config(self, save=True):
-        for attribute in self._attributes:
-            print attribute + " = " + str(self.__getattribute__(attribute))
+        self._config = ['name', 'unit']
 
     @abc.abstractmethod
-    def read(self):
+    def __call__(self, *values, **kw):
         pass
 
     # --- name --- #
@@ -80,47 +62,23 @@ class Channel(object):
     def unit(self, unit):
         self._unit = str(unit)
 
+    def config(self, return_type='list', load=False, save=False):
 
-class Limit(object):
+        # Load configuration
+        if load:
+            pass
 
-    def __init__(self, high=None, low=None):
+        config = [(attr, self.__getattribute__(attr)) for attr in self._config]
 
-        self.values = (high, low)
+        # Save configuration
+        if save:
+            pass
 
-    @property
-    def values(self):
-        return self._values
+        return config
 
-    @values.setter
-    def values(self, values):
-        values = list(values)
-
-        # Make None out of False
-        if values[0] is False:
-            values[0] = None
-        if values[1] is False:
-            values[1] = None
-
-        # Finally set the limits
-        self._values = tuple(values)
-
-    @property
-    def high(self):
-        return self._values[-1]
-
-    @property
-    def low(self):
-        return self._values[0]
-
-    def check(self, *values):
-
-        for value in values:
-
-            if not ((self.values[0] <= value or self.values[0] is None) and
-                    (self.values[1] >= value or self.values[1] is None)):
-                return False
-
-        return True
+    @abc.abstractmethod
+    def read(self):
+        pass
 
 
 class ChannelRead(Channel):
@@ -130,7 +88,18 @@ class ChannelRead(Channel):
         # Call Channel constructor
         Channel.__init__(self, name, unit)
 
-        self._factor = None
+        self.factor = None
+        self._config += ['factor']
+
+    def __call__(self, **kw):
+        """Call the read method.
+
+        x.__call__(**kw) <==> x(**kw) <==> x.read(**kw)
+
+        """
+
+        # Check for optional *values and call read or wirte
+        return self.read()
 
     # --- factor --- #
     @property
@@ -151,7 +120,7 @@ class ChannelRead(Channel):
         except:
             raise ValueError('factor must be a nonzero number or None, False.')
 
-    def _factor_read(self, values):
+    def _factor_divide(self, values):
         return [value / self.factor for value in values]
 
     @classmethod
@@ -160,7 +129,7 @@ class ChannelRead(Channel):
         def read(self):
             values = readmethod(self)
             if self.factor:
-                values = self._factor_read(values)
+                values = self._factor_divide(values)
             return values
 
         return read
@@ -176,20 +145,53 @@ class ChannelWrite(ChannelRead):
 
         ChannelRead.__init__(self, name, unit)
 
-        self._limit = Limit()
+        self.limit = (None, None)
+        self._config += ['limit']
+
+    def __call__(self, *values, **kw):
+        """ Call the write or read method.
+
+        With optional *values the write method gets called
+            x.__call__(*values, **kw) <==> x(*values, **kw) <==>
+            x.read(*values, **kw)
+        otherwise the read method
+            x.__call__(**kw) <==> x(**kw) <==> x.read(**kw)
+
+        """
+
+    # --- factor --- #
+    def _factor_multiply(self, values):
+        return [value / self.factor for value in values]
 
     # --- limit --- #
     @property
     def limit(self):
-        return self._limit.values
+        return self._limit
 
     @limit.setter
-    def limit(self, values):
-        self._limit.values = values
+    def limit(self, limit):
+        limit = list(limit)
 
-    # --- factor --- #
-    def _factor_write(self, values):
-        return [value / self.factor for value in values]
+        # Make None out of False
+        if limit[0] is False:
+            limit[0] = None
+        if limit[1] is False:
+            limit[1] = None
+
+        # Finally set the limits
+        self._limit = tuple(limit)
+
+    def _limit_test(self, *values):
+
+        limit = self.limit
+
+        for value in values:
+
+            if not ((limit[0] <= value or limit[0] is None) and
+                    (limit[1] >= value or limit[1] is None)):
+                return False
+
+        return True
 
     @classmethod
     def _writemethod(cls, writemethod):
@@ -197,14 +199,14 @@ class ChannelWrite(ChannelRead):
         def write(self, *values):
 
             # Check if value is out of limit
-            if not self._limit.check(*values):
+            if not self._limit_test(*values):
                 msg = str(values) + ' is out of limit=' + \
-                      str(self.limit.values)
+                      str(self.limit)
                 raise ValueError(msg)
 
             # Multiply the value with the factor if defined
             if self.factor:
-                values = self._factor_write(values)
+                values = self._factor_multiply(values)
 
             # Execute the decorated write method
             writemethod(self, *values)

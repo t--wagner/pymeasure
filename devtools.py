@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 
-
 import random
 import pymeasure as pym
 
@@ -17,10 +16,14 @@ def readchannel_test(channel):
     print dir(channel)
     print ''
 
+    # test channel configuration
+    print channel.config()
+    print
+
     # Channel read method test
     val = channel.read()
-    print 'channel()      = ' + str(channel())
-    print 'channel.read() = ' + str(val)
+    print 'channel()      = val = ' + str(channel())
+    print 'channel.read() = val = ' + str(val)
     print 'len(val)       = ' + str(len(val))
     print 'type(val)      = ' + str(type(val))
     print 'iter(val)      = ' + str(iter(val))
@@ -38,7 +41,7 @@ def readchannel_test(channel):
     factor = random.random()
     channel.factor = factor
     invals = [random.random() for i in range(3)]
-    outvals = channel._factor_read(invals)
+    outvals = channel._factor_divide(invals)
     print 'factor = ' + str(channel.factor)
     print 'invals               = ' + str(invals)
     print '_factor_read(invals) = ' + str(outvals)
