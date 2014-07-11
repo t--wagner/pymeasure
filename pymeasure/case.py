@@ -25,25 +25,8 @@ import abc
 import time
 from functools import wraps
 from math import ceil
-#import cPickle as pickle
+from collections import OrderedDict
 
-
-class ChannelConfig(object):
-
-    def __init__(self):
-        pass
-
-    def __repr__(self):
-        pass
-
-    def __str__(self):
-        pass
-
-    def string(self):
-        pass
-
-    def save(self):
-        pass
 
 class Channel(object):
     """Channel class of pymeasure.case.
@@ -79,19 +62,11 @@ class Channel(object):
     def unit(self, unit):
         self._unit = str(unit)
 
-    def config(self, return_type='list', load=False, save=False):
-
-        # Load configuration
-        if load:
-            pass
+    def config(self):
 
         config = [(attr, self.__getattribute__(attr)) for attr in self._config]
 
-        # Save configuration
-        if save:
-            pass
-
-        return config
+        return ChannelConfig(config)
 
     @abc.abstractmethod
     def read(self):
@@ -140,11 +115,14 @@ class ChannelRead(Channel):
     def _factor_divide(self, values):
         return [value / self.factor for value in values]
 
+    def _factor_multiply(self, values):
+        return [value * self.factor for value in values]
+
     @classmethod
     def _readmethod(cls, readmethod):
 
-        def read(self):
-            values = readmethod(self)
+        def read(self, **kw):
+            values = readmethod(self, **kw)
             if self.factor:
                 values = self._factor_divide(values)
             return values
@@ -176,10 +154,6 @@ class ChannelWrite(ChannelRead):
 
         """
 
-    # --- factor --- #
-    def _factor_multiply(self, values):
-        return [value / self.factor for value in values]
-
     # --- limit --- #
     @property
     def limit(self):
@@ -198,7 +172,7 @@ class ChannelWrite(ChannelRead):
         # Finally set the limits
         self._limit = tuple(limit)
 
-    def _limit_test(self, *values):
+    def _limit_test(self, values):
 
         limit = self.limit
 
@@ -213,10 +187,10 @@ class ChannelWrite(ChannelRead):
     @classmethod
     def _writemethod(cls, writemethod):
 
-        def write(self, *values):
+        def write(self, *values, **kw):
 
             # Check if value is out of limit
-            if not self._limit_test(*values):
+            if not self._limit_test(values):
                 msg = str(values) + ' is out of limit=' + str(self.limit)
                 raise ValueError(msg)
 
@@ -225,7 +199,7 @@ class ChannelWrite(ChannelRead):
                 values = self._factor_multiply(values)
 
             # Execute the decorated write method
-            writemethod(self, *values)
+            writemethod(self, *values, **kw)
 
         return write
 
@@ -236,6 +210,79 @@ class ChannelWrite(ChannelRead):
     @abc.abstractmethod
     def write(self):
         pass
+
+
+class ChannelConfig(object):
+
+    def __init__(self, config=[]):
+        self._config = OrderedDict(config)
+
+    def __getitem__(self, key):
+        """x.__getitem__(key) <==> x[key]
+
+        Return configuration item of key.
+
+        """
+        return self._config[key]
+
+    def __iter__(self):
+        """x.__iter__() <==> iter(x)
+
+        Return a configuration iterator.
+
+        """
+        return iter(self.items())
+
+    def __repr__(self):
+        """x.__repr__() <==> rapr(x)
+
+        Return the canonical string representation of teh configuration.
+
+        """
+        return self.to_str(key_delimiter=': ', item_delimiter='\n')
+
+    def __str__(self):
+        """x.__str__() <==> str(x)
+
+        Return a nice string representation of the configuration.
+
+        """
+        return self.to_str()
+
+    def keys(self):
+        """Return list with configuraten keys.
+
+        """
+        return self._config.keys()
+
+    def values(self):
+        """Retrun list with configuration values.
+
+        """
+        return self._config.values()
+
+    def items(self):
+        """Return list with configuration items.
+
+        """
+        return self._config.items()
+
+    def to_str(self, key_delimiter=': ', item_delimiter='; '):
+        """MAke a string out of configuration.
+
+        """
+
+        # Create configuration string
+        config_str = ''
+        for attribute, value in self._config.items():
+            config_str += str(attribute) + key_delimiter
+            config_str += str(value) + item_delimiter
+
+        # Cut of the last item_delimiter
+        if len(item_delimiter):
+            config_str = config_str[:-1 * len(item_delimiter)]
+
+        return config_str
 
 
 def RampDecorator(cls):

@@ -62,7 +62,7 @@ class Loop(object):
         self._stop.set()
 
 
-class NestedLoop(object):
+class LoopNested(object):
 
     def __init__(self, cls, *sweeps):
         """Initialize NestedLoop with a list of sweeps.

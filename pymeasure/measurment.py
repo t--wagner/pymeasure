@@ -25,7 +25,7 @@ class Measurment():
 
     @property
     def is_running(self):
-        """Check if Measurment is running.
+        """Check if measurment is running.
 
         """
 
@@ -35,7 +35,7 @@ class Measurment():
             return self._thread.is_alive()
 
     def start(self):
-        """Start the Measurment thread.
+        """Start the measurment.
 
         """
 
