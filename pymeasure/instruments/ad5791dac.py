@@ -42,66 +42,14 @@ class LinearSweepAd5791Dac(SweepLinear):
 class _Ad5791DacChannel(Channel):
 
     def __init__(self, instrument, channel):
-        Channel.__init__(self)
-
         self._instrument = instrument
         self._channel = channel
-        self._unit = 'volt'
-        self._factor = 1.
-        self._limit = [None, None]
-        self._readback = True
-        self._output = None
 
-        self._attributes = ['unit', 'factor', 'limit', 'readback', 'output']
+        Channel.__init__(self)
+        self.unit = 'volt'
+        self.output = None
 
-    # --- unit ---- #
-    @property
-    def unit(self):
-        return self._unit
-
-    @unit.setter
-    def unit(self, unit):
-        self._unit = unit
-
-    # --- factor --- #
-    @property
-    def factor(self):
-        return self._factor
-
-    @factor.setter
-    def factor(self, factor):
-        try:
-            if factor:
-                self._factor = float(factor)
-            else:
-                raise ValueError
-        except:
-            raise ValueError('Factor must be a nonzero number.')
-
-    # --- limit ---- #
-    @property
-    def limit(self):
-        return self._limit
-
-    @limit.setter
-    def limit(self, limit):
-        self._limit = limit
-
-    # --- readback --- #
-    @property
-    def readback(self):
-        return bool(self._readback)
-
-    @readback.setter
-    def readback(self, boolean):
-        if not (isinstance(boolean, int) and boolean in [0, 1]):
-            err_str = 'readback must be bool, int with True = 1 or False = 0.'
-            raise ValueError(err_str)
-
-        try:
-            self._readback = int(boolean)
-        except:
-            raise ValueError('Readback must be True or False')
+        self._attributes += ['output']
 
     # --- output ---#
     @property

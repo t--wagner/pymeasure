@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from threading import Event
+import threading
 
 
 class Loop(object):
@@ -11,21 +11,27 @@ class Loop(object):
         """
 
         self._sweep = sweep
-        self._pause = Event()
-        self._pause.set()
-        self._hold = Event()
-        self._stop = Event()
+        self._pause = threading.Event().set()
+        self._hold = threading.Event()
+        self._stop = threading.Event()
         self._step = [None]
 
     def __iter__(self):
+        """Return iterator.
 
+        """
+
+        # Iterate through sweep
         for step in self._sweep:
             self._step = step
 
             yield step
 
+            # Wait until pause event got set
+            # Using Event.wait() over a while loop reduces the cpu load
             self._pause.wait()
 
+            # Check stop event and if true break iteration
             if self._stop.is_set():
                 self._stop.clear()
                 break
@@ -39,7 +45,7 @@ class Loop(object):
         return self._step
 
     def pause(self):
-        """Pause the Loop
+        """Pause or unpause the Loop
 
         """
 

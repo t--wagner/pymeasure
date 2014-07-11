@@ -9,15 +9,15 @@ import time
 class _IoTechDac488HrChannel(ChannelWrite):
 
     def __init__(self, backend,  port):
+
         ChannelWrite.__init__(self)
+        self.unit = 'volt'
+        self._config += ['range']
 
         self._backend = backend
         self._port = str(port)
-        self._unit = 'volt'
 
-        self._attributes = ['unit', 'factor', 'limit', 'range', 'readback']
-
-    #--- range ---#
+    # --- range ---#
     @property
     def range(self):
         return self._backend.ask("P" + self._port + "R?X")

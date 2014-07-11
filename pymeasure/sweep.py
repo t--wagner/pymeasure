@@ -174,6 +174,7 @@ class SweepStepsize(Sweep):
 class SweepBits(Sweep):
     pass
 
+
 class SweepTime(Sweep):
 
     def __init__(self, points, waiting_time, readback=False):

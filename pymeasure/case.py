@@ -25,8 +25,25 @@ import abc
 import time
 from functools import wraps
 from math import ceil
-import cPickle as pickle
+#import cPickle as pickle
 
+
+class ChannelConfig(object):
+
+    def __init__(self):
+        pass
+
+    def __repr__(self):
+        pass
+
+    def __str__(self):
+        pass
+
+    def string(self):
+        pass
+
+    def save(self):
+        pass
 
 class Channel(object):
     """Channel class of pymeasure.case.
@@ -200,8 +217,7 @@ class ChannelWrite(ChannelRead):
 
             # Check if value is out of limit
             if not self._limit_test(*values):
-                msg = str(values) + ' is out of limit=' + \
-                      str(self.limit)
+                msg = str(values) + ' is out of limit=' + str(self.limit)
                 raise ValueError(msg)
 
             # Multiply the value with the factor if defined
@@ -212,6 +228,10 @@ class ChannelWrite(ChannelRead):
             writemethod(self, *values)
 
         return write
+
+    @classmethod
+    def _rampmethod():
+        pass
 
     @abc.abstractmethod
     def write(self):
@@ -253,7 +273,7 @@ def RampDecorator(cls):
         def ramp(self, stop, verbose=False):
             start = self.read()[0]
 
-            #Calculate the steps, stepsize and steptime
+            # Calculate the steps, stepsize and steptime
             try:
                 stepsize = abs(self._ramprate * self._steptime)
                 steps = int(ceil(abs(stop - start) / stepsize))
@@ -273,7 +293,8 @@ def RampDecorator(cls):
             last_time = start_time
             position = start
 
-            for n, step in ((n, start + n * stepsize) for n in xrange(1, steps + 1)):
+            steps = xrange(1, steps + 1)
+            for n, step in ((n, start + n * stepsize) for n in steps):
 
                 position = write_method(self, step)
 

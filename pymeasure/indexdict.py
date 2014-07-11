@@ -61,7 +61,7 @@ class IndexDict(object):
         # If direct key lookup fails try the index.
         except KeyError:
             try:
-                #Get the key that bekongs ot the index
+                # Get the key that bekongs ot the index
                 key = self._odict.keys()[key]
                 return self._odict[key]
             except:

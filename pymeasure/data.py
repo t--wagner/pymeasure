@@ -3,6 +3,7 @@
 from pymeasure.indexdict import IndexDict
 import pandas
 
+
 class Data2d(object):
 
     def __init__(self):
