@@ -48,8 +48,9 @@ class Channel(object):
     # --- name --- #
     @property
     def name(self):
-        """A string name.
+        """Name of the channel.
 
+        Returns a string.
         """
         return self._name
 
@@ -60,8 +61,9 @@ class Channel(object):
     # --- unit --- #
     @property
     def unit(self):
-        """The physical unit.
+        """The physical unit of the channel.
 
+        Returns a string.
         """
         return self._unit
 
@@ -81,6 +83,10 @@ class Channel(object):
 
     @abc.abstractmethod
     def read(self):
+        """Abstract read method. Every channel has to implement at least a
+        read method.
+
+        """
         pass
 
 
@@ -111,7 +117,11 @@ class ChannelRead(Channel):
     def factor(self):
         """The factor for the read and write method.
 
-        Write values get multiplied and read values get divided by the factor.
+        The factor can be any nonzero number or None (1 and False are equal
+        None). Write input values get multiplied and read return values get
+        divided by the factor.
+
+        Returns: Float or None.
         """
         return self._factor
 
@@ -120,6 +130,8 @@ class ChannelRead(Channel):
         try:
             if factor:
                 self._factor = float(factor)
+            elif factor == 1:
+                self._factor = None
             elif factor is None:
                 self._factor = None
             elif factor is False:
@@ -130,14 +142,39 @@ class ChannelRead(Channel):
             raise ValueError('factor must be a nonzero number or None, False.')
 
     def _factor_divide(self, values):
+        """Divide the values with the channel factor.
+
+        This method is used by the _readmethod decorator, do not use it out-
+        side. Depending on the output (list, numpy array, ctype array, ...) of
+        the decorated read method a different implementation is might be
+        necessary.
+
+        Returns: List with divided values.
+        """
         return [value / self.factor for value in values]
 
     def _factor_multiply(self, values):
+        """Factor the values with the channel factor.
+
+        This method is used by the _writemethod decorator, do not use it out-
+        side.
+
+        Returns: List with multiplied values.
+        """
         return [value * self.factor for value in values]
 
     @classmethod
     def _readmethod(cls, readmethod):
+        """Decorator for the channel read method.
 
+        It applies the _factor_divide method to the output of the decorated
+        method.
+
+        Returns: Usually a list but anything iteratable (e.g. ctype or numpy
+                 array) is allowed.
+        """
+
+        @wraps(readmethod)
         def read(self, **kw):
             values = readmethod(self, **kw)
             if self.factor:
@@ -145,10 +182,6 @@ class ChannelRead(Channel):
             return values
 
         return read
-
-    @abc.abstractmethod
-    def read(self):
-        pass
 
 
 class ChannelWrite(ChannelRead):
@@ -182,9 +215,10 @@ class ChannelWrite(ChannelRead):
     def limit(self):
         """The lower and upper limit for the write method.
 
-        Values outside the limits will raise a ValueError by the write method.
+        Values outside the limit boundaries will raise a ValueError by the
+        write method.
 
-        Returns a tuple limit=(low,up)
+        Returns: Tuple limit=(low,up)
         """
         return self._limit
 
@@ -202,7 +236,13 @@ class ChannelWrite(ChannelRead):
         self._limit = tuple(limit)
 
     def _limit_test(self, values):
+        """Test if values or inside the limit boundaries.
 
+        This method is used by the _writemethod decorator, do not use it out-
+        side.
+
+        Returns: True or False
+        """
         limit = self.limit
 
         for value in values:
@@ -215,7 +255,16 @@ class ChannelWrite(ChannelRead):
 
     @classmethod
     def _writemethod(cls, writemethod):
+        """Decorator for the channel read method.
 
+        It applies the _factor_divide method to the output of the decorated
+        method.
+
+        Returns: Usually a list but anything iteratable (e.g. ctype or numpy
+                 array) is allowed.
+        """
+
+        @wraps(writemethod)
         def write(self, *values, **kw):
 
             # Check if value is out of limit
@@ -234,6 +283,10 @@ class ChannelWrite(ChannelRead):
 
     @abc.abstractmethod
     def write(self, *values):
+        """Abstract write method. Every write channel has to implement a write
+        method.
+
+        """
         pass
 
 
@@ -250,6 +303,14 @@ class ChannelStep(ChannelWrite):
 
     @property
     def steptime(self):
+        """Steptime of channel.
+
+        The steptime is a instrument dependet quantity and usually coresponds
+        to the communication time. This makes sure that the steprate is kept.
+        None means that there is no stepping of the write method.
+
+        Return: Float or None
+        """
         return self._steptime
 
     @steptime.setter
@@ -261,6 +322,13 @@ class ChannelStep(ChannelWrite):
 
     @property
     def steprate(self):
+        """Steprate of channel.
+
+        Setting the steprate changes the stepsize = steprate * steptime. None
+        means that there is no stepping of the write method.
+
+        Return: Float or None
+        """
         return self._steprate
 
     @steprate.setter
@@ -272,6 +340,13 @@ class ChannelStep(ChannelWrite):
 
     @property
     def stepsize(self):
+        """Stepsize of channel.
+
+        Setting the stepsize changes the steprate = steprate * steptime. None
+        means that there is no stepping of the write method.
+
+        Return: Float or None
+        """
         try:
             stepsize = self._steprate * self._steptime
         except TypeError:
@@ -396,7 +471,7 @@ class ChannelConfig(object):
         return self._config.items()
 
     def to_str(self, key_delimiter=': ', item_delimiter='; '):
-        """MAke a string out of configuration.
+        """Make a string out of configuration.
 
         """
 
@@ -418,14 +493,12 @@ class Instrument(IndexDict):
 
     Instrument is the base class of all pymeasure instruments. It inherits
     from IndexDict to provide a lightweight interface for interactive work.
-
     """
 
     def __init__(self, name=''):
         """Initiate Instrument class.
 
         """
-
         IndexDict.__init__(self)
         self._name = name
 
@@ -437,13 +510,21 @@ class Instrument(IndexDict):
 
     @property
     def name(self):
+        """Name of instrument.
+
+        Returns: string.
+        """
         return self._name
 
+    @name.setter
+    def name(self, name):
+        self._name = str(name)
+
     def channels(self):
-        """Return list of all Channels in Instrument.
+        """List all channels in instrument.
 
+        Returns: List of channel references.
         """
-
         return self._odict.values()
 
 
@@ -462,4 +543,8 @@ class Rack(IndexDict):
             raise TypeError('item must be an Instrument')
 
     def instruments(self):
+        """Return list of all instruments in rack.
+
+        """
+
         return self._odict.values()
