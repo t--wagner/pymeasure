@@ -43,6 +43,10 @@ class Sweep(object):
     def steps(self):
         pass
 
+    @abc.abstractproperty
+    def points(self):
+        pass
+
     @property
     def waiting_time(self):
         return self._waiting_time
@@ -63,6 +67,10 @@ class SweepSteps(Sweep):
     @property
     def steps(self):
         return self._steps
+
+    @property
+    def points(self):
+        return len(self.steps)
 
 
 class SweepLinear(Sweep):

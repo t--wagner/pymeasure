@@ -15,7 +15,7 @@
     implemented directly. So refer to the documentation how to write and design
     pymeasure instruments and channels.
 
-    The additional Rack class is an container for Instruments. Althogh it is
+    The additional Rack class is an container for Instruments. Although it is
     not a necessary part of the abstraction concept it rounds things off.
 
 """
@@ -24,7 +24,7 @@ from pymeasure.indexdict import IndexDict
 import abc
 import time
 from functools import wraps
-from math import ceil
+import math
 from collections import OrderedDict
 
 
@@ -38,6 +38,7 @@ class Channel(object):
         self.name = name
         self.unit = unit
 
+        # Define config list
         self._config = ['name', 'unit']
 
     @abc.abstractmethod
@@ -47,6 +48,9 @@ class Channel(object):
     # --- name --- #
     @property
     def name(self):
+        """A string name.
+
+        """
         return self._name
 
     @name.setter
@@ -56,13 +60,20 @@ class Channel(object):
     # --- unit --- #
     @property
     def unit(self):
+        """The physical unit.
+
+        """
         return self._unit
 
     @unit.setter
     def unit(self, unit):
         self._unit = str(unit)
 
-    def config(self):
+    def config(self, load=None):
+
+        if load:
+            for attr, value in load:
+                self.__setattr__(attr, value)
 
         config = [(attr, self.__getattribute__(attr)) for attr in self._config]
 
@@ -81,9 +92,11 @@ class ChannelRead(Channel):
         Channel.__init__(self, name, unit)
 
         self.factor = None
+
+        # Update config list
         self._config += ['factor']
 
-    def __call__(self, **kw):
+    def __call__(self):
         """Call the read method.
 
         x.__call__(**kw) <==> x(**kw) <==> x.read(**kw)
@@ -96,6 +109,10 @@ class ChannelRead(Channel):
     # --- factor --- #
     @property
     def factor(self):
+        """The factor for the read and write method.
+
+        Write values get multiplied and read values get divided by the factor.
+        """
         return self._factor
 
     @factor.setter
@@ -141,9 +158,11 @@ class ChannelWrite(ChannelRead):
         ChannelRead.__init__(self, name, unit)
 
         self.limit = (None, None)
+
+        # Update config list
         self._config += ['limit']
 
-    def __call__(self, *values, **kw):
+    def __call__(self, *values):
         """ Call the write or read method.
 
         With optional *values the write method gets called
@@ -153,10 +172,20 @@ class ChannelWrite(ChannelRead):
             x.__call__(**kw) <==> x(**kw) <==> x.read(**kw)
 
         """
+        if len(values):
+            return self.write(*values)
+        else:
+            return self.read()
 
     # --- limit --- #
     @property
     def limit(self):
+        """The lower and upper limit for the write method.
+
+        Values outside the limits will raise a ValueError by the write method.
+
+        Returns a tuple limit=(low,up)
+        """
         return self._limit
 
     @limit.setter
@@ -203,13 +232,112 @@ class ChannelWrite(ChannelRead):
 
         return write
 
-    @classmethod
-    def _rampmethod():
+    @abc.abstractmethod
+    def write(self, *values):
         pass
 
-    @abc.abstractmethod
-    def write(self):
-        pass
+
+class ChannelStep(ChannelWrite):
+
+    def __init__(self):
+        ChannelWrite.__init__(self)
+
+        # Update config list
+        self._config += ['steprate', 'steptime', 'stepsize']
+
+        self.steprate = None
+        self.steptime = None
+
+    @property
+    def steptime(self):
+        return self._steptime
+
+    @steptime.setter
+    def steptime(self, seconds):
+        if seconds:
+            self._steptime = float(seconds)
+        else:
+            self._steptime = None
+
+    @property
+    def steprate(self):
+        return self._steprate
+
+    @steprate.setter
+    def steprate(self, steprate):
+        if steprate:
+            self._steprate = float(steprate)
+        else:
+            self._steprate = None
+
+    @property
+    def stepsize(self):
+        try:
+            stepsize = self._steprate * self._steptime
+        except TypeError:
+            stepsize = None
+
+        return stepsize
+
+    @stepsize.setter
+    def stepsize(self, stepsize):
+        if stepsize:
+            self.steprate = float(stepsize) / self.steptime
+        else:
+            self.steprate = None
+
+    @classmethod
+    def _writemethod(cls, writemethod):
+
+        # Decortae the writemethod
+        writemethod = ChannelWrite._writemethod(writemethod)
+
+        def write(self, stop, verbose=False):
+
+            start, = self.read()
+            stepsize = self.stepsize
+            steptime = self.steptime
+
+            # Calculate the number of points
+            try:
+                points = int((stop - start) / stepsize)
+            except TypeError:
+                points = 0
+
+            # Return generator for negative or positive step direction
+            if math.copysign(1, points) > 0:
+                points = xrange(1, points + 1, 1)
+            else:
+                points = xrange(-1, points - 1, -1)
+
+            # Do stepping
+            last_time = verbose_time = time.time()
+
+            for step in (start + n * stepsize for n in points):
+                writemethod(self, step)
+
+                # Check verbose argument
+                if verbose:
+                    # If verbose is True print every step
+                    if verbose is True:
+                        position, = self.read()
+                        print position
+                    # If verbose is a time print the current step
+                    elif (time.time() - verbose_time) > verbose:
+                        verbose_time = time.time()
+                        position, = self.read()
+                        print position
+
+                # Calculate left waiting time and wait for it
+                waiting_time = steptime - (time.time() - last_time)
+                if waiting_time > 0:
+                    time.sleep(waiting_time)
+                last_time = time.time()
+
+            # Set last step
+            writemethod(self, stop)
+
+        return write
 
 
 class ChannelConfig(object):
@@ -236,7 +364,7 @@ class ChannelConfig(object):
     def __repr__(self):
         """x.__repr__() <==> rapr(x)
 
-        Return the canonical string representation of teh configuration.
+        Return the canonical string representation of the configuration.
 
         """
         return self.to_str(key_delimiter=': ', item_delimiter='\n')
@@ -283,86 +411,6 @@ class ChannelConfig(object):
             config_str = config_str[:-1 * len(item_delimiter)]
 
         return config_str
-
-
-def RampDecorator(cls):
-
-    # Add ramprate property
-    setattr(cls, '_ramprate', None)
-
-    @property
-    def ramprate(self):
-        return self._ramprate
-
-    @ramprate.setter
-    def ramprate(self, rate):
-        self._ramprate = rate
-
-    setattr(cls, 'ramprate', ramprate)
-
-    # Add steptime property
-    setattr(cls, '_steptime', None)
-
-    @property
-    def steptime(self):
-        return self._steptime
-
-    @steptime.setter
-    def steptime(self, seconds):
-        self._steptime = seconds
-
-    setattr(cls, 'steptime', steptime)
-
-    # Define ramp for write method
-    def write_decorator(write_method):
-
-        @wraps(write_method)
-        def ramp(self, stop, verbose=False):
-            start = self.read()[0]
-
-            # Calculate the steps, stepsize and steptime
-            try:
-                stepsize = abs(self._ramprate * self._steptime)
-                steps = int(ceil(abs(stop - start) / stepsize))
-
-                # Correct stepsize and steptime for equal stepping
-                stepsize = float(stop - start) / steps
-                steptime = abs(stepsize / float(self._ramprate))
-
-            # Handle exception if steptime and ramprate are None from
-            # pymeasure.case import Instrument
-            except (TypeError, ZeroDivisionError):
-                stepsize = (stop - start)
-                steps = 1
-                steptime = 0
-
-            start_time = time.time()
-            last_time = start_time
-            position = start
-
-            steps = xrange(1, steps + 1)
-            for n, step in ((n, start + n * stepsize) for n in steps):
-
-                position = write_method(self, step)
-
-                if verbose:
-                    if (time.time() - last_time) > verbose:
-                        last_time = time.time()
-                        print position
-
-                wait_time = steptime - (time.time() - start_time)
-                if wait_time > 0:
-                    time.sleep(wait_time)
-
-                start_time = time.time()
-
-            return position
-
-        return ramp
-
-    setattr(cls, 'write', write_decorator(getattr(cls, 'write')))
-
-    return cls
 
 
 class Instrument(IndexDict):

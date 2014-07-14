@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
 
 import random
-import pymeasure as pym
+import math
+from pymeasure.case import *
+from pymeasure import pym
 
 
 def readchannel_test(channel):
@@ -74,15 +76,43 @@ def readchannel_test(channel):
     print ''
 
 
-
-
 def writechannel_test(channel):
     readchannel_test(channel)
 
+    print 'Channel write():'
+    print '---------------'
+    vals = [random.random() for i in range(1)]
+    print 'channel()       = ' + str(channel(*vals))
+    print 'channel.write() = ' + str(channel.write(*vals))
+    print
+
+
+def instrument_test(instrument):
+
+    for channel in instrument:
+        if isinstance(channel, ChannelWrite):
+            writechannel_test(channel)
+        elif isinstance(channel, ChannelRead):
+            readchannel_test(channel)
+
+
+def ramp(start, stop, stepsize):
+    stepsize = stepsize
+    points = int((stop - start) / stepsize)
+
+    # Return generator for negative or positive stepping
+    if math.copysign(1, points) > 0:
+        steps = (start + n * stepsize for n in xrange(1, points + 1, 1))
+    else:
+        steps = (start + n * stepsize for n in xrange(-1, points - 1, -1))
+
+    return list(steps) + [stop]
 
 if __name__ == '__main__':
 
     fooinstr = pym.instruments.FooInstrument()
-    testch = fooinstr['random']
-    testch.samples = 2
-    writechannel_test(testch)
+    instrument_test(fooinstr)
+
+    out = fooinstr[1]
+    out.steptime = 0.1
+    out.steprate = 0.1

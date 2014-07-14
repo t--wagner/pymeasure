@@ -38,14 +38,14 @@ class Loop(object):
 
     @property
     def step(self):
-        """Return the current step of the Loop.
+        """Return the current step of the loop.
 
         """
 
         return self._step
 
     def pause(self):
-        """Pause or unpause the Loop
+        """Pause or unpause the loop
 
         """
 
@@ -55,7 +55,7 @@ class Loop(object):
             self._pause.set()
 
     def stop(self):
-        """Stop the Loop.
+        """Stop the loop.
 
         """
 
@@ -71,9 +71,9 @@ class LoopNested(object):
 
         self._loop_list = [Loop(sweep) for sweep in sweeps]
 
-        cls.step = self.step
-        cls.pause = self.pause
-        cls.stop = self.stop
+        setattr(cls, 'step', self.step)
+        setattr(cls, 'pause', self.pause)
+        setattr(cls, 'stop', self.stop)
 
     def __getitem__(self, key):
         """x.__getitem__(key) <==> x[key]

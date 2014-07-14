@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*
 
-from pymeasure.case import ChannelRead, ChannelWrite, RampDecorator, Instrument
+from pymeasure.case import ChannelRead, ChannelWrite, ChannelStep, Instrument
 import random
 
 
@@ -8,6 +8,8 @@ class _FooRandomChannel(ChannelRead):
 
     def __init__(self):
         ChannelRead.__init__(self)
+        self.name = 'foo_random'
+        self.unit = 'abu'
 
         self._samples = 1
         self._min = -1
@@ -48,31 +50,41 @@ class _FooRandomChannel(ChannelRead):
 # @RampDecorator
 class FooBaseChannel(object):
 
-    _value = 0
+    _values = []
 
 
-class _FooOutputChannel(FooBaseChannel, ChannelWrite):
+class _FooOutputChannel(FooBaseChannel, ChannelStep):
 
     def __init__(self):
-        ChannelWrite.__init__(self)
+        ChannelStep.__init__(self)
 
-    @ChannelWrite._readmethod
+        FooBaseChannel._values.append([0])
+        self._index = len(FooBaseChannel._values) - 1
+
+        self.name = 'foo_out'
+        self.unit = 'abu'
+
+    @ChannelStep._readmethod
     def read(self):
-        return [FooBaseChannel._value]
+        return list(_FooOutputChannel._values[self._index])
 
-    @ChannelWrite._writemethod
-    def write(self, value):
-        FooBaseChannel._value = value
+    @ChannelStep._writemethod
+    def write(self, *values, **kw):
+        _FooOutputChannel._values[self._index] = values
 
 
 class _FooInputChannel(FooBaseChannel, ChannelRead):
 
-    def __init__(self):
-        ChannelWrite.__init__(self)
+    def __init__(self, index):
+        ChannelRead.__init__(self)
+        self._index = index
 
-    @ChannelWrite._readmethod
+        self.name = 'foo_in'
+        self.name = 'abu'
+
+    @ChannelRead._readmethod
     def read(self):
-        return [FooBaseChannel._value]
+        return list(_FooOutputChannel._values[self._index])
 
 
 class FooInstrument(Instrument):
@@ -82,7 +94,7 @@ class FooInstrument(Instrument):
 
         self.__setitem__('random', _FooRandomChannel())
         self.__setitem__('out0', _FooOutputChannel())
-        self.__setitem__('in0', _FooOutputChannel())
+        self.__setitem__('in0', _FooInputChannel(0))
 
         if reset is True:
             self.reset()
