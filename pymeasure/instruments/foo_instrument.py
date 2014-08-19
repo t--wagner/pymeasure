@@ -95,6 +95,8 @@ class FooInstrument(Instrument):
         self.__setitem__('random', _FooRandomChannel())
         self.__setitem__('out0', _FooOutputChannel())
         self.__setitem__('in0', _FooInputChannel(0))
+        self.__setitem__('out1', _FooOutputChannel())
+        self.__setitem__('in1', _FooInputChannel(0))
 
         if reset is True:
             self.reset()

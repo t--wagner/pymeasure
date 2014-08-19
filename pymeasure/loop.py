@@ -11,7 +11,8 @@ class Loop(object):
         """
 
         self._sweep = sweep
-        self._pause = threading.Event().set()
+        self._pause = threading.Event()
+        self._pause.set()
         self._hold = threading.Event()
         self._stop = threading.Event()
         self._step = [None]
