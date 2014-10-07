@@ -52,3 +52,6 @@ nosetests.xml
 
 # ADwin
 *.BAK
+
+# IPython
+.ipynb_checkpoints

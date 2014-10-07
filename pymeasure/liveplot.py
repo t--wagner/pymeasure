@@ -17,29 +17,19 @@
 # Pymeasure
 from pymeasure.indexdict import IndexDict
 
-# Abc
 import abc
-
-# System
 import sys
 if sys.version_info[0] < 3:
     import Tkinter as Tk
 else:
     import tkinter as Tk
-
 import warnings
-
-#Numpy
 import numpy as np
-
-# Matplotlib
 import matplotlib as mpl
 from matplotlib.backends.backend_tkagg import (FigureCanvasTkAgg,
                                                NavigationToolbar2TkAgg)
 from matplotlib.colors import Normalize, LogNorm
 from mpl_toolkits.axes_grid1 import make_axes_locatable
-
-# Threading stuff
 from Queue import Queue
 from threading import Event
 
@@ -180,7 +170,7 @@ class LiveGraphTk(LiveGraphBase):
     def __init__(self, figure=None, master=None):
         LiveGraphBase.__init__(self, figure=figure)
 
-        #Setup the TKInter window with the canvas and a toolbar
+        # Setup the TKInter window with the canvas and a toolbar
         if not master:
             self._master = Tk.Tk()
         else:
@@ -355,7 +345,7 @@ class MarkerConf(object):
         # Handle wrong input to avoid crashing running liveplot
         if marker in [None, False]:
             marker = 'None'
-        elif not marker in self._line.markers.keys():
+        elif marker not in self._line.markers.keys():
             raise ValueError('not a valid marker')
 
         self._graph._add_task(self._line.set_marker, marker)
@@ -861,11 +851,18 @@ class ColorbarConf(object):
         self._scale = 'linear'
 
     @property
+    def colormap_names(self):
+        return sorted(mpl.cm.cmap_d.keys())
+
+    @property
     def colormap(self):
         return self._image.get_cmap().name
 
     @colormap.setter
     def colormap(self, colormap):
+        if colormap not in self.colormap_names:
+            raise TypeError('colormap is not valid')
+
         self._graph._add_task(self._image.set_cmap, colormap)
 
     @property
@@ -936,12 +933,11 @@ class Dataplot2d(DataplotBase):
             warnings.simplefilter("ignore")
             self._colorbar = self._graph._figure.colorbar(self._image, axes_cb)
 
-        #self._axes.set_axis_off()
-
         self._image_conf = ImageConf(self._graph, self._image)
         self._label_conf = LabelConf2d(self._graph, self._axes, self._colorbar)
         self._colorbar_conf = ColorbarConf(self._graph, self._image,
                                            self._colorbar)
+        self._colorbar_conf.colormap = 'hot'
 
     @property
     def image(self):
@@ -994,8 +990,8 @@ class Dataplot2d(DataplotBase):
                     self._data = np.array([[]])
                     self._request_update.set()
                 # Fix it later
-                #elif message == 'next':
-                #    self._data.append([])
+                # elif message == 'next':
+                #     self._data.append([])
 
             # Handle the maximum number of displayed points.
             while len(self._trace) >= self._length:
@@ -1006,20 +1002,20 @@ class Dataplot2d(DataplotBase):
                 if self._data.size:
                     self._data = np.vstack((self._data, trace))
                 else:
-                    self._data = np.array(trace)
+                    self._data = np.array([trace])
 
-                #Set the up_to_date flag to True for redrawing
+                # Set the up_to_date flag to True for redrawing
                 self._request_update.set()
 
         # Update the image with the new data if available
         if self._request_update.is_set():
 
             # Prepare displayed data
-            data = self._data
+            data = self._data.copy()
 
             # Take absolute value if log scaled
             if self.colorbar.log:
-                data = np.abs(data)
+                data[data <= 0] = np.nan
 
             if self.colorbar.scale == 'linear':
                 self._colorbar.set_norm(Normalize())
