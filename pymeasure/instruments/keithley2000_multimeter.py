@@ -2,7 +2,7 @@
 
 from pymeasure.instruments.pyvisa_instrument import PyVisaInstrument
 from pymeasure.case import Channel
-
+from pymeasure.instruments.pyvisa_instrument import PyVisaInstrument
 
 def validate_string(value):
     if isinstance(value, str):
@@ -55,6 +55,9 @@ class _Keithley2000MultimeterChannel(Channel):
         self._measf = measurment_function
         self._buffering = False
         self._factor = 1
+
+    def __call__(self, *args, **kwargs):
+        return self.read(*args, **kwargs)        
 
     #--- factor ---#
     @property
