@@ -109,7 +109,7 @@ class _AdwinPro2DacChannel(Channel):
 
         self._last_value = -1
 
-    #--- unit ----#
+    # --- unit ---- #
     @property
     def unit(self):
         return self._unit
@@ -118,7 +118,7 @@ class _AdwinPro2DacChannel(Channel):
     def unit(self, unit):
         self._unit = str(unit)
 
-    #--- factor ---#
+    # --- factor --- #
     @property
     def factor(self):
         return self._factor
@@ -133,7 +133,7 @@ class _AdwinPro2DacChannel(Channel):
         except:
             raise ValueError('factor must be a nonzero number.')
 
-    #--- limit ----#
+    # --- limit ---- #
     @property
     def limit(self):
         return self._limit
@@ -142,7 +142,7 @@ class _AdwinPro2DacChannel(Channel):
     def limit(self, limit):
         self._limit = limit
 
-    #--- readback ---#
+    # --- readback --- #
     @property
     def readback(self):
         return bool(self._readback)
@@ -154,11 +154,11 @@ class _AdwinPro2DacChannel(Channel):
         except:
             raise ValueError('readback must be True or False')
 
-    #--- read ---#
+    # --- read --- #
     def read(self):
         return [self._instrument.Get_FPar(self._dac_number)]
 
-    #--- write ---#
+    # --- write --- #
     def write(self, level):
 
         # Check if value is inside the limits
@@ -234,7 +234,7 @@ class _AdwinPro2AdcChannel(Channel):
         # Transport the values
         data = self._instrument.GetFifo_Long(self._adc_number, self._samples)
 
-        #Return the values as a list
+        # Return the values as a list
         return data[:]
 
 

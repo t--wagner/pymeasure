@@ -9,7 +9,7 @@ class Sweep(object):
 
     __metaclass__ = abc.ABCMeta
 
-    def __init__(self, channel, waiting_time=0, readback=False):
+    def __init__(self, channel, waiting_time=0, readback=False, name=None):
 
         try:
             iter(channel)
@@ -19,6 +19,11 @@ class Sweep(object):
 
         self._waiting_time = float(waiting_time)
         self._readback = bool(readback)
+
+        if not name:
+            names = [channel.name for channel in self._channel]
+            name = str(names).strip('[]').replace('\'', '')
+        self.name = name
 
     def __iter__(self):
 
@@ -65,7 +70,8 @@ class Sweep(object):
 
 class SweepSteps(Sweep):
 
-    def __init__(self, channel, steps, waiting_time=0, readback=False):
+    def __init__(self, channel, steps, waiting_time=0, readback=False,
+                 name=None):
 
         Sweep.__init__(self, channel, waiting_time, readback)
 
@@ -86,7 +92,7 @@ class SweepSteps(Sweep):
 class SweepLinear(Sweep):
 
     def __init__(self, channel, start, stop, points,
-                 waiting_time=0, direction='one', readback=False):
+                 waiting_time=0, direction='one', readback=False, name=None):
 
         Sweep.__init__(self, channel, waiting_time, readback)
 
@@ -173,7 +179,7 @@ class SweepLinear(Sweep):
 
 class SweepTime(Sweep):
 
-    def __init__(self, points, waiting_time, readback=False):
+    def __init__(self, points, waiting_time, readback=False, name='time'):
 
         self._waiting_time = waiting_time
         self._points = int(points)

@@ -1,69 +1,94 @@
-# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*
 
-from pymeasure.indexdict import IndexDict
-import pandas
+import datetime
+from string import join
 
+class DatasetBase(object):
+    """Hdf5 base class.
 
-class Data2d(object):
+    """
 
-    def __init__(self):
+    def __init__(self, dataset):
+        self.dataset = dataset
 
-        self._df = pandas.DataFrame()
-        self._mcol = []
+    @staticmethod
+    def _trim(string):
+        string = join([line.strip() for line in string.splitlines()], sep='\n')
+        return string.strip()
 
-    def __repr__(self):
-        return self._df.__repr__()
+    @classmethod
+    def create(cls, hdf5_file, dataset_key, date=None, contact=None,
+               comment=None, **dset_kwargs):
+        """Create a new HDF5 dataset and initalize Hdf5Base.
 
-    def __str__(self):
-        return self._df.__str__()
+        """
 
-    def head(self, rows=5):
-        return self._df.head(rows)
+        if date is None:
+            # Standart date format '2014/10/31 14:25:57'
+            date = datetime.datetime.now().strftime('%Y/%m/%d %H:%M:%S')
+        if comment is None:
+            comment = ''
+        if contact is None:
+            contact = ''
 
-    def tail(self, rows=5):
-        return self._df.tail(rows)
+        # Initalize Hdf5Base instance with new dataset
+        hdf5base = cls(hdf5_file.create_dataset(dataset_key, **dset_kwargs))
+        hdf5base.date = date
+        hdf5base.comment = comment
+        hdf5base.contact = contact
+
+        # Return
+        return hdf5base
+
+    def __getitem__(self, key):
+
+        # Handle floating point slice numbers
+        if isinstance(key, slice):
+            start = int(key.start) if key.start else None
+            stop = int(key.stop) if key.stop else None
+            step = int(key.step) if key.step else None
+
+            # Pack new slice with integer values
+            key = slice(start, stop, step)
+
+        return self.dataset[key]
+
+    def __setitem__(self, key, value):
+        self.dataset[key] = value
+
+    def __len__(self):
+        """Number of levels.
+
+        """
+        return self.dataset.size
 
     @property
-    def shape(self):
-        return self._df.shape
+    def date(self):
+        return self.dataset.attrs['date']
+
+    @date.setter
+    def date(self, date):
+        self.dataset.attrs['date'] = date
 
     @property
-    def row_len(self):
-        return self._df.shape[0]
+    def contact(self):
+        return self.dataset.attrs['contact']
+
+    @contact.setter
+    def contact(self, contact):
+        self.dataset.attrs['contact'] = DatasetBase._trim(contact)
 
     @property
-    def col_len(self):
-        return self._df.shape[1]
+    def comment(self):
+        return self.dataset.attrs['comment']
+
+    @comment.setter
+    def comment(self, comment):
+        self.dataset.attrs['comment'] = DatasetBase._trim(comment)
 
     @property
-    def row_names(self):
-        return list(self._df.index.names)
+    def dtype(self):
+        """Datatpye of the signal.
 
-    @property
-    def col_names(self):
-        return list(self._df.columns.names)
-
-    def add_trace(self, trace, row_index, col_index):
-
-        row_index = pandas.Index(row_index)
-        col_index = pandas.MultiIndex.from_tuples([col_index])
-        df_trace = pandas.DataFrame(trace, row_index, col_index)
-
-        self._df = pandas.concat([self._df, df_trace], axis=1)
-
-        return self._df
-
-
-class Data(IndexDict):
-
-    def __init__(self, *keys):
-
-        IndexDict.__init__(self)
-
-        for key in keys:
-            self._odict[key] = Data2d()
-
-        self._index = []
-
-    def save_panel(self):
-        pass
+        """
+        return self.dataset.dtype

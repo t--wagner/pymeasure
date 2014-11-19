@@ -128,3 +128,7 @@ class IndexDict(object):
 
         """
         return self._odict.keys()
+
+    def items(self):
+
+        return self._odict.items()

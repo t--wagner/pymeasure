@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import threading
-
+import time
 
 class Loop(object):
 
@@ -16,16 +16,18 @@ class Loop(object):
         self._hold = threading.Event()
         self._stop = threading.Event()
         self._step = [None]
+        self._position = 0
 
     def __iter__(self):
         """Return iterator.
 
         """
+        self._start_time = time.time()
 
         # Iterate through sweep
-        for step in self._sweep:
+        for position, step in enumerate(self._sweep):
             self._step = step
-
+            self._position = position
             yield step
 
             # Wait until pause event got set
@@ -36,6 +38,14 @@ class Loop(object):
             if self._stop.is_set():
                 self._stop.clear()
                 break
+
+    @property
+    def points(self):
+        return self._sweep.points
+
+    @property
+    def position(self):
+        return self._position
 
     @property
     def step(self):
@@ -125,3 +135,18 @@ class LoopNested(object):
         # Set all loops above loop_nr to stop
         for loop in self._loop_list[:loop_nr]:
             loop.stop()
+
+    @property
+    def points(self):
+        product = 1
+        for loop in self._loop_list:
+            product *= loop.points
+        return product
+
+    @property
+    def shape(self):
+        return tuple(loop.points for loop in self._loop_list)
+
+    @property
+    def position(self):
+        return tuple(loop.position for loop in self._loop_list)

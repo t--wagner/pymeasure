@@ -79,7 +79,7 @@ class Channel(object):
 
         config = [(attr, self.__getattribute__(attr)) for attr in self._config]
 
-        return ChannelConfig(config)
+        return Config(config)
 
     @abc.abstractmethod
     def read(self):
@@ -415,79 +415,6 @@ class ChannelStep(ChannelWrite):
         return write
 
 
-class ChannelConfig(object):
-
-    def __init__(self, config=[]):
-        self._config = OrderedDict(config)
-
-    def __getitem__(self, key):
-        """x.__getitem__(key) <==> x[key]
-
-        Return configuration item of key.
-
-        """
-        return self._config[key]
-
-    def __iter__(self):
-        """x.__iter__() <==> iter(x)
-
-        Return a configuration iterator.
-
-        """
-        return iter(self.items())
-
-    def __repr__(self):
-        """x.__repr__() <==> rapr(x)
-
-        Return the canonical string representation of the configuration.
-
-        """
-        return self.to_str(key_delimiter=': ', item_delimiter='\n')
-
-    def __str__(self):
-        """x.__str__() <==> str(x)
-
-        Return a nice string representation of the configuration.
-
-        """
-        return self.to_str()
-
-    def keys(self):
-        """Return list with configuraten keys.
-
-        """
-        return self._config.keys()
-
-    def values(self):
-        """Retrun list with configuration values.
-
-        """
-        return self._config.values()
-
-    def items(self):
-        """Return list with configuration items.
-
-        """
-        return self._config.items()
-
-    def to_str(self, key_delimiter=': ', item_delimiter='; '):
-        """Make a string out of configuration.
-
-        """
-
-        # Create configuration string
-        config_str = ''
-        for attribute, value in self._config.items():
-            config_str += str(attribute) + key_delimiter
-            config_str += str(value) + item_delimiter
-
-        # Cut of the last item_delimiter
-        if len(item_delimiter):
-            config_str = config_str[:-1 * len(item_delimiter)]
-
-        return config_str
-
-
 class Instrument(IndexDict):
     """Container class for instances of pymeasure.Channel.
 
@@ -505,6 +432,7 @@ class Instrument(IndexDict):
     def __setitem__(self, key, channel):
         if isinstance(channel, Channel):
             IndexDict.__setitem__(self, key, channel)
+            channel.name = key
         else:
             raise TypeError('item must be a Channel')
 
@@ -527,6 +455,14 @@ class Instrument(IndexDict):
         """
         return self._odict.values()
 
+    def config(self):
+
+        instr_config = OrderedDict()
+        for key, channel in self.items():
+            instr_config[key] = channel.config()
+
+        return InstrumentConfig(instr_config)
+
 
 class Rack(IndexDict):
     """Container class for instances of pymeasure.Channel.
@@ -548,3 +484,121 @@ class Rack(IndexDict):
         """
 
         return self._odict.values()
+
+
+class Config(object):
+
+    _repr_config = {'key_delimiter': ': ',
+                    'item_delimiter': '\n',
+                    'item_space': ''}
+
+    _str_config = {'key_delimiter': ': ',
+                   'item_delimiter': '; ',
+                   'item_space': ''}
+
+    def __init__(self, config=[]):
+        self._config = OrderedDict(config)
+
+    def __getitem__(self, key):
+        """x.__getitem__(key) <==> x[key]
+
+        Return configuration item of key.
+
+        """
+        return self._config[key]
+
+    def __iter__(self):
+        """x.__iter__() <==> iter(x)
+
+        Return a configuration iterator.
+
+        """
+        return iter(self._config.items())
+
+    def __repr__(self):
+        """x.__repr__() <==> rapr(x)
+
+        Return the canonical string representation of the configuration.
+
+        """
+        return self.to_str(**self._repr_config)
+
+    def __str__(self):
+        """x.__str__() <==> str(x)
+
+        Return a nice string representation of the configuration.
+
+        """
+        return self.to_str(**self._str_config)
+
+    def keys(self):
+        """Return list with configuraten keys.
+
+        """
+        return self._config.keys()
+
+    def values(self):
+        """Retrun list with configuration values.
+
+        """
+        return self._config.values()
+
+    def items(self):
+        """Return list with configuration items.
+
+        """
+        return self._config.items()
+
+    def to_str(self, key_delimiter=': ', item_delimiter='; ', item_space=''):
+        """Make a string out of configuration.
+
+        """
+
+        # Create configuration string
+        config_str = ''
+        for attribute, value in self._config.items():
+            config_str += str(item_space)
+            config_str += str(attribute) + key_delimiter
+            config_str += str(value) + item_delimiter
+
+        # Cut of the last item_delimiter
+        if len(item_delimiter):
+            config_str = config_str[:-1 * len(item_delimiter)]
+
+        return config_str
+
+
+class InstrumentConfig(Config):
+
+    _repr_config = {'key_delimiter': ':\n',
+                    'channel_delimiter': '\n\n',
+                    'config_boundary': ('', ''),
+                    'config_key_delimiter': ': ',
+                    'config_item_delimiter': '\n',
+                    'config_item_space': '\t'}
+
+    _str_config = {'key_delimiter': ': ',
+                   'channel_delimiter': '\n',
+                   'config_boundary': ('{', '}'),
+                   'config_key_delimiter': ': ',
+                   'config_item_delimiter': '; ',
+                   'config_item_space': ''}
+
+    def to_str(self, key_delimiter=': ', channel_delimiter='\n',
+               config_boundary=('{', '}'), config_key_delimiter=': ',
+               config_item_delimiter='; ', config_item_space=''):
+        """Make a string out of configuration.
+
+        """
+
+        # Create configuration string
+        config_str = ''
+        for channel, config in self._config.items():
+            config_str += str(channel) + key_delimiter
+            config_str += config_boundary[0]
+            config_str += config.to_str(config_key_delimiter,
+                                        config_item_delimiter,
+                                        config_item_space)
+            config_str += config_boundary[1] + channel_delimiter
+
+        return config_str

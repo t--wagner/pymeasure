@@ -1019,7 +1019,6 @@ class Dataplot2d(DataplotBase):
 
             if self.colorbar.scale == 'linear':
                 self._colorbar.set_norm(Normalize())
-                self._image.set_norm(Normalize())
             elif self.colorbar.scale == 'log':
                 self._colorbar.set_norm(LogNorm())
 
