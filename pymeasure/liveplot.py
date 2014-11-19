@@ -186,7 +186,7 @@ class LiveGraphTk(LiveGraphBase):
         self._toolbar.update()
         canvas._tkcanvas.pack(side=Tk.TOP, fill=Tk.BOTH, expand=1)
 
-        self._master.protocol("WM_DELETE_WINDOW", self.close_event)
+        self._master.protocol("WM_DELETE_WINDOW", self.close)
 
     def run(self, delay=25):
         """Calls the update method periodically with the delay in milliseconds.
@@ -209,9 +209,8 @@ class LiveGraphTk(LiveGraphBase):
     def close(self):
         if self.close_event:
             self.close_event()
-        self.master.destroy()
-        self.master.quit()
-
+        self._master.destroy()
+        #self._master.quit()
 
 class DataplotBase(object):
     __metaclass__ = abc.ABCMeta
