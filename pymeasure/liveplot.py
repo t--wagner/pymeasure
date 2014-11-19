@@ -62,6 +62,7 @@ class LiveGraphBase(IndexDict):
         # Task queue
         self._tasks = Queue()
         self._tight_layout = True
+        self.close_event = None
 
     def __setitem__(self, key, dataplot):
         """x.__setitem__(key, dataplot) <==> x['key'] = dataplot
@@ -185,6 +186,8 @@ class LiveGraphTk(LiveGraphBase):
         self._toolbar.update()
         canvas._tkcanvas.pack(side=Tk.TOP, fill=Tk.BOTH, expand=1)
 
+        self._master.protocol("WM_DELETE_WINDOW", self.close_event)
+
     def run(self, delay=25):
         """Calls the update method periodically with the delay in milliseconds.
 
@@ -202,6 +205,12 @@ class LiveGraphTk(LiveGraphBase):
 
         # Call run again afer the delay time
         self._master.after(delay, self.run, delay)
+
+    def close(self):
+        if self.close_event:
+            self.close_event()
+        self.master.destroy()
+        self.master.quit()
 
 
 class DataplotBase(object):
