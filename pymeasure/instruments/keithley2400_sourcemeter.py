@@ -17,7 +17,7 @@ class _Keithley2400SourceMeterChannelSource(ChannelStep):
     #--- range ---#
     @property
     def range(self):
-        return float(self._instrument.ask("SOURce:" + self._srcf + ":RANGe?"))
+        return float(self._instrument.query("SOURce:" + self._srcf + ":RANGe?"))
 
     @range.setter
     def range(self, range):
@@ -28,7 +28,7 @@ class _Keithley2400SourceMeterChannelSource(ChannelStep):
     @property
     def autorange(self):
         cmd = "SOURce:" + self._srcf + ":RANGe:AUTO?"
-        return bool(int(self._instrument.ask(cmd)))
+        return bool(int(self._instrument.query(cmd)))
 
     @autorange.setter
     def autorange(self, autorange):
@@ -39,7 +39,7 @@ class _Keithley2400SourceMeterChannelSource(ChannelStep):
     @ChannelStep._readmethod
     def read(self):
         cmd = "SOURce:" + self._srcf + ":LEVel?"
-        level = self._instrument.ask_for_values(cmd)[0]
+        level = self._instrument.query_ascii_values(cmd)[0]
         return [level]
 
     #--- write ---#
@@ -85,7 +85,7 @@ class _Keithley2400SourceMeterChannelMeasure(ChannelRead):
     @property
     def range(self):
         cmd = "SENSe:" + self._measf + ":RANGe?"
-        return self._instrument.ask(cmd)
+        return self._instrument.query(cmd)
 
     @range.setter
     def range(self, range):
@@ -96,7 +96,7 @@ class _Keithley2400SourceMeterChannelMeasure(ChannelRead):
     @property
     def autorange(self):
         cmd = "SENSe:" + self._measf + ":RANGe:AUTO?"
-        return bool(int(self._instrument.ask(cmd)))
+        return bool(int(self._instrument.query(cmd)))
 
     @autorange.setter
     def autorange(self, autorange):
@@ -107,7 +107,7 @@ class _Keithley2400SourceMeterChannelMeasure(ChannelRead):
     @property
     def speed(self):
         cmd = "SENSe:" + self._measf + ":NPLCycles?"
-        return self._instrument.ask(cmd)
+        return self._instrument.query(cmd)
 
     @speed.setter
     def speed(self, speed):
@@ -120,7 +120,7 @@ class _Keithley2400SourceMeterChannelMeasure(ChannelRead):
         cmd = (":SENS:FUNC:CONC 0" + ';' + 
                ":SENSe:FUNCtion '" + self._measf + "'" + ";" +
                ":READ?")
-        return [self._instrument.ask_for_values(cmd)[self._rindex]]
+        return [self._instrument.query_ascii_values(cmd)[self._rindex]]
 
 
 class _Keithley2400SourceMeterChannelMeasureVoltage(_Keithley2400SourceMeterChannelMeasure):
@@ -135,7 +135,7 @@ class _Keithley2400SourceMeterChannelMeasureVoltage(_Keithley2400SourceMeterChan
     @property
     def compliance(self):
         cmd = "SENSe:" + self._measf + ":PROTection?"
-        return self._instrument.ask(cmd)
+        return self._instrument.query(cmd)
 
     @compliance.setter
     def compliance(self, compliance):
@@ -156,7 +156,7 @@ class _Keithley2400SourceMeterChannelMeasureCurrent(_Keithley2400SourceMeterChan
     @property
     def compliance(self):
         cmd = "SENSe:" + self._measf + ":PROTection?"
-        return self._instrument.ask(cmd)
+        return self._instrument.query(cmd)
 
     @compliance.setter
     def compliance(self, compliance):
@@ -175,7 +175,7 @@ class _Keithley2400SourceMeterChannelMeasureResistance(_Keithley2400SourceMeterC
     @property
     def mode(self):
         cmd = "SENSe:" + self._measf + ":MODE?"
-        return self._instrument.ask(cmd)
+        return self._instrument.query(cmd)
 
     @mode.setter
     def mode(self, mode):
@@ -186,8 +186,11 @@ class _Keithley2400SourceMeterChannelMeasureResistance(_Keithley2400SourceMeterC
 class Keithley2400SourceMeter(PyVisaInstrument):
 
     #--- constructor ---#
-    def __init__(self, address, name='', defaults=True, reset=False):
-        PyVisaInstrument.__init__(self, address, name)
+    def __init__(self, rm, address, name='', defaults=False, reset=False):
+        PyVisaInstrument.__init__(self, rm, address, name)
+        
+        # Setting the termination characters
+        self._instrument.read_termination = self._instrument.LF
 
         # Channels
         self.__setitem__('source_voltage_dc', _Keithley2400SourceMeterChannelSourceVoltageDc(self._instrument))
@@ -222,17 +225,17 @@ class Keithley2400SourceMeter(PyVisaInstrument):
     #--- identification ---#
     @property
     def identification(self):
-        return self._instrument.ask("*IDN?")
+        return self._instrument.query("*IDN?")
 
     #--- error ---#
     @property
     def errors(self):
-        return self._instrument.ask("SYSTem:ERRor?")
+        return self._instrument.query("SYSTem:ERRor?")
 
     #--- output ---#
     @property
     def output(self):
-        return bool(int(self._instrument.ask("OUTPut:STATe?")))
+        return bool(int(self._instrument.query("OUTPut:STATe?")))
 
     @output.setter
     def output(self, boolean):
