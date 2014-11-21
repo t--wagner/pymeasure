@@ -1,20 +1,36 @@
 # -*- coding: utf-8 -*
 
 from pymeasure.instruments.pyvisa_instrument import PyVisaInstrument
-from pymeasure.case import Channel
+from pymeasure.case import ChannelWrite
 import time
 from visa import VisaIOError
 
 
-class _OxfordIPSFieldChannel(Channel):
+class _OxfordIPSFieldChannel(ChannelWrite):
 
     def __init__(self, instrument):
-        Channel.__init__(self)
+        ChannelWrite.__init__(self)
         self._instrument = instrument
         self._unit = 'tesla'
         self._readback = True
 
-        self._attributes = ['unit']
+        self._config += ['rate', 'setpoint', 'sweeprate', 'persistant_field',
+                         'heater']
+
+    def __call__(self, *values):
+        """ Call the write or read method.
+
+        With optional *values the write method gets called
+            x.__call__(*values, **kw) <==> x(*values, **kw) <==>
+            x.read(*values, **kw)
+        otherwise the read method
+            x.__call__(**kw) <==> x(**kw) <==> x.read(**kw)
+
+        """
+        if len(values):
+            return self.write(*values)
+        else:
+            return self.read()
 
     def _send_command(self, cmd_string):
         while True:
@@ -22,8 +38,8 @@ class _OxfordIPSFieldChannel(Channel):
             # Sending '\r' before every command makes the communication very
             # stabel and is strongly recommendanded by Timo (after an entire
             # weekend of fighting with the fucking ips)
-            self._instrument.ask('')
-            answer = self._instrument.ask(cmd_string)
+            self._instrument.query('')
+            answer = self._instrument.query(cmd_string)
 
             try:
                 # The ips answers with the commands first letter if it
@@ -40,22 +56,12 @@ class _OxfordIPSFieldChannel(Channel):
                 #print '---------------------'
 
                 timeout = self._instrument.timeout
-                self._instrument.timeout = 0.5
+                self._instrument.timeout = 1
                 try:
                     self._instrument.read()
                 except VisaIOError:
                     pass
                 self._instrument.timeout = timeout
-
-    @property
-    def rate(self):
-        return self._instrument.ask_for_values('R9')
-
-    @rate.setter
-    def rate(self, rate):
-        if not isinstance(rate, (int, float)):
-            raise ValueError
-        self._send_command('T' + str(rate))
 
     @property
     def setpoint(self):
@@ -190,8 +196,8 @@ class _OxfordIPSFieldChannel(Channel):
 
 class QxfordIPS(PyVisaInstrument):
 
-    def __init__(self, address, name='', reset=True, defaults=True):
-        PyVisaInstrument.__init__(self, address, name)
+    def __init__(self, rm, address, name='', reset=True, defaults=True):
+        PyVisaInstrument.__init__(self, rm, address, name)
 
         # Channels
         self.__setitem__('bfield', _OxfordIPSFieldChannel(self._instrument))
@@ -201,7 +207,8 @@ class QxfordIPS(PyVisaInstrument):
 
     #@property
     #def status(self):
-    #    return self._instrument.ask('X')
+    #    return self._instrument.query('X')
 
     def defaults(self):
         pass
+
