@@ -51,18 +51,18 @@ class LiveGraphBase(IndexDict):
         IndexDict.__init__(self)
 
         # Define matplotlib Figure
-        if not figure:
+        if figure is None:
             self._figure = mpl.figure.Figure()
         else:
             self._figure = figure
-
-        # Set the number of colums
-        self._columns = 1
 
         # Task queue
         self._tasks = Queue()
         self._tight_layout = True
         self.close_event = None
+        self.key = 'None'
+
+
 
     def __setitem__(self, key, dataplot):
         """x.__setitem__(key, dataplot) <==> x['key'] = dataplot
@@ -168,6 +168,8 @@ class LiveGraphTk(LiveGraphBase):
 
     """
 
+    _events_key = {' ': None}
+
     def __init__(self, figure=None, master=None):
         LiveGraphBase.__init__(self, figure=figure)
 
@@ -187,6 +189,15 @@ class LiveGraphTk(LiveGraphBase):
         canvas._tkcanvas.pack(side=Tk.TOP, fill=Tk.BOTH, expand=1)
 
         self._master.protocol("WM_DELETE_WINDOW", self.close)
+        self._event = None
+        self.key = None
+
+        # Events
+        self._figure.canvas.mpl_connect('key_press_event', self._on_key)
+
+    def _on_key(self, event):
+        self.event = event
+        self.key = event.key
 
     def run(self, delay=25):
         """Calls the update method periodically with the delay in milliseconds.

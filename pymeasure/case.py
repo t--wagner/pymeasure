@@ -507,6 +507,9 @@ class Config(object):
         """
         return self._config[key]
 
+    def __setitem__(self, key, value):
+        self._config[key] = value
+
     def __iter__(self):
         """x.__iter__() <==> iter(x)
 

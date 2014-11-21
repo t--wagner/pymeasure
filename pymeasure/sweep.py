@@ -122,7 +122,7 @@ class SweepLinear(Sweep):
 
         # Create generator expressions for up and down sweep
         up = (self.start + n * self.stepsize for n in xrange(self.points))
-        down = (self.stop - n * self.stepsize for n in xrange(self.points))
+        down = (self.start + (self.points - n - 1) * self.stepsize for n in xrange(self.points))
 
         # Return genorator for the sweep direction
         if self.direction == 'one':
