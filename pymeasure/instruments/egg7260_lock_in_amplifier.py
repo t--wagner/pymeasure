@@ -29,9 +29,12 @@ class _Egg7260LockInAmplifierChannel(ChannelRead):
         '''Returns the measured value of the channel.
 
         '''
-
-        level = self._instrument.query_ascii_values(self._channel + ".")
-        return level
+        value = self._instrument.query(self._channel + ".")
+        try:     
+            value = float(value)
+        except UnicodeEncodeError:
+            value = float(value.strip('\x00'))
+        return [value]
 
     @property
     def time_constant(self):
@@ -98,7 +101,7 @@ class _Egg7260LockInAmplifierOscillator(ChannelStep):
         self._instrument.write('IE ' + str(n))
         if not(value_ok):
             err_str = 'Unknown reference channel selected.'
-            raise valueError(err_str)
+            raise ValueError(err_str)
 
 
     @property
@@ -126,8 +129,13 @@ class _Egg7260LockInAmplifierOscillator(ChannelStep):
         '''Returns the amplitude of the Oscillator Output.
 
         '''
-
-        return self._instrument.query_ascii_values('OA.')
+        value = self._instrument.query('OA.')
+        try:     
+            value = float(value)
+        except UnicodeEncodeError:
+            value = float(value.strip('\x00'))
+        return [value]
+        
 
     @ChannelStep._writemethod
     def write(self, level):
