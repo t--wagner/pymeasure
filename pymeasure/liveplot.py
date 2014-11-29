@@ -957,6 +957,7 @@ class Dataplot2d(DataplotBase):
         self._colorbar_conf = ColorbarConf(self._graph, self._image,
                                            self._colorbar)
         self._colorbar_conf.colormap = 'hot'
+        self._diff = False
 
     @property
     def image(self):
@@ -982,6 +983,19 @@ class Dataplot2d(DataplotBase):
 
         # Put the incoming data into the data exchange queue
         self._exchange_queue.put([data])
+
+    @property
+    def diff(self):
+        return self._diff
+
+    @diff.setter
+    def diff(self, diff):
+        if int(diff) > 0:
+            self._diff = int(diff)
+        elif diff is False:
+            self._diff = False
+        else:
+            raise ValueError('diff musste be True, False or integer greater 0')
 
     def next_line(self):
 
@@ -1031,6 +1045,10 @@ class Dataplot2d(DataplotBase):
 
             # Prepare displayed data
             data = self._data.copy()
+
+            # Differentiate data
+            if self.diff:
+                data = data[:, self.diff:] - data[:, :-self.diff]
 
             # Take absolute value if log scaled
             if self.colorbar.log:

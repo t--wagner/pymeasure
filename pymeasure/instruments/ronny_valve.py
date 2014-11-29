@@ -73,7 +73,6 @@ class RonnyValve(PyVisaInstrument):
     def status(self):
         return self._instrument.query('status?')
 
-    @property
     def setup(self, setup=False):
         if setup:
             self._instrument.write('setup')

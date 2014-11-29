@@ -120,9 +120,13 @@ class SweepLinear(Sweep):
         """The step generator.
         """
 
-        # Create generator expressions for up and down sweep
-        up = (self.start + n * self.stepsize for n in xrange(self.points))
-        down = (self.start + (self.points - n - 1) * self.stepsize for n in xrange(self.points))
+        # Create generator expressions for up sweep
+        points = xrange(self.points)
+        up = (self.start + n * self.stepsize for n in points)
+
+        # Create generator expressions for down sweep
+        points = xrange(self.points - 1, -1, -1)
+        down = (self.start + n * self.stepsize for n in points)
 
         # Return genorator for the sweep direction
         if self.direction == 'one':
