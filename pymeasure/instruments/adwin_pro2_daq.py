@@ -1,6 +1,6 @@
 from pymeasure.case import Channel, Instrument
 import ADwin
-
+import numpy as np
 
 class _AdwinSubsystem(object):
 
@@ -107,9 +107,18 @@ class _AdwinPro2AdcChannel(Channel):
         self._instrument = instrument
         self._adc_number = adc_number
         self._samples = 1
+        self.factor = 1
 
     def __call__(self):
         pass
+
+    @property
+    def factor(self):
+        return self._factor
+
+    @factor.setter
+    def factor(self, factor):
+        self._factor = factor
 
     @property
     def samples(self):
@@ -135,9 +144,9 @@ class _AdwinPro2AdcChannel(Channel):
         while (self._instrument.Fifo_Full(self._adc_number) < self._samples):
             pass
 
-        data = self._instrument.GetFifo_Long(self._adc_number, self._samples)
+        data = self._instrument.GetFifo_Float(self._adc_number, self._samples)
 
-        return data
+        return np.array(data) / self._factor
 
 
 class AdwinPro2Daq(AdwinInstrument):

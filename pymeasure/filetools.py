@@ -4,6 +4,20 @@ import os
 from os import makedirs as create_directory
 
 
+def read_file(filename, strip=True):
+    """Read file into string.
+
+    """
+
+    with open(filename, 'r') as fobj:
+        file_str = fobj.read()
+
+    if strip:
+        file_str = file_str.strip()
+
+    return file_str
+
+
 def create_file(filename, override=False):
     """Create all directories and open new file.
 
@@ -63,7 +77,7 @@ def index_str(positions, index):
     return zero_str + val_str
 
 
-class _IndexerBase(object):
+class IndexerBase(object):
 
     def __init__(self, filename, positions=3, start=0, increment=1):
 
@@ -106,7 +120,7 @@ class _IndexerBase(object):
         return self._increment
 
 
-class DirectoryIndexer(_IndexerBase):
+class DirectoryIndexer(IndexerBase):
 
     def next(self):
 
@@ -134,7 +148,7 @@ class DirectoryIndexer(_IndexerBase):
         return path + self._basename
 
 
-class BasenameIndexer(_IndexerBase):
+class BasenameIndexer(IndexerBase):
 
     def next(self):
 

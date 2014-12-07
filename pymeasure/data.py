@@ -4,15 +4,23 @@ import datetime
 from textwrap import dedent
 
 
-class DatasetBase(object):
-    """Hdf5 base class.
+class FileContainer(object):
+    """Copy file to folder
+
+    """
+
+    def __init__(self, directory):
+        pass
+
+
+class DatasetHdf(object):
+    """Dynamic Hdf5 dataset class.
 
     """
 
     def __init__(self, dataset):
         self.__dict__['dataset'] = dataset
         self.__dict__['trim'] = True
-        self.__dict__['strip'] = True
 
     @classmethod
     def create(cls, hdf5_file, dataset_key, date=None, contact=None,
@@ -70,9 +78,6 @@ class DatasetBase(object):
                 # Trim lines
                 if self.trim:
                     value = dedent(value)
-                # Strip whitespaces at start and end of string
-                if self.strip:
-                    value = value.strip()
 
             self.dataset.attrs[name] = value
 
@@ -91,3 +96,10 @@ class DatasetBase(object):
 
         """
         return self.dataset.dtype
+
+    @property
+    def shape(self):
+        """Datatpye of the signal.
+
+        """
+        return self.dataset.shape

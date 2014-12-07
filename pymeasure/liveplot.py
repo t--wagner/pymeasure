@@ -62,8 +62,6 @@ class LiveGraphBase(IndexDict):
         self.close_event = None
         self.key = 'None'
 
-
-
     def __setitem__(self, key, dataplot):
         """x.__setitem__(key, dataplot) <==> x['key'] = dataplot
 
@@ -624,7 +622,7 @@ class YaxisConf(object):
 
 class Dataplot1d(DataplotBase):
 
-    def __init__(self, graph, axes, length, continuously=False):
+    def __init__(self, graph, axes, length=None, continuously=False):
         """Initiate Dataplot1d class.
 
         """
@@ -648,6 +646,8 @@ class Dataplot1d(DataplotBase):
         self._xaxis_conf = XaxisConf(self._graph, self._axes)
         self._yaxis_conf = YaxisConf(self._graph, self._axes)
         self._label_conf = LabelConf1d(self._graph, self._axes)
+
+        self.switch_xy = False
 
     @property
     def line(self):
@@ -709,6 +709,14 @@ class Dataplot1d(DataplotBase):
         """
         return self._continuously
 
+    @property
+    def switch_xy(self):
+        return self._xy_switch
+
+    @switch_xy.setter
+    def switch_xy(self, boolean):
+        self._xy_switch = bool(boolean)
+
     def add_data(self, xdata, ydata):
         """Add a list of data to the plot.
 
@@ -716,6 +724,21 @@ class Dataplot1d(DataplotBase):
 
         # Put the incoming data into the data exchange queue
         self._exchange_queue.put([xdata, ydata])
+
+    def _clear(self):
+        """Clear the data.
+
+        """
+
+        # Remove oldest datapoints if plotting continuously.
+        if self._continuously:
+            del self._xdata[:-self._length]
+            del self._ydata[:-self._length]
+
+        # Clear all displayed datapoints otherwise.
+        else:
+            del self._xdata[:self._length]
+            del self._ydata[:self._length]
 
     def _update(self):
         """Update the dataplot with the incoming data.
@@ -735,35 +758,32 @@ class Dataplot1d(DataplotBase):
             self._exchange_queue.task_done()
 
             # Try to add data to the x and y lists for plotting
-            try:
-                ydata = package.pop()
-                xdata = package.pop()
+            ydata = package.pop()
+            xdata = package.pop()
 
-                for xdatapoint in xdata:
-                    self._xdata.append(xdatapoint)
+            if self._length:
+                try:
+                    for xdatapoint in xdata:
+                        self._xdata.append(xdatapoint)
 
-                for ydatapoint in ydata:
-                    self._ydata.append(ydatapoint)
+                    for ydatapoint in ydata:
+                        self._ydata.append(ydatapoint)
 
-            # Look for a clearing request if the pop() attribute failed
-            except AttributeError:
-                meassage = package
-                if meassage == 'clear':
-                    del self._xdata[:]
-                    del self._ydata[:]
+                # Look for a clearing request if the pop() attribute failed
+                except AttributeError:
+                    meassage = package
+                    if meassage == 'clear':
+                        del self._xdata[:]
+                        del self._ydata[:]
 
-            # Handle the maximum number of displayed points.
-            while len(self._xdata) > self._length:
+                # Handle the maximum number of displayed points.
+                while len(self._xdata) > self._length:
+                    self._clear()
 
-                #Remove oldest datapoints if plotting continuously.
-                if self._continuously:
-                    del self._xdata[:-self._length]
-                    del self._ydata[:-self._length]
+            else:
+                self._xdata = xdata
+                self._ydata = ydata
 
-                # Clear all displayed datapoints otherwise.
-                else:
-                    del self._xdata[:self._length]
-                    del self._ydata[:self._length]
 
             #Set the up_to_date flag to True for redrawing
             self._request_update.set()
@@ -783,8 +803,10 @@ class Dataplot1d(DataplotBase):
                 ydata = np.abs(ydata)
 
             # Update displayed data.
-            self._line.set_data(xdata, ydata)
-            self._line.set_data(self._xdata, self._ydata)
+            if not self.switch_xy:
+                self._line.set_data(xdata, ydata)
+            else:
+                self._line.set_data(ydata, xdata)
 
             # Recompute the data limits.
             self._axes.relim()
