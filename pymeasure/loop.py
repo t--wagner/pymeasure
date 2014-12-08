@@ -41,7 +41,7 @@ class Loop(object):
 
     @property
     def points(self):
-        return self._sweep.points
+        return len(self._sweep)
 
     @property
     def position(self):

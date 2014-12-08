@@ -52,6 +52,9 @@ class Sweep(object):
     def points(self):
         pass
 
+    def __len__(self):
+        return self.points
+
     @property
     def waiting_time(self):
         """Time in seconds to wait after every step.
