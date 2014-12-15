@@ -26,6 +26,7 @@ import time
 from functools import wraps
 import math
 from collections import OrderedDict
+import numpy as np
 
 
 class Channel(object):
@@ -151,7 +152,12 @@ class ChannelRead(Channel):
 
         Returns: List with divided values.
         """
-        return [value / self.factor for value in values]
+        if isinstance(values, np.ndarray):
+            values = values / self.factor
+        else:
+            values = [value / self.factor for value in values]
+
+        return values
 
     def _factor_multiply(self, values):
         """Factor the values with the channel factor.
@@ -161,7 +167,12 @@ class ChannelRead(Channel):
 
         Returns: List with multiplied values.
         """
-        return [value * self.factor for value in values]
+        if isinstance(values, np.ndarray):
+            values = values * self.factor
+        else:
+            values = [value * self.factor for value in values]
+
+        return values
 
     @classmethod
     def _readmethod(cls, readmethod):

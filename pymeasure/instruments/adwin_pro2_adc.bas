@@ -1,5 +1,5 @@
 '<ADbasic Header, Headerversion 001.001>
-' Process_Number                 = 1
+' Process_Number                 = 3
 ' Initial_Processdelay           = 3000
 ' Eventsource                    = Timer
 ' Control_long_Delays_for_Stop   = No
@@ -15,10 +15,10 @@
 ' Define the ADC module number
 #Define ADC_MODULE 1
 #define ADC_OFFSET 8388608
-#Define INTEGRATION_TIME FPar_1 
-#Define INTEGRATION_POINTS Par_1
-#Define TRIGGER Par_2
-#Define CONTINUOUS Par_3
+#Define INTEGRATION_TIME FPar_70 
+#Define INTEGRATION_POINTS Par_70
+#Define TRIGGER Par_71
+#Define CONTINUOUS Par_73
 
 'Dim Data_1[fifo1_size] As Long As Fifo
 
@@ -84,14 +84,14 @@ Event:
     If (running_index >= INTEGRATION_POINTS) Then
         
       ' Put out the average channel value
-      FPar_11 = (average1 / ADC_OFFSET - 1) * 10
-      FPar_12 = (average2 / ADC_OFFSET - 1) * 10
-      FPar_13 = (average3 / ADC_OFFSET - 1) * 10
-      FPar_14 = (average4 / ADC_OFFSET - 1) * 10
-      FPar_15 = (average5 / ADC_OFFSET - 1) * 10
-      FPar_16 = (average6 / ADC_OFFSET - 1) * 10
-      FPar_17 = (average7 / ADC_OFFSET - 1) * 10
-      FPar_18 = (average8 / ADC_OFFSET - 1) * 10
+      FPar_1 = (average1 / ADC_OFFSET - 1) * 10
+      FPar_2 = (average2 / ADC_OFFSET - 1) * 10
+      FPar_3 = (average3 / ADC_OFFSET - 1) * 10
+      FPar_4 = (average4 / ADC_OFFSET - 1) * 10
+      FPar_5 = (average5 / ADC_OFFSET - 1) * 10
+      FPar_6 = (average6 / ADC_OFFSET - 1) * 10
+      FPar_7 = (average7 / ADC_OFFSET - 1) * 10
+      FPar_8 = (average8 / ADC_OFFSET - 1) * 10
       
       ' Set back running_index
       running_index = 0
