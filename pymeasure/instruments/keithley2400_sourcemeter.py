@@ -12,7 +12,18 @@ class _Keithley2400SourceMeterChannelSource(ChannelStep):
         self._instrument = instrument
         self._srcf = str(source_function)
 
-        self._config += ['range', 'autorange']
+        self._config += ['output', 'range', 'autorange']
+
+    #--- output ---#
+    @property
+    def output(self):
+        return bool(int(self._instrument.query("OUTPut:STATe?")))
+
+    @output.setter
+    def output(self, boolean):
+        if not (isinstance(boolean, int) and boolean in [0, 1]):
+            raise ValueError('output must be bool, int with True = 1 or False = 0.')
+        self._instrument.write("OUTPUt:STATe " + str(int(boolean)))
 
     #--- range ---#
     @property
@@ -213,7 +224,7 @@ class Keithley2400SourceMeter(PyVisaInstrument):
             channel.autorange = True
             
             if isinstance(channel, _Keithley2400SourceMeterChannelSource):
-                channel.steptime = 0.025
+                channel.steptime = 0.040
                 channel.steprate = 0.1
 
     #--- reset ----#
