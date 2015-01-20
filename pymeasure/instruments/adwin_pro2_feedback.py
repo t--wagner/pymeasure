@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*
 
-from pymeasure.case import ChannelRead
 from adwin import AdwinType, AdwinInstrument, AdwinPro2AdcChannel, \
-    AdwinPro2DacChannel
+    AdwinPro2DacChannel, AdwinPro2DaqChannel
 
 
 class AdwinVariables(object):
@@ -77,7 +76,13 @@ class AdwinPro2FeedbackChannel(AdwinVariables, AdwinPro2DacChannel):
 
     @property
     def range(self):
-        return (self._range_low_volt(), self._range_high_volt())
+        if not self.factor:
+            factor = 1.
+        else:
+            factor = self.factor
+        low = self._range_low_volt() / factor
+        high = self._range_high_volt() / factor
+        return (low, high)
 
     @range.setter
     def range(self, range):
@@ -86,9 +91,14 @@ class AdwinPro2FeedbackChannel(AdwinVariables, AdwinPro2DacChannel):
         """
         low = range[0]
         high = range[1]
-        self._set_range_low_volt(low)
-        self._set_range_high_volt(high)
         self.limit = (low, high)
+        if not self.factor:
+            factor = 1.
+        else:
+            factor = self.factor
+        self._set_range_low_volt(low * factor)
+        self._set_range_high_volt(high * factor)
+
         self.update()
 
     @property
@@ -227,9 +237,16 @@ class AdwinPro2Feedback(AdwinInstrument):
                  reboot=False):
         AdwinInstrument.__init__(self, device_number, name)
 
-        # Channels
-        self.__setitem__('adc2',     AdwinPro2DaqChannel(self._instrument, 2,  2))
-        self.__setitem__('adc3',     AdwinPro2DaqChannel(self._instrument, 3,  3))
+        # DAQ
+        self.__setitem__('daq2',     AdwinPro2DaqChannel(self._instrument, 2))
+        self.__setitem__('daq3',     AdwinPro2DaqChannel(self._instrument, 3))
+
+        # ADC
+        self.__setitem__('adc1',     AdwinPro2AdcChannel(self._instrument, 1))
+        self.__setitem__('adc2',     AdwinPro2AdcChannel(self._instrument, 2))
+        self.__setitem__('adc3',     AdwinPro2AdcChannel(self._instrument, 3))
+
+        # Feedback
         self.__setitem__('feedback', AdwinPro2FeedbackChannel(self._instrument, 1, 11))
 
         if defaults:
@@ -239,7 +256,8 @@ class AdwinPro2Feedback(AdwinInstrument):
             self.reset()
 
         if reboot:
-            self.reboot()
+            self.reboot(True)
+            self.defaults()
 
     def defaults(self):
         self['feedback'].steptime = 0.01
@@ -250,22 +268,29 @@ class AdwinPro2Feedback(AdwinInstrument):
         self.reboot()
         self.defaults()
 
-    def start_feedback(self):
-        self._instrument.Stop_Process(3)
+    def start_feedback(self, defaults=False):
         self._instrument.Start_Process(1)
+        self._instrument.Stop_Process(3)
         self._instrument.Start_Process(2)
 
-    def start_adc(self):
+        if defaults:
+            self.defaults()
+
+    def start_adc(self, defaults=False):
+        self._instrument.Start_Process(1)
         self._instrument.Stop_Process(2)
-        self._instrument.Stop_Process(1)
         self._instrument.Start_Process(3)
 
-    def reboot(self):
-        # Reboot adwin
-        self._instrument.Boot(self._boot)
-        self._instrument.Load_Process(self._com)
-        self._instrument.Load_Process(self._main)
-        self._instrument.Load_Process(self._adc)
-        self.start_adc()
+        if defaults:
+            self.defaults()
+
+    def reboot(self, boolean=False):
+        if boolean:
+            # Reboot adwin
+            self._instrument.Boot(self._boot)
+            self._instrument.Load_Process(self._com)
+            self._instrument.Load_Process(self._main)
+            self._instrument.Load_Process(self._adc)
+            self.start_adc()
 
         # Start communication process

@@ -83,7 +83,7 @@ class Channel(object):
         return Config(config)
 
     @abc.abstractmethod
-    def read(self):
+    def read(self, *args, **kwargs):
         """Abstract read method. Every channel has to implement at least a
         read method.
 
@@ -103,7 +103,7 @@ class ChannelRead(Channel):
         # Update config list
         self._config += ['factor']
 
-    def __call__(self):
+    def __call__(self, *args, **kwargs):
         """Call the read method.
 
         x.__call__(**kw) <==> x(**kw) <==> x.read(**kw)
@@ -111,7 +111,7 @@ class ChannelRead(Channel):
         """
 
         # Check for optional *values and call read or wirte
-        return self.read()
+        return self.read(*args, **kwargs)
 
     # --- factor --- #
     @property
@@ -186,8 +186,8 @@ class ChannelRead(Channel):
         """
 
         @wraps(readmethod)
-        def read(self, **kw):
-            values = readmethod(self, **kw)
+        def read(self, *args, **kw):
+            values = readmethod(self, *args, **kw)
             if self.factor:
                 values = self._factor_divide(values)
             return values

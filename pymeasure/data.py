@@ -103,3 +103,13 @@ class DatasetHdf(object):
 
         """
         return self.dataset.shape
+
+
+def dataset_copy(source, hdf_file, destionation, **kw_create_dataset):
+    """Copy the data and all attributes to a new dataset.
+
+    """
+
+    hdf_file.create_dataset(destionation, data=source[:], **kw_create_dataset)
+    for key, value in source.attrs.iteritems():
+        hdf_file[destionation].attrs[key] = value
