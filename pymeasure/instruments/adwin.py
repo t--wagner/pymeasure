@@ -107,8 +107,47 @@ class AdwinInstrument(Instrument):
 
 class AdwinPro2AdcChannel(ChannelRead):
 
-    def __init__(self):
-        pass
+    def __init__(self, instrument, adc_number):
+        ChannelRead.__init__(self)
+        self._instrument = instrument
+
+        self._integration_time   = AdwinType(instrument, 'fpar', 70, True)
+        self._integration_points = AdwinType(instrument, 'par',  70)
+        self._continous          = AdwinType(instrument, 'par',   3, True)
+        self._adc                = AdwinType(instrument, 'fpar', adc_number)
+        self._adc_number = adc_number
+        self._config += ['continous', 'intergration_time']
+
+    @ChannelRead._readmethod
+    def read(self):
+        self.continous = True
+        return [self._adc()]
+
+    @property
+    def continous(self):
+        return bool(self._continous())
+
+    @continous.setter
+    def continous(self, boolean):
+        if boolean is True:
+            self._continous(1)
+        elif boolean is False:
+            self._continous(0)
+        else:
+            raise ValueError('Has to be boolean')
+
+    @property
+    def intergration_time(self):
+        return self._integration_time()
+
+    @intergration_time.setter
+    def intergration_time(self, seconds):
+        self._integration_time(seconds)
+
+    @property
+    def integration_points(self):
+        return self._integration_points()
+
 
 class AdwinPro2DacChannel(ChannelStep):
 
@@ -131,10 +170,9 @@ class AdwinPro2DacChannel(ChannelStep):
 
 class AdwinPro2DaqChannel(ChannelRead):
 
-    def __init__(self, instrument, adc_number, fifo_number):
+    def __init__(self, instrument, fifo_number):
         ChannelRead.__init__(self)
         self._instrument = instrument
-        self._adc_number = adc_number
         self._fifo_number = fifo_number
         self._samples = 1
 
@@ -165,9 +203,9 @@ class AdwinPro2DaqChannel(ChannelRead):
         elif not self.fifo_empty:
             raise ADwin.ADwinError('aquire', 'Fifo overrun.', 0)
 
-        while self.fifo_full < self._samples:
+        while self.fifo_full <= self._samples:
             pass
 
-        data = self._instrument.GetFifo_Float(self._adc_number, self._samples)
+        data = self._instrument.GetFifo_Float(self._fifo_number, self._samples)
 
         return np.array(data)

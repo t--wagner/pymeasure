@@ -94,7 +94,7 @@
 ' ----- Fifo variables -----
 #Define detector_fifo         Data_2
 #Define gate_fifo             Data_3
-#Define fifo_size 10000000
+#Define fifo_size 15000000
 #Define detector_fifo_free    Par_60
 #Define gate_fifo_free        Par_61
 

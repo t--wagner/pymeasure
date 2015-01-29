@@ -59,14 +59,14 @@ Function fupdate() As Long:
   
   ' ------ Range ------    
   
-  ' Hardware build in limits are (-0.3, 0)
+  ' Hardware build in limits are (-10, 0)
   
   ' Set voltage ranges
-  If ((-0.3 <= set_range_high_volt) And (set_range_high_volt <= 0)) Then
+  If ((-10 <= set_range_high_volt) And (set_range_high_volt <= 0)) Then
     range_high_volt = set_range_high_volt
   EndIf
   
-  If ((-0.3 <= set_range_low_volt) And (set_range_low_volt <= 0)) Then
+  If ((-10 <= set_range_low_volt) And (set_range_low_volt <= 0)) Then
     range_low_volt  = set_range_low_volt
   EndIf
   

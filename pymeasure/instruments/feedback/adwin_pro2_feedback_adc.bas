@@ -11,16 +11,10 @@
 ' Info_Last_Save                 = THOMSON  FKP2\wagner
 '<Header End>
 #Include ADwinPro_All.INC
+#Include .\adwin_pro2_feedback_def.inc
 
 ' Define the ADC module number
-#Define ADC_MODULE 1
 #define ADC_OFFSET 8388608
-#Define INTEGRATION_TIME FPar_70 
-#Define INTEGRATION_POINTS Par_70
-#Define TRIGGER Par_71
-#Define CONTINUOUS Par_73
-
-'Dim Data_1[fifo1_size] As Long As Fifo
 
 Dim running_index As Long
 Dim factor As Float
@@ -37,17 +31,20 @@ Dim average6 As Float
 Dim average7 As Float
 Dim average8 As Float
 
+Dim dword16_buf As Long
+
+
 Init:
   ' Turn off trigger
   TRIGGER = 0
   CONTINUOUS = 1
   
   ' Set sampling rate  
-  sampling_rate = 400e3
+  sampling_rate = 300e3
   INTEGRATION_TIME = 0.02
   
-  ProcessDelay = 300e6 / sampling_rate
-  INTEGRATION_POINTS = sampling_rate * INTEGRATION_TIME
+  ProcessDelay = Round(300e6 / sampling_rate)
+  INTEGRATION_POINTS = Round(sampling_rate * INTEGRATION_TIME)
   
   running_index = 1
     
@@ -67,7 +64,7 @@ Init:
   P2_Start_ConvF(adc_module, 011111111b)
   
 Event:
-  P2_Read_ADCF8_24B(ADC_MODULE, adc_values, 1)  
+  P2_Read_ADCF8_24B(adc_module, adc_values, 1)  
   IF ((TRIGGER = 1) OR (CONTINUOUS = 1)) Then
              
     ' Running average
@@ -114,4 +111,31 @@ Event:
     Inc(running_index)
   EndIf
     
+  
+  ' Calculate dwords to set
+  dword16_buf = dword16(FPar_11)
+  
+  ' Check range limits
+  If ((range_low_dword <= dword16_buf) and (dword16_buf <= range_high_dword)) Then
+    ' Value in range
+    feedback_dword = dword16_buf  
+    ' Set dac output value
+    P2_DAC(dac_module, feedback, feedback_dword)
+  Else
+    If (dword16_buf <= range_low_dword) Then
+      ' Value to low
+      feedback_volt = range_low_volt
+      feedback_dword = range_low_dword
+      P2_DAC(dac_module, feedback, feedback_dword)
+    Else
+      If (dword16_buf >= range_high_dword) Then
+        ' Value to high
+        feedback_volt = range_high_volt
+        feedback_dword = range_high_dword
+        P2_DAC(dac_module, feedback, feedback_dword)
+      EndIf
+    EndIf
+  EndIf
+  
   INTEGRATION_POINTS = sampling_rate * INTEGRATION_TIME
+    

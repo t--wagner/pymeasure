@@ -38,6 +38,10 @@ Function freset() As Long
   counts1    =  0
   counts0_nr =  0
   counts1_nr =  0
+  rate0      =  0
+  rate1      =  0
+  length0    =  0
+  length1    =  0
   length0_nr =  0
   length1_nr =  0
   

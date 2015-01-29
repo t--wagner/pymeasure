@@ -15,7 +15,7 @@ set_state1_high_volt = 0
 set_state1_low_volt  = 0
 
 ' Range limits (there are addition hardware limits)
-set_range_low_volt  = -0.2
+set_range_low_volt  = -9
 set_range_high_volt =  0
 
 ' Feedback values

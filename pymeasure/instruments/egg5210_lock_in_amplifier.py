@@ -21,7 +21,7 @@ class _Egg5210LockInAmplifierChannel(ChannelRead):
 
         '''
 
-        level = self._instrument.ask_for_values(self._channel)
+        level = self._instrument.query_ascii_values(self._channel)
         return level
 
     _tcs = OrderedDict([[0, 1.0E-03], [1, 3.0E-03], [2, 10.0E-03], [3, 30.0E-03],
@@ -35,7 +35,7 @@ class _Egg5210LockInAmplifierChannel(ChannelRead):
 
         '''
 
-        index = int(self._instrument.ask('XTC'))
+        index = int(self._instrument.query('XTC'))
         return _Egg5210LockInAmplifierChannel._tcs[index]        
 
     @time_constant.setter
@@ -73,7 +73,7 @@ class _Egg5210LockInAmplifierOscillator(ChannelStep):
 
         '''
 
-        index = int(self._instrument.ask('IE'))
+        index = int(self._instrument.query('IE'))
 
         ref = {0: 'EXT', 1: 'INT'}
         return ref[index]
@@ -138,8 +138,8 @@ class _Egg5210LockInAmplifierOscillator(ChannelStep):
 
         '''
 
-        value, = self._instrument.ask_for_values('OA')
-        return value * 0.001
+        value, = self._instrument.query_ascii_values('OA')
+        return [value * 0.001]
 
     @ChannelStep._writemethod 
     def write(self, level):
@@ -168,7 +168,7 @@ class _Egg5210LockInAmplifierSignalSubsystem(object):
                   
     @property
     def sensitivity(self):
-        index = int(self._instrument.ask_for_values('SEN')[0])
+        index = int(self._instrument.query_ascii_values('SEN')[0])
         return _Egg5210LockInAmplifierSignalSubsystem._sens_dic[index]
     
     @sensitivity.setter
@@ -185,7 +185,7 @@ class _Egg5210LockInAmplifierSignalSubsystem(object):
         Defined Connectors are: 'A', '-B', 'A-B' (for differential measurement)
         and 'test mode' '''
 
-        connector = self._instrument.ask('VMODE')
+        connector = self._instrument.query('VMODE')
         if connector == '0':
             return 'test mode'
         elif connector == '1':
@@ -224,7 +224,7 @@ class _Egg5210LockInAmplifierSignalSubsystem(object):
 
         '''
 
-        return bool(int(self._instrument.ask('FLOAT')))
+        return bool(int(self._instrument.query('FLOAT')))
 
     @floating.setter
     def floating(self, boolean):
@@ -250,7 +250,7 @@ class _Egg5210LockInAmplifierSignalSubsystem(object):
 
         '''
 
-        return (self._instrument.ask('ACGAIN') + '0 dB')
+        return (self._instrument.query('ACGAIN') + '0 dB')
 
     @amplifier.setter
     def amplifier(self, amplification):
@@ -271,7 +271,7 @@ class _Egg5210LockInAmplifierSignalSubsystem(object):
 
         '''
 
-        return bool(int(self._instrument.ask('AUTOMATIC')))
+        return bool(int(self._instrument.query('AUTOMATIC')))
 
     @amplifier_automatic.setter
     def amplifier_automatic(self, boolean):
@@ -338,7 +338,7 @@ class _Egg5210LockInAmplifierRearPanelSubsystem(object):
 
         '''
 
-        output = int(self._instrument.ask('CH 1'))
+        output = int(self._instrument.query('CH 1'))
         if output == 0:
             return 'x'
         elif output == 1:
@@ -374,7 +374,7 @@ class _Egg5210LockInAmplifierRearPanelSubsystem(object):
 
         '''
 
-        output = int(self._instrument.ask('CH 2'))
+        output = int(self._instrument.query('CH 2'))
         if output == 0:
             return 'x'
         elif output == 1:
@@ -404,13 +404,15 @@ class _Egg5210LockInAmplifierRearPanelSubsystem(object):
 """
 class Egg5210LockInAmplifier(PyVisaInstrument):
 
-    def __init__(self, address, name='', defaults=False, reset=False):
-        PyVisaInstrument.__init__(self, address, name)
+    def __init__(self, rm, address, name='', defaults=False, reset=False):
+        PyVisaInstrument.__init__(self, rm, address, name)
+        
+        # Setting the termination characters
+        term_chars = self._instrument.CR
+        self._instrument.read_termination = term_chars
         
         #Setting the input term char at the instrument and for the driver
-        self._instrument.write('DD 13')        
-        self._instrument.term_chars = '\r' 
-        
+        self._instrument.write('DD 13')                
         
         # Channels
         x_channel = _Egg5210LockInAmplifierChannel(self._instrument, 'X')
@@ -464,5 +466,5 @@ class Egg5210LockInAmplifier(PyVisaInstrument):
 
         '''
 
-        id_str = self._instrument.ask('ID')
+        id_str = self._instrument.query('ID')
         return 'EG&G DSP Lock-in Amplifier Model ' + id_str
