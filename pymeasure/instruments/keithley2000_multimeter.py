@@ -156,9 +156,9 @@ class _Keithley2000MultimeterChannel(Channel):
 
         # Get the data
         if self._buffering:
-            data_raw = self._instrument.ask_for_values("TRACe:DATA?")
+            data_raw = self._instrument.query_ascii_values("TRACe:DATA?")
         else:
-            data_raw = self._instrument.ask_for_values("FETCH?")
+            data_raw = self._instrument.query_ascii_values("FETCH?")
 
         # Devide the datapoints by the factor and return the data
         return [point / float(self._factor) for point in data_raw]
@@ -410,7 +410,7 @@ class _Keithley2000MultimeterSubsystemBuffer(object):
 
     @property
     def free(self):
-        return self._instrument.ask_for_values("TRACe:FREE?")
+        return self._instrument.query_ascii_values("TRACe:FREE?")
 
     @property
     def points(self):
@@ -451,7 +451,7 @@ class _Keithley2000MultimeterSubsystemBuffer(object):
 
     @property
     def data(self):
-        return self._instrument.ask_for_values("TRACe:DATA?")
+        return self._instrument.query_ascii_values("TRACe:DATA?")
 
 
 class _Keithley2000MultimeterSubsystemFormat(object):
@@ -521,8 +521,11 @@ class _Keithley2000MultimeterSubsystemSystem(object):
 
 class Keithley2000Multimeter(PyVisaInstrument):
 
-    def __init__(self, address, name='', reset=True):
-        PyVisaInstrument.__init__(self, address, name)
+    def __init__(self, rm, address, name='', reset=True):
+        PyVisaInstrument.__init__(self, rm, address, name)
+        
+        # Setting the termination characters
+        self._instrument.read_termination = self._instrument.LF
 
         # Subsystems
         self.display = _Keithley2000MultimeterSubsystemDisplay(self._instrument)
