@@ -1,13 +1,20 @@
-# -*- coding: utf-8 -*
-
-from pymeasure.case import Channel, Instrument, RampDecorator
+from pymeasure.case import Channel, Instrument
 import ADwin
-
+import numpy as np
 
 class _AdwinSubsystem(object):
 
     def __init__(self, instrument):
         self._instrument = instrument
+
+    def process_delay(self):
+        delay_list = []
+
+        for process_nr in range(1, 11):
+            delay = self._instrument.Get_Processdelay(process_nr)
+            delay_list.append(delay)
+
+        return delay_list
 
     def test_version(self):
         """Checks if the correct operating system for the processor has been
@@ -93,98 +100,6 @@ class AdwinInstrument(Instrument):
         return self._adwin_subsystem
 
 
-@RampDecorator
-class _AdwinPro2DacChannel(Channel):
-
-    def __init__(self, instrument, dac_number):
-        Channel.__init__(self)
-        self._instrument = instrument
-        self._dac_number = dac_number
-
-        self._unit = 'volt'
-        self._factor = 1
-        self._limit = [None, None]
-        self._readback = True
-        self._attributes = ['unit', 'factor', 'limit', 'range', 'readback']
-
-        self._last_value = -1
-
-    # --- unit ---- #
-    @property
-    def unit(self):
-        return self._unit
-
-    @unit.setter
-    def unit(self, unit):
-        self._unit = str(unit)
-
-    # --- factor --- #
-    @property
-    def factor(self):
-        return self._factor
-
-    @factor.setter
-    def factor(self, factor):
-        try:
-            if factor:
-                self._factor = float(factor)
-            else:
-                raise ValueError
-        except:
-            raise ValueError('factor must be a nonzero number.')
-
-    # --- limit ---- #
-    @property
-    def limit(self):
-        return self._limit
-
-    @limit.setter
-    def limit(self, limit):
-        self._limit = limit
-
-    # --- readback --- #
-    @property
-    def readback(self):
-        return bool(self._readback)
-
-    @readback.setter
-    def readback(self, readback):
-        try:
-            self._readback = int(readback)
-        except:
-            raise ValueError('readback must be True or False')
-
-    # --- read --- #
-    def read(self):
-        return [self._instrument.Get_FPar(self._dac_number)]
-
-    # --- write --- #
-    def write(self, level):
-
-        # Check if value is inside the limits
-        if ((self._limit[0] <= level or self._limit[0] is None) and
-            (self._limit[1] >= level or self._limit[1] is None)):
-
-            # Calculate the dword level
-            dlevel = int(round(3276.75 * (10 + level)))
-
-            # Make sure all data has been processed
-            while not self._instrument.GetData_Long(10, 1, 1)[0] == 0:
-                pass
-
-            # Set the level on the instrument
-            self._instrument.SetData_Long([self._dac_number, dlevel], 10, 1, 2)
-
-        # If requested return the new value otherwise the requested value
-        if self._readback:
-            self._last_value = self.read()
-        else:
-            self._last_value = [level]
-
-        # Return the new value
-        return self._last_value
-
-
 class _AdwinPro2AdcChannel(Channel):
 
     def __init__(self, instrument, adc_number):
@@ -192,6 +107,18 @@ class _AdwinPro2AdcChannel(Channel):
         self._instrument = instrument
         self._adc_number = adc_number
         self._samples = 1
+        self.factor = 1
+
+    def __call__(self):
+        pass
+
+    @property
+    def factor(self):
+        return self._factor
+
+    @factor.setter
+    def factor(self, factor):
+        self._factor = factor
 
     @property
     def samples(self):
@@ -204,7 +131,7 @@ class _AdwinPro2AdcChannel(Channel):
     def clear_fifo(self):
         self._instrument.Fifo_Clear(self._adc_number)
 
-    def aquire(self, file_object, clear=False):
+    def read(self, file_object=None, clear=True):
 
         if clear:
             self._instrument.Fifo_Clear(self._adc_number)
@@ -217,36 +144,15 @@ class _AdwinPro2AdcChannel(Channel):
         while (self._instrument.Fifo_Full(self._adc_number) < self._samples):
             pass
 
-        data = self._instrument.GetFifo_Long(self._adc_number, self._samples)
+        data = self._instrument.GetFifo_Float(self._adc_number, self._samples)
 
-        file_object.write(data)
-
-        return data
-
-    def read(self):
-        # Clear the fifo field
-        self._instrument.Fifo_Clear(self._adc_number)
-
-        # Wait until all data have been aquiered
-        while self._instrument.Fifo_Full(self._adc_number) < self._samples:
-            pass
-
-        # Transport the values
-        data = self._instrument.GetFifo_Long(self._adc_number, self._samples)
-
-        # Return the values as a list
-        return data[:]
+        return np.array(data) / self._factor
 
 
-class AdwinPro2Dac(AdwinInstrument):
+class AdwinPro2Daq(AdwinInstrument):
 
-    def __init__(self, device_number, name='', defaults=False, reset=False,
-                 reboot=False):
+    def __init__(self, device_number, name='', reboot=False, delay=500e3):
         AdwinInstrument.__init__(self, device_number, name)
-
-        # DAC Channels
-        self.__setitem__('dac1', _AdwinPro2DacChannel(self._instrument, 1))
-        self.__setitem__('dac2', _AdwinPro2DacChannel(self._instrument, 2))
 
         # ADC Channels
         self.__setitem__('adc1', _AdwinPro2AdcChannel(self._instrument, 1))
@@ -258,28 +164,14 @@ class AdwinPro2Dac(AdwinInstrument):
         self.__setitem__('adc7', _AdwinPro2AdcChannel(self._instrument, 7))
         self.__setitem__('adc8', _AdwinPro2AdcChannel(self._instrument, 8))
 
-        if defaults:
-            self.defaults()
-
-        if reset:
-            self.reset()
-
         if reboot:
             self.reboot()
 
-    def defaults(self):
-        for channel in self.__iter__():
-            channel.limit = [-10, 10]
-            channel.ramprate = 0.1
-            channel.steptime = 0.005
-
-    def reset(self):
-        self.reboot()
-        self.defaults()
+        self._instrument.Set_Processdelay(1, int(300e6 / delay))
 
     def reboot(self):
         adwin_boot = 'C:\ADwin\ADwin11.btl'
-        adwin_dac_bin = 'E:/timo/Messungen/pymeasure/pymeasure/instruments/adwin_pro2_dac.TB1'
+        adwin_dac_bin = 'E:/timo/pymeasure/pymeasure/instruments/adwin_pro2_adc.TB1'
         self._instrument.Boot(adwin_boot)
         self._instrument.Load_Process(adwin_dac_bin)
         self._instrument.Start_Process(1)

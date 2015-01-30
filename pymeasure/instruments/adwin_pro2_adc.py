@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*
 
-from pymeasure.case import Channel, Instrument, RampDecorator
+from pymeasure.case import ChannelRead, Instrument
 import ADwin
 
 
@@ -93,34 +93,45 @@ class AdwinInstrument(Instrument):
         return self._adwin_subsystem
 
 
+class _AdwinPro2AdcChannel(ChannelRead):
 
-class _AdwinPro2AdcChannel(Channel):
+    # Set names for global ADwin parameters
+    _fpar_integration_time = 1
+    _par_trigger = 2
+    _par_continous = 3
 
     def __init__(self, instrument, adc_number):
-        Channel.__init__(self)
+        ChannelRead.__init__(self)
         self._instrument = instrument
         self._adc_number = adc_number
-        self._samples = 1
-        self._factor = 1.
+        self._config += ['continous', 'intergration_time']
 
-    #--- factor ---#
-    @property
-    def factor(self):
-        return self._factor
-
-    @factor.setter
-    def factor(self, factor):
-        try:
-            if factor:
-                self._factor = float(factor)
-            else:
-                raise ValueError
-        except:
-            raise ValueError('Factor must be a nonzero number.')
-
+    @ChannelRead._readmethod
     def read(self):
-        value = self._instrument.Get_FPar(self._adc_number)
-        return [value / float(self._factor)]
+        self._instrument.Set_Par(2, 1)
+        return [self._instrument.Get_FPar(self._adc_number)]
+
+    @property
+    def continous(self):
+        return bool(self._instrument.Get_Par(3))
+
+    @continous.setter
+    def continous(self, boolean):
+        if boolean is True:
+            self._instrument.Set_Par(self._par_continous, 1)
+        elif boolean is False:
+            self._instrument.Set_Par(self._par_continous, 0)
+        else:
+            raise ValueError('Has to be boolean')
+
+    @property
+    def intergration_time(self):
+        return self._instrument.Get_FPar(self._fpar_integration_time)
+
+    @intergration_time.setter
+    def intergration_time(self, seconds):
+        self._instrument.Set_FPar(self._fpar_integration_time, seconds)
+
 
 class AdwinPro2ADC(AdwinInstrument):
 
@@ -156,7 +167,7 @@ class AdwinPro2ADC(AdwinInstrument):
 
     def reboot(self):
         adwin_boot = 'C:\ADwin\ADwin11.btl'
-        adwin_dac_bin = 'C:/Dokumente und Einstellungen/bayer/Eigene Dateien/pymeasure/pymeasure/instruments/adwin_pro2_adc.TB1'
+        adwin_dac_bin = 'E:/timo/pymeasure/pymeasure/instruments/adwin_pro2_adc.TB1'
         self._instrument.Boot(adwin_boot)
         self._instrument.Load_Process(adwin_dac_bin)
         self._instrument.Start_Process(1)

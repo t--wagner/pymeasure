@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*
+# -*- coding: utf-8 -*-
 
 from pymeasure.instruments.pyvisa_instrument import PyVisaInstrument
 from pymeasure.case import ChannelRead, ChannelStep
@@ -6,35 +6,28 @@ import time
 from collections import OrderedDict
 
 
-class _Egg7260LockInAmplifierChannel(ChannelRead):
+class _Egg5210LockInAmplifierChannel(ChannelRead):
 
     def __init__(self, instrument, channel):
         ChannelRead.__init__(self)
         self._instrument = instrument
-        self._channel = channel
+        self._channel = str(channel)
         self._unit = 'volt'
         self._config += ['time_constant']
-
-    _tcs = OrderedDict([(1.0E-05, 0), (2.0E-05, 1), (4.0E-5, 2), (8.0E-5, 3),
-               (16.0E-5, 4), (32.0E-5, 5), (64.0E-5, 6), (5.0E-3, 7),
-               (10.0E-3, 8), (20.0E-3, 9), (50.0E-3, 10), (0.1, 11),
-               (0.2, 12), (0.5, 13), (1.0, 14), (2.0, 15), (5.0, 16),
-               (10.0, 17), (20.0, 18), (50.0, 19), (100.0, 20), (200.0, 21),
-               (500.0, 22), (1.0E3, 23), (2.0E3, 24), (5.0E3, 25),
-               (10.0E3, 26), (20.0E3, 27), (50.0E3, 28), (1.0E5, 29)])
-
 
     @ChannelRead._readmethod
     def read(self):
         '''Returns the measured value of the channel.
 
         '''
-        value = self._instrument.query(self._channel + ".")
-        try:     
-            value = float(value)
-        except UnicodeEncodeError:
-            value = float(value.strip('\x00'))
-        return [value]
+
+        level = self._instrument.query_ascii_values(self._channel)
+        return level
+
+    _tcs = OrderedDict([[0, 1.0E-03], [1, 3.0E-03], [2, 10.0E-03], [3, 30.0E-03],
+               [4, 100.0E-03], [5, 300.0E-03], [6, 1.0], [7, 3.0],
+               [8, 10.0], [9, 30.0], [10, 100.0], [11, 300.0],
+               [12, 1000.0], [13, 3000.0]])
 
     @property
     def time_constant(self):
@@ -42,7 +35,8 @@ class _Egg7260LockInAmplifierChannel(ChannelRead):
 
         '''
 
-        return float(self._instrument.query('TC.'))
+        index = int(self._instrument.query('XTC'))
+        return _Egg5210LockInAmplifierChannel._tcs[index]        
 
     @time_constant.setter
     def time_constant(self, seconds):
@@ -50,17 +44,17 @@ class _Egg7260LockInAmplifierChannel(ChannelRead):
         The time constant can be set to discrete values. If the user chooses
         an impossible value, the time constant is set to the next higher
         allowed value.
-        The time constant ranges from 10E-06 to 100E03 seconds.
+        The time constant ranges from 1E-03 to 3E03 seconds.
 
         '''
 
-        for value, nr in _Egg7260LockInAmplifierChannel._tcs.items():
+        for nr, value in _Egg5210LockInAmplifierChannel._tcs.items():
             if seconds <= value:
                 break
 
-        self._instrument.write('TC ' + str(nr))
+        self._instrument.write('XTC ' + str(nr))
 
-class _Egg7260LockInAmplifierOscillator(ChannelStep):
+class _Egg5210LockInAmplifierOscillator(ChannelStep):
 
     def __init__(self, instrument):
         ChannelStep.__init__(self)
@@ -69,39 +63,36 @@ class _Egg7260LockInAmplifierOscillator(ChannelStep):
 
         self._config += ['reference', 'frequency']
 
-    _ref_dic = OrderedDict([(0, 'INT'), (1, 'EXT LOGIC'), (2, 'EXT')])
+    _freq_dic = {0: 2E-1, 1: 2, 2: 20, 3: 200, 4: 2000, 5: 20000}
 
     @property
     def reference(self):
         '''Returns the source of the reference channel:
         'INT' for internal oscillator source
-        'EXT LOGIC' for external rear panel TTL input
         'EXT' for external front panel analog input
 
         '''
 
-        index = int(self._instrument.query('IE?'))
+        index = int(self._instrument.query('IE'))
 
-        return _Egg7260LockInAmplifierOscillator._ref_dic[index]
+        ref = {0: 'EXT', 1: 'INT'}
+        return ref[index]
 
     @reference.setter
     def reference(self, value):
         '''Sets the source of the reference channel to:
         'INT' for internal oscillator source
-        'EXT LOGIC' for external rear panel TTL input
         'EXT' for external front panel analog input
 
         '''
 
-        value_ok = False
-        for n, item in _Egg7260LockInAmplifierOscillator._ref_dic.items():
-            if item == value:
-                value_ok = True
-                break
-        self._instrument.write('IE ' + str(n))
-        if not(value_ok):
+        if value == 'INT':
+            self._instrument.write('IE 1')
+        elif value == 'EXT':
+            self._instrument.write('IE 0')
+        else:
             err_str = 'Unknown reference channel selected.'
-            raise ValueError(err_str)
+            raise valueError(err_str)
 
 
     @property
@@ -110,84 +101,83 @@ class _Egg7260LockInAmplifierOscillator(ChannelStep):
 
         '''
 
-        return self._instrument.query_ascii_values('OF.')[0]
+        #device returns two values for frequency query. 
+        #First: A value that is proportional to the frequency within a given range
+        # Second a index that correspond to a specific range
+        self._instrument.write('OF')
+        numerical_frequency = int(self._instrument.read())
+        range_index = int(self._instrument.read())
+        return 0.0005 * numerical_frequency * _Egg5210LockInAmplifierOscillator._freq_dic[range_index]
 
     @frequency.setter
     def frequency(self, frequency):
         '''Sets the frequency of the Oscillator Output.
-        The frequency ranges from 0 to 250 kHz.
+        The frequency ranges from 0.5Hz to 125 kHz.
 
         '''
 
         #Set the device to internal as reference channel source
-        self._instrument.write('IE 0')
+        self._instrument.write('IE 1')
+        time.sleep(0.001)        
+        #Proof whether frequency is in the range of the device
+        if ((frequency > 125E3) or (frequency < 0.5)):
+            err_str = 'Frequency out of range'
+            raise ValueError(err_str)
+        #List of the frequencies corresponding to the lower boundary of the ranges
+        #Find the siutable range
+        for n, range in reversed(_Egg5210LockInAmplifierOscillator._freq_dic.items()):
+            if ((frequency / range) >= 1):
+                break
+        frequency_factor = int(float(frequency) / float(range) * 2000)
         #Writes the selected frequency to the device
-        self._instrument.write('OF. ' + str(frequency))
-
+        self._instrument.write('OF ' + str(frequency_factor) + ' ' + str(int(n)))
+        
     @ChannelStep._readmethod
     def read(self):
-        '''Returns the amplitude of the Oscillator Output.
+        '''Returns the amplitude of the Oscillator Output in Volts.
 
         '''
-        value = self._instrument.query('OA.')
-        try:     
-            value = float(value)
-        except UnicodeEncodeError:
-            value = float(value.strip('\x00'))
-        return [value]
-        
 
-    @ChannelStep._writemethod
+        value, = self._instrument.query_ascii_values('OA')
+        return [value * 0.001]
+
+    @ChannelStep._writemethod 
     def write(self, level):
         '''Sets the amplitude of the Oscillator Output.
-        The amplitude ranges from 0V to 5V.
+        The amplitude ranges from 0V to 2V continiously or is 5V fix.
 
         '''
-        self._instrument.write('OA. ' + str(level))
+        if ((level > 2) and (level < 5)):
+            level = 2
+        if level >= 5:
+            level = 5
+            
+        level_in_milivolts = int(float(level) * 1000)
+        self._instrument.write('OA ' + str(level_in_milivolts))
 
 
-class _Egg7260LockInAmplifierSignalSubsystem(object):
+class _Egg5210LockInAmplifierSignalSubsystem(object):
 
     def __init__(self, instrument):
         self._instrument = instrument
-
-    _amps_list = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90]
-
+        
+    _sens_dic = OrderedDict([(0, 100E-9), (1, 300E-9), (2, 1E-6), (3, 3E-6), (4, 10E-6),
+                  (5, 30E-6), (6, 100E-6), (7, 300E-6), (8, 1E-3), (9, 3E-3),
+                  (10, 10E-3), (11, 30E-3), (12, 100E-3), (13, 300E-3), (14, 1),
+                  (15, 3)])
+                  
     @property
-    def mode(self):
-        '''Returns the Input-Mode of the device.
-
-        There are three modes defined: 'Voltage mode', 'High bandwidth current
-        mode' and 'Low noise current mode' '''
-
-        mode = self._instrument.query('IMODE')
-        if mode == '0':
-            return 'Voltage mode'
-        elif mode == '1':
-            return 'High bandwidth current mode'
-        elif mode == '2':
-            return 'Low noise current mode'
-        else:
-            return 'unknown InputMode'
-
-    @mode.setter
-    def mode(self, mode):
-        '''Sets the Input-Mode of the device.
-
-        Possible modes are: 'Voltage mode', 'High bandwidth current
-        mode' and 'Low noise current mode' '''
-
-        if mode == 'Voltage mode':
-            self._instrument.write('IMODE 0')
-        elif mode == 'High bandwidth current mode':
-            self._instrument.write('IMODE 1')
-        elif mode == 'Low noise current mode':
-            self._instrument.write('IMODE 2')
-        else:
-           err_str = 'signal_mode must be \"Voltage mode\", \"High bandwidth' \
-           ' current mode\" or \"Low noise current mode\"'
-           raise ValueError(err_str)
-
+    def sensitivity(self):
+        index = int(self._instrument.query_ascii_values('SEN')[0])
+        return _Egg5210LockInAmplifierSignalSubsystem._sens_dic[index]
+    
+    @sensitivity.setter
+    def sensitivity(self, sens):
+        for n, level in _Egg5210LockInAmplifierSignalSubsystem._sens_dic.items():
+            if level >= sens:
+                break
+        self._instrument.write('SEN ' + str(n))
+"""
     @property
     def connector(self):
         '''Returns the Signal-Connector of the device.
@@ -269,7 +259,8 @@ class _Egg7260LockInAmplifierSignalSubsystem(object):
 
         '''
 
-        for i in reversed(_Egg7260LockInAmplifierSignalSubsystem._amps_list):
+        amps = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90]
+        for i in reversed(amps):
             if i <= amplification:
                 break
         self._instrument.write(('ACGAIN ') + str(amplification / 10))
@@ -296,8 +287,8 @@ class _Egg7260LockInAmplifierSignalSubsystem(object):
             raise ValueError(err_str)
         else:
             self._instrument.write('AUTOMATIC ' + str(int(boolean)))
-
-class _Egg7260LockInAmplifierAutoSubsystem(object):
+"""
+class _Egg5210LockInAmplifierAutoSubsystem(object):
 
     def __init__(self, instrument):
         self._instrument = instrument
@@ -334,11 +325,11 @@ class _Egg7260LockInAmplifierAutoSubsystem(object):
 
         self._instrument.write('AQN')
 
-class _Egg7260LockInAmplifierRearPanelSubsystem(object):
+class _Egg5210LockInAmplifierRearPanelSubsystem(object):
 
     def __init__(self, instrument):
         self._instrument = instrument
-
+"""
     @property
     def ch1(self):
         '''Returns what output appears in the CH1 rear panel connector.
@@ -410,47 +401,51 @@ class _Egg7260LockInAmplifierRearPanelSubsystem(object):
         except KeyError:
             err_str = 'Undefined output on CH2 connector'
             raise ValueError(err_str)
-
-class Egg7260LockInAmplifier(PyVisaInstrument):
+"""
+class Egg5210LockInAmplifier(PyVisaInstrument):
 
     def __init__(self, rm, address, name='', defaults=False, reset=False):
         PyVisaInstrument.__init__(self, rm, address, name)
         
         # Setting the termination characters
-        term_chars = self._instrument.CR + self._instrument.LF
+        term_chars = self._instrument.CR
         self._instrument.read_termination = term_chars
         
+        #Setting the input term char at the instrument and for the driver
+        self._instrument.write('DD 13')                
+        
         # Channels
-        x_channel = _Egg7260LockInAmplifierChannel(self._instrument, 'X')
+        x_channel = _Egg5210LockInAmplifierChannel(self._instrument, 'X')
         self.__setitem__('x', x_channel)
 
-        y_channel = _Egg7260LockInAmplifierChannel(self._instrument, 'Y')
+        y_channel = _Egg5210LockInAmplifierChannel(self._instrument, 'Y')
         self.__setitem__('y', y_channel)
 
-        mag_channel = _Egg7260LockInAmplifierChannel(self._instrument, 'MAG')
+        mag_channel = _Egg5210LockInAmplifierChannel(self._instrument, 'MAG')
         self.__setitem__('mag', mag_channel)
 
-        pha_channel = _Egg7260LockInAmplifierChannel(self._instrument, 'PHA')
+        pha_channel = _Egg5210LockInAmplifierChannel(self._instrument, 'PHA')
         self.__setitem__('phase', pha_channel)
 
-        osc_channel = _Egg7260LockInAmplifierOscillator(self._instrument)
+        osc_channel = _Egg5210LockInAmplifierOscillator(self._instrument)
         self.__setitem__('oscillator', osc_channel)
 
         # Subsystems
-        self.auto = _Egg7260LockInAmplifierAutoSubsystem(self._instrument)
-        self.signal = _Egg7260LockInAmplifierSignalSubsystem(self._instrument)
-        self.rear_panel = _Egg7260LockInAmplifierRearPanelSubsystem(self._instrument)
+        self.auto = _Egg5210LockInAmplifierAutoSubsystem(self._instrument)
+        self.signal = _Egg5210LockInAmplifierSignalSubsystem(self._instrument)
+        self.rear_panel = _Egg5210LockInAmplifierRearPanelSubsystem(self._instrument)
 
         if reset:
             self.reset()
         elif defaults:
             self.defaults()
+            
+        
 
     def reset(self):
-        self._instrument.write('ADF')
         self.defaults()
         time.sleep(2)
-
+        
     def defaults(self):
         '''Set all instrument controls and displays to the factory set default
         values.
@@ -463,7 +458,7 @@ class Egg7260LockInAmplifier(PyVisaInstrument):
         self.__getitem__('oscillator').limit = [0, 5]
         self.__getitem__('oscillator').ramprate = 0.1
         self.__getitem__('oscillator').steptime = 0.02
-
+        
 
     @property
     def identification(self):

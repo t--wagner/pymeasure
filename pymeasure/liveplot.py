@@ -17,29 +17,19 @@
 # Pymeasure
 from pymeasure.indexdict import IndexDict
 
-# Abc
 import abc
-
-# System
 import sys
 if sys.version_info[0] < 3:
     import Tkinter as Tk
 else:
     import tkinter as Tk
-
 import warnings
-
-#Numpy
 import numpy as np
-
-# Matplotlib
 import matplotlib as mpl
 from matplotlib.backends.backend_tkagg import (FigureCanvasTkAgg,
                                                NavigationToolbar2TkAgg)
 from matplotlib.colors import Normalize, LogNorm
 from mpl_toolkits.axes_grid1 import make_axes_locatable
-
-# Threading stuff
 from Queue import Queue
 from threading import Event
 
@@ -61,17 +51,16 @@ class LiveGraphBase(IndexDict):
         IndexDict.__init__(self)
 
         # Define matplotlib Figure
-        if not figure:
+        if figure is None:
             self._figure = mpl.figure.Figure()
         else:
             self._figure = figure
 
-        # Set the number of colums
-        self._columns = 1
-
         # Task queue
         self._tasks = Queue()
         self._tight_layout = True
+        self.close_event = None
+        self.key = 'None'
 
     def __setitem__(self, key, dataplot):
         """x.__setitem__(key, dataplot) <==> x['key'] = dataplot
@@ -177,10 +166,12 @@ class LiveGraphTk(LiveGraphBase):
 
     """
 
+    _events_key = {' ': None}
+
     def __init__(self, figure=None, master=None):
         LiveGraphBase.__init__(self, figure=figure)
 
-        #Setup the TKInter window with the canvas and a toolbar
+        # Setup the TKInter window with the canvas and a toolbar
         if not master:
             self._master = Tk.Tk()
         else:
@@ -194,6 +185,17 @@ class LiveGraphTk(LiveGraphBase):
         self._toolbar = NavigationToolbar2TkAgg(canvas, self._master)
         self._toolbar.update()
         canvas._tkcanvas.pack(side=Tk.TOP, fill=Tk.BOTH, expand=1)
+
+        self._master.protocol("WM_DELETE_WINDOW", self.close)
+        self._event = None
+        self.key = None
+
+        # Events
+        self._figure.canvas.mpl_connect('key_press_event', self._on_key)
+
+    def _on_key(self, event):
+        self.event = event
+        self.key = event.key
 
     def run(self, delay=25):
         """Calls the update method periodically with the delay in milliseconds.
@@ -213,6 +215,11 @@ class LiveGraphTk(LiveGraphBase):
         # Call run again afer the delay time
         self._master.after(delay, self.run, delay)
 
+    def close(self):
+        if self.close_event:
+            self.close_event()
+        self._master.destroy()
+        #self._master.quit()
 
 class DataplotBase(object):
     __metaclass__ = abc.ABCMeta
@@ -355,7 +362,7 @@ class MarkerConf(object):
         # Handle wrong input to avoid crashing running liveplot
         if marker in [None, False]:
             marker = 'None'
-        elif not marker in self._line.markers.keys():
+        elif marker not in self._line.markers.keys():
             raise ValueError('not a valid marker')
 
         self._graph._add_task(self._line.set_marker, marker)
@@ -615,7 +622,7 @@ class YaxisConf(object):
 
 class Dataplot1d(DataplotBase):
 
-    def __init__(self, graph, axes, length, continuously=False):
+    def __init__(self, graph, axes, length=None, continuously=False):
         """Initiate Dataplot1d class.
 
         """
@@ -639,6 +646,8 @@ class Dataplot1d(DataplotBase):
         self._xaxis_conf = XaxisConf(self._graph, self._axes)
         self._yaxis_conf = YaxisConf(self._graph, self._axes)
         self._label_conf = LabelConf1d(self._graph, self._axes)
+
+        self.switch_xy = False
 
     @property
     def line(self):
@@ -700,6 +709,14 @@ class Dataplot1d(DataplotBase):
         """
         return self._continuously
 
+    @property
+    def switch_xy(self):
+        return self._xy_switch
+
+    @switch_xy.setter
+    def switch_xy(self, boolean):
+        self._xy_switch = bool(boolean)
+
     def add_data(self, xdata, ydata):
         """Add a list of data to the plot.
 
@@ -707,6 +724,21 @@ class Dataplot1d(DataplotBase):
 
         # Put the incoming data into the data exchange queue
         self._exchange_queue.put([xdata, ydata])
+
+    def _clear(self):
+        """Clear the data.
+
+        """
+
+        # Remove oldest datapoints if plotting continuously.
+        if self._continuously:
+            del self._xdata[:-self._length]
+            del self._ydata[:-self._length]
+
+        # Clear all displayed datapoints otherwise.
+        else:
+            del self._xdata[:self._length]
+            del self._ydata[:self._length]
 
     def _update(self):
         """Update the dataplot with the incoming data.
@@ -726,35 +758,32 @@ class Dataplot1d(DataplotBase):
             self._exchange_queue.task_done()
 
             # Try to add data to the x and y lists for plotting
-            try:
-                ydata = package.pop()
-                xdata = package.pop()
+            ydata = package.pop()
+            xdata = package.pop()
 
-                for xdatapoint in xdata:
-                    self._xdata.append(xdatapoint)
+            if self._length:
+                try:
+                    for xdatapoint in xdata:
+                        self._xdata.append(xdatapoint)
 
-                for ydatapoint in ydata:
-                    self._ydata.append(ydatapoint)
+                    for ydatapoint in ydata:
+                        self._ydata.append(ydatapoint)
 
-            # Look for a clearing request if the pop() attribute failed
-            except AttributeError:
-                meassage = package
-                if meassage == 'clear':
-                    del self._xdata[:]
-                    del self._ydata[:]
+                # Look for a clearing request if the pop() attribute failed
+                except AttributeError:
+                    meassage = package
+                    if meassage == 'clear':
+                        del self._xdata[:]
+                        del self._ydata[:]
 
-            # Handle the maximum number of displayed points.
-            while len(self._xdata) > self._length:
+                # Handle the maximum number of displayed points.
+                while len(self._xdata) > self._length:
+                    self._clear()
 
-                #Remove oldest datapoints if plotting continuously.
-                if self._continuously:
-                    del self._xdata[:-self._length]
-                    del self._ydata[:-self._length]
+            else:
+                self._xdata = xdata
+                self._ydata = ydata
 
-                # Clear all displayed datapoints otherwise.
-                else:
-                    del self._xdata[:self._length]
-                    del self._ydata[:self._length]
 
             #Set the up_to_date flag to True for redrawing
             self._request_update.set()
@@ -774,8 +803,10 @@ class Dataplot1d(DataplotBase):
                 ydata = np.abs(ydata)
 
             # Update displayed data.
-            self._line.set_data(xdata, ydata)
-            self._line.set_data(self._xdata, self._ydata)
+            if not self.switch_xy:
+                self._line.set_data(xdata, ydata)
+            else:
+                self._line.set_data(ydata, xdata)
 
             # Recompute the data limits.
             self._axes.relim()
@@ -861,11 +892,18 @@ class ColorbarConf(object):
         self._scale = 'linear'
 
     @property
+    def colormap_names(self):
+        return sorted(mpl.cm.cmap_d.keys())
+
+    @property
     def colormap(self):
         return self._image.get_cmap().name
 
     @colormap.setter
     def colormap(self, colormap):
+        if colormap not in self.colormap_names:
+            raise TypeError('colormap is not valid')
+
         self._graph._add_task(self._image.set_cmap, colormap)
 
     @property
@@ -936,12 +974,12 @@ class Dataplot2d(DataplotBase):
             warnings.simplefilter("ignore")
             self._colorbar = self._graph._figure.colorbar(self._image, axes_cb)
 
-        #self._axes.set_axis_off()
-
         self._image_conf = ImageConf(self._graph, self._image)
         self._label_conf = LabelConf2d(self._graph, self._axes, self._colorbar)
         self._colorbar_conf = ColorbarConf(self._graph, self._image,
                                            self._colorbar)
+        self._colorbar_conf.colormap = 'hot'
+        self._diff = False
 
     @property
     def image(self):
@@ -967,6 +1005,19 @@ class Dataplot2d(DataplotBase):
 
         # Put the incoming data into the data exchange queue
         self._exchange_queue.put([data])
+
+    @property
+    def diff(self):
+        return self._diff
+
+    @diff.setter
+    def diff(self, diff):
+        if int(diff) > 0:
+            self._diff = int(diff)
+        elif diff is False:
+            self._diff = False
+        else:
+            raise ValueError('diff musste be True, False or integer greater 0')
 
     def next_line(self):
 
@@ -994,8 +1045,8 @@ class Dataplot2d(DataplotBase):
                     self._data = np.array([[]])
                     self._request_update.set()
                 # Fix it later
-                #elif message == 'next':
-                #    self._data.append([])
+                # elif message == 'next':
+                #     self._data.append([])
 
             # Handle the maximum number of displayed points.
             while len(self._trace) >= self._length:
@@ -1006,24 +1057,27 @@ class Dataplot2d(DataplotBase):
                 if self._data.size:
                     self._data = np.vstack((self._data, trace))
                 else:
-                    self._data = np.array(trace)
+                    self._data = np.array([trace])
 
-                #Set the up_to_date flag to True for redrawing
+                # Set the up_to_date flag to True for redrawing
                 self._request_update.set()
 
         # Update the image with the new data if available
         if self._request_update.is_set():
 
             # Prepare displayed data
-            data = self._data
+            data = self._data.copy()
+
+            # Differentiate data
+            if self.diff:
+                data = data[:, self.diff:] - data[:, :-self.diff]
 
             # Take absolute value if log scaled
             if self.colorbar.log:
-                data = np.abs(data)
+                data[data <= 0] = np.nan
 
             if self.colorbar.scale == 'linear':
                 self._colorbar.set_norm(Normalize())
-                self._image.set_norm(Normalize())
             elif self.colorbar.scale == 'log':
                 self._colorbar.set_norm(LogNorm())
 

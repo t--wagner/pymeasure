@@ -1,75 +1,90 @@
 # -*- coding: utf-8 -*
 
-from pymeasure.case import Channel, RampDecorator, Instrument
+from pymeasure.case import ChannelRead, ChannelWrite, ChannelStep, Instrument
 import random
-import numpy as np
 
 
-class _FooInstrumentChannelRandom(Channel):
+class _FooRandomChannel(ChannelRead):
 
     def __init__(self):
-        Channel.__init__(self)
+        ChannelRead.__init__(self)
+        self.name = 'foo_random'
+        self.unit = 'abu'
 
-        self._minimum = 0
-        self._maximum = 1
+        self._samples = 1
+        self._min = -1
+        self._max = 1
+
+        self._config += ['samples', 'minimum', 'maximum']
+
+    @property
+    def samples(self):
+        return self._samples
+
+    @samples.setter
+    def samples(self, samples):
+        self._samples = int(samples)
 
     @property
     def minimum(self):
-        return self._minimum
+        return self._min
 
     @minimum.setter
     def minimum(self, minimum):
-        self._minimum = minimum
+        self._min = minimum
 
     @property
     def maximum(self):
-        return self._maximum
+        return self._max
 
     @maximum.setter
     def maximum(self, maximum):
-        self._maximum = maximum
+        self._max = maximum
 
+    @ChannelRead._readmethod
     def read(self):
-        return [random.uniform(self._minimum, self._maximum)]
+        return [random.uniform(self._min, self._max)
+                for sample in range(self._samples)]
 
 
-@RampDecorator
-class _FooInstrumentChannelOutput(Channel):
+# @RampDecorator
+class FooBaseChannel(object):
+
+    _values = []
+
+
+class _FooOutputChannel(FooBaseChannel, ChannelStep):
 
     def __init__(self):
-        Channel.__init__(self)
+        ChannelStep.__init__(self)
 
-        self._period = 2 * np.pi
-        self._value = 0
+        FooBaseChannel._values.append([0])
+        self._index = len(FooBaseChannel._values) - 1
 
-    @property
-    def period(self):
-        return self._period
+        self.name = 'foo_out'
+        self.unit = 'abu'
 
-    @period.setter
-    def period(self, period):
-        self._period = period
-
+    @ChannelStep._readmethod
     def read(self):
-        return [self._value]
+        return list(_FooOutputChannel._values[self._index])
 
-    def write(self, value):
-        self._value = value
-        return [self._value]
+    @ChannelStep._writemethod
+    def write(self, *values, **kw):
+        _FooOutputChannel._values[self._index] = values
 
 
-class _FooInstrumentChannelFunction(Channel):
+class _FooInputChannel(FooBaseChannel, ChannelRead):
 
-    def __init__(self, function, output1, output2):
-        Channel.__init__(self)
+    def __init__(self, index):
+        ChannelRead.__init__(self)
+        self._index = index
 
-        self._function = function
-        self._output1 = output1
-        self._output2 = output2
+        self.name = 'foo_in'
+        self.name = 'abu'
 
+    @ChannelRead._readmethod
     def read(self):
-
-        return [self._function(self._output1()[0] + self._output2()[0])]
+        return list(_FooOutputChannel._values[self._index])
 
 
 class FooInstrument(Instrument):
@@ -77,19 +92,11 @@ class FooInstrument(Instrument):
     def __init__(self, reset=True):
         Instrument.__init__(self)
 
-        chan_out1 = _FooInstrumentChannelOutput()
-        self.__setitem__('out0', chan_out1)
-
-        chan_out2 = _FooInstrumentChannelOutput()
-        self.__setitem__('out1', chan_out2)
-
-        sin_chan = _FooInstrumentChannelFunction(np.sin, chan_out1, chan_out2)
-        self.__setitem__('sin', sin_chan)
-
-        cos_chan = _FooInstrumentChannelFunction(np.cos, chan_out1, chan_out2)
-        self.__setitem__('cos', cos_chan)
-
-        self.__setitem__('random', _FooInstrumentChannelRandom())
+        self.__setitem__('random', _FooRandomChannel())
+        self.__setitem__('out0', _FooOutputChannel())
+        self.__setitem__('in0', _FooInputChannel(0))
+        self.__setitem__('out1', _FooOutputChannel())
+        self.__setitem__('in1', _FooInputChannel(0))
 
         if reset is True:
             self.reset()

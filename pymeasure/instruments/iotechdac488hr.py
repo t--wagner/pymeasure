@@ -1,100 +1,39 @@
 # -*- coding: utf-8 -*
 
 from pymeasure.instruments.pyvisa_instrument import PyVisaInstrument
-from pymeasure.case import Channel, RampDecorator
+from pymeasure.case import ChannelWrite, RampDecorator
 import time
 
 
 @RampDecorator
-class _IoTechDac488HrChannel(Channel):
+class _IoTechDac488HrChannel(ChannelWrite):
 
-    def __init__(self, instrument,  port):
-        Channel.__init__(self)
+    def __init__(self, backend,  port):
 
-        self._instrument = instrument
-        self._port = port
-        self._unit = 'volt'
-        self._factor = 1
-        self._limit = [None, None]
-        self._readback = True
+        ChannelWrite.__init__(self)
+        self.unit = 'volt'
+        self._config += ['range']
 
-        self._attributes = ['unit', 'factor', 'limit', 'range', 'readback']
+        self._backend = backend
+        self._port = str(port)
 
-    #--- unit ----#
-    @property
-    def unit(self):
-        return self._unit
-
-    @unit.setter
-    def unit(self, unit):
-        self._unit = str(unit)
-
-    #--- factor ---#
-    @property
-    def factor(self):
-        return self._factor
-
-    @factor.setter
-    def factor(self, factor):
-        try:
-            if factor:
-                self._factor = float(factor)
-            else:
-                raise ValueError
-        except:
-            raise ValueError('factor must be a nonzero number.')
-
-    #--- limit ----#
-    @property
-    def limit(self):
-        return self._limit
-
-    @limit.setter
-    def limit(self, limit):
-        self._limit = limit
-
-    #--- range ---#
+    # --- range ---#
     @property
     def range(self):
-        return self._instrument.ask("P" + str(self._port) + "R?X")
+        return self._backend.ask("P" + self._port + "R?X")
 
     @range.setter
     def range(self, range):
-        self._instrument.write("P" + str(self._port) +
-                                 "R" + str(range) +
-                                 "X")
+        self._backend.write("P" + self._port + "R" + str(range) + "X")
 
-    #--- readback ---#
-    @property
-    def readback(self):
-        return bool(self._readback)
-
-    @readback.setter
-    def readback(self, readback):
-        try:
-            self._readback = int(readback)
-        except:
-            raise ValueError('readback must be True or False')
-
-    #--- read ---#
+    @ChannelWrite._readmethod
     def read(self):
-        level = self._instrument.ask_for_values("P" + str(self._port) +
-                                                "V?X")
-        return [level[0] / float(self._factor)]
+        return self._backend.ask_for_values("P" + self._port + "V?X")
 
-    #--- write ---#
-    def write(self, level):
-        
-        # Check if value is inside the limits
-        if (self._limit[0] <= level or self._limit[0] is None) and (level <= self._limit[1] or self._limit[1] is None):
-            
+    @ChannelWrite._writemethod
+    def write(self, value):
             # Set the level on the instrument
-            self._instrument.write("P" + str(self._port) + "V" + str(level * self._factor) + "X")
-
-        if self._readback:
-            return self.read()
-        else:
-            return [level]
+            self._backend.write("P" + self._port + "V" + str(value) + "X")
 
 
 class IoTechDac488Hr(PyVisaInstrument):
@@ -110,7 +49,7 @@ class IoTechDac488Hr(PyVisaInstrument):
 
         if defaults:
             self.defaults()
-            
+
         if reset:
             self.reset()
 
@@ -118,7 +57,7 @@ class IoTechDac488Hr(PyVisaInstrument):
         for channel in self.__iter__():
             channel.limit = [-10, 10]
             channel.ramprate = 0.005
-            channel.steptime = 0.2 # Measured write time 0.16s.
+            channel.steptime = 0.2
 
     def reset(self):
         self._instrument.write("*RX")

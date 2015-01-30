@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
-from threading import Event
-
+import threading
+import time
 
 class Loop(object):
 
@@ -11,35 +11,52 @@ class Loop(object):
         """
 
         self._sweep = sweep
-        self._pause = Event()
+        self._pause = threading.Event()
         self._pause.set()
-        self._hold = Event()
-        self._stop = Event()
+        self._hold = threading.Event()
+        self._stop = threading.Event()
         self._step = [None]
+        self._position = 0
 
     def __iter__(self):
+        """Return iterator.
 
-        for step in self._sweep:
+        """
+        self._start_time = time.time()
+
+        # Iterate through sweep
+        for position, step in enumerate(self._sweep):
             self._step = step
-
+            self._position = position
             yield step
 
+            # Wait until pause event got set
+            # Using Event.wait() over a while loop reduces the cpu load
             self._pause.wait()
 
+            # Check stop event and if true break iteration
             if self._stop.is_set():
                 self._stop.clear()
                 break
 
     @property
+    def points(self):
+        return len(self._sweep)
+
+    @property
+    def position(self):
+        return self._position
+
+    @property
     def step(self):
-        """Return the current step of the Loop.
+        """Return the current step of the loop.
 
         """
 
         return self._step
 
     def pause(self):
-        """Pause the Loop
+        """Pause or unpause the loop
 
         """
 
@@ -49,28 +66,25 @@ class Loop(object):
             self._pause.set()
 
     def stop(self):
-        """Stop the Loop.
+        """Stop the loop.
 
         """
 
         self._stop.set()
 
 
-class NestedLoop(object):
+class LoopNested(object):
 
     def __init__(self, cls, *sweeps):
         """Initialize NestedLoop with a list of sweeps.
 
         """
 
-        self._loop_list = []
-        for sweep in sweeps:
-            loop = Loop(sweep)
-            self._loop_list.append(loop)
+        self._loop_list = [Loop(sweep) for sweep in sweeps]
 
-        cls.step = self.step
-        cls.pause = self.pause
-        cls.stop = self.stop
+        setattr(cls, 'step', self.step)
+        setattr(cls, 'pause', self.pause)
+        setattr(cls, 'stop', self.stop)
 
     def __getitem__(self, key):
         """x.__getitem__(key) <==> x[key]
@@ -98,8 +112,10 @@ class NestedLoop(object):
 
         """
 
+        # Get inner loop
         loop = self._loop_list[-1]
 
+        # Set or clear pause Event of inner loop
         if loop._pause.is_set():
             loop._pause.clear()
         else:
@@ -116,5 +132,21 @@ class NestedLoop(object):
         else:
             loop_nr += 1
 
+        # Set all loops above loop_nr to stop
         for loop in self._loop_list[:loop_nr]:
             loop.stop()
+
+    @property
+    def points(self):
+        product = 1
+        for loop in self._loop_list:
+            product *= loop.points
+        return product
+
+    @property
+    def shape(self):
+        return tuple(loop.points for loop in self._loop_list)
+
+    @property
+    def position(self):
+        return tuple(loop.position for loop in self._loop_list)

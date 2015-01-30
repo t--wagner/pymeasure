@@ -7,7 +7,7 @@ from visa import VisaIOError
 
 
 class _QxfordILMChannel(Channel):
-    
+
     def __init__(self, instrument):
         Channel.__init__(self)
         self._instrument = instrument
@@ -15,15 +15,15 @@ class _QxfordILMChannel(Channel):
     @property
     def fast(self):
         pass
-    
+
     @fast.setter
     def fast(self, boolean):
         pass
 
     def read(self):
         self._instrument.askz()
-    
-    
+
+
 class QxfordILM(PyVisaInstrument):
 
     def __init__(self, address, isobus name='', reset=True, defaults=True):
