@@ -224,7 +224,7 @@ class Keithley2400SourceMeter(PyVisaInstrument):
             channel.autorange = True
             
             if isinstance(channel, _Keithley2400SourceMeterChannelSource):
-                channel.steptime = 0.040
+                channel.steptime = 0.020
                 channel.steprate = 0.1
 
     #--- reset ----#
