@@ -17,8 +17,7 @@ class _Keithley2400SourceMeterChannelSource(ChannelStep):
 
     @property
     def output(self):
-        cmd = "OUTP:STAT?"
-        asw = self._instrument.query(cmd)
+        asw = self._instrument.query("OUTP:STAT?")
         return bool(int(asw))
 
     @output.setter
@@ -220,7 +219,6 @@ class Keithley2400SourceMeter(PyVisaInstrument):
         if reset:
             self.reset()
 
-    #--- defaults ---#
     def defaults(self):
         self._instrument.write("SENS:FUNC:CONC 0")
         for channel in self.__iter__():
@@ -230,23 +228,19 @@ class Keithley2400SourceMeter(PyVisaInstrument):
                 channel.steptime = 0.020
                 channel.steprate = 0.1
 
-    #--- reset ----#
     def reset(self):
         self._instrument.write("*CLS")
         self._instrument.write("*RST")
         self.defaults()
 
-    #--- identification ---#
     @property
     def identification(self):
         return self._instrument.query("*IDN?")
 
-    #--- error ---#
     @property
     def errors(self):
         return self._instrument.query("SYST:ERR?")
 
-    #--- output ---#
     @property
     def output(self):
         asw = self._instrument.query("OUTP:STAT?")
