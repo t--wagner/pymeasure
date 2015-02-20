@@ -24,7 +24,7 @@ class _Keithley2400SourceMeterChannelSource(ChannelStep):
     def output(self, boolean):
         if not (isinstance(boolean, int) and boolean in [0, 1]):
             raise ValueError('output must be bool, int with True = 1 or False = 0.')
-        cmd = "OUTPU:STAT {}".format(int(boolean))
+        cmd = "OUTP:STAT {}".format(int(boolean))
         self._instrument.write(cmd)
 
     @property
@@ -35,7 +35,7 @@ class _Keithley2400SourceMeterChannelSource(ChannelStep):
 
     @range.setter
     def range(self, range):
-        cmd = "SOUR:{}:RANG {}".format(range)
+        cmd = "SOUR:{}:RANG {}".format(self._srcf, range)
         self._instrument.write(cmd)
 
     @property
@@ -52,7 +52,8 @@ class _Keithley2400SourceMeterChannelSource(ChannelStep):
     @property
     def compliance(self):
         cmd = "SENS:{}:PROT?".format(self._measf)
-        return self._instrument.query(cmd)
+        asw = self._instrument.query(cmd)
+        return float(asw)
 
     @compliance.setter
     def compliance(self, compliance):
@@ -150,7 +151,8 @@ class _Keithley2400SourceMeterChannelMeasureVoltage(_Keithley2400SourceMeterChan
     @property
     def compliance(self):
         cmd = "SENS:{}:PROT?".format(self._measf)
-        return self._instrument.query(cmd)
+        asw = self._instrument.query(cmd)
+        return float(asw)
 
     @compliance.setter
     def compliance(self, compliance):
@@ -169,7 +171,8 @@ class _Keithley2400SourceMeterChannelMeasureCurrent(_Keithley2400SourceMeterChan
     @property
     def compliance(self):
         cmd = "SENS:{}:PROT?".format(self._measf)
-        return self._instrument.query(cmd)
+        asw = self._instrument.query(cmd)
+        return float(asw)
 
     @compliance.setter
     def compliance(self, compliance):
@@ -250,5 +253,5 @@ class Keithley2400SourceMeter(PyVisaInstrument):
     def output(self, boolean):
         if not (isinstance(boolean, int) and boolean in [0, 1]):
             raise ValueError('output must be bool, int with True = 1 or False = 0.')
-        cmd = "OUTPU:STAT {}".format(int(boolean))
+        cmd = "OUTP:STAT {}".format(int(boolean))
         self._instrument.write(cmd)
