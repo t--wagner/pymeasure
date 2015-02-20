@@ -6,71 +6,82 @@ from pymeasure.case import ChannelRead, ChannelStep
 
 class _Keithley2400SourceMeterChannelSource(ChannelStep):
 
-    def __init__(self, instrument, source_function):
+    def __init__(self, instrument, source_function, measurment_function):
         ChannelStep.__init__(self)
 
         self._instrument = instrument
-        self._srcf = str(source_function)
+        self._srcf = source_function
+        self._measf = measurment_function
 
         self._config += ['output', 'range', 'autorange']
 
-    #--- output ---#
     @property
     def output(self):
-        return bool(int(self._instrument.query("OUTPut:STATe?")))
+        cmd = "OUTP:STAT?"
+        asw = self._instrument.query(cmd)
+        return bool(int(asw))
 
     @output.setter
     def output(self, boolean):
         if not (isinstance(boolean, int) and boolean in [0, 1]):
             raise ValueError('output must be bool, int with True = 1 or False = 0.')
-        self._instrument.write("OUTPUt:STATe " + str(int(boolean)))
+        cmd = "OUTPU:STAT {}".format(int(boolean))
+        self._instrument.write(cmd)
 
-    #--- range ---#
     @property
     def range(self):
-        return float(self._instrument.query("SOURce:" + self._srcf + ":RANGe?"))
+        cmd = "SOUR:{}:RANG?".format(self._srcf)
+        asw = self._instrument.query(cmd)
+        return float(asw)
 
     @range.setter
     def range(self, range):
-        cmd = "SOURce:" + self._srcf + ":RANGe " + str(range)
+        cmd = "SOUR:{}:RANG {}".format(range)
         self._instrument.write(cmd)
 
-    #--- autorange ---#
     @property
     def autorange(self):
-        cmd = "SOURce:" + self._srcf + ":RANGe:AUTO?"
-        return bool(int(self._instrument.query(cmd)))
+        cmd = "SOUR:{}:RANG:AUTO?".format(self._srcf)
+        asw = self._instrument.query(cmd)
+        return bool(int(asw))
 
     @autorange.setter
     def autorange(self, autorange):
-        cmd = "SOURce:" + self._srcf + ":RANGe:AUTO " + str(int(autorange))
+        cmd = "SOUR:{}:RANG:AUTO {}".format(self._srcf, int(autorange))
         self._instrument.write(cmd)
 
-    #--- read ---#
+    @property
+    def compliance(self):
+        cmd = "SENS:{}:PROT?".format(self._measf)
+        return self._instrument.query(cmd)
+
+    @compliance.setter
+    def compliance(self, compliance):
+        cmd = "SENS:{}:PROT {}".format(self._measf, compliance)
+        self._instrument.write(cmd)
+
     @ChannelStep._readmethod
     def read(self):
-        cmd = "SOURce:" + self._srcf + ":LEVel?"
+        cmd = "SOUR:{}:LEV?".format(self._srcf)
         level = self._instrument.query_ascii_values(cmd)[0]
         return [level]
 
-    #--- write ---#
     @ChannelStep._writemethod
     def write(self, value):
-        cmd = (':SOUR:FUNC ' + self._srcf + ';' +
-               self._srcf + ':Mode Fixed;LEV ' + str(value))
+        cmd = ':SOUR:FUNC {0};{0}:Mode Fixed;LEV {1}'.format(self._srcf, value)
         self._instrument.write(cmd)
 
 
 class _Keithley2400SourceMeterChannelSourceVoltageDc(_Keithley2400SourceMeterChannelSource):
 
     def __init__(self, instrument):
-        _Keithley2400SourceMeterChannelSource.__init__(self, instrument, 'VOLT')
+        _Keithley2400SourceMeterChannelSource.__init__(self, instrument, 'VOLT', 'CURR')
         self.unit = 'volt'
 
 class _Keithley2400SourceMeterChannelSourceCurrentDc(_Keithley2400SourceMeterChannelSource):
 
     def __init__(self, instrument):
-        _Keithley2400SourceMeterChannelSource.__init__(self, instrument, 'CURR')
+        _Keithley2400SourceMeterChannelSource.__init__(self, instrument, 'CURR', 'VOLT')
         self.unit = 'ampere'
 
 
@@ -92,45 +103,40 @@ class _Keithley2400SourceMeterChannelMeasure(ChannelRead):
         elif self._measf[:3].lower() == 'res':
             self._rindex = 2
 
-    #--- range ---#
     @property
     def range(self):
-        cmd = "SENSe:" + self._measf + ":RANGe?"
+        cmd = "SENS:{}:RANG?".format(self._measf)
         return self._instrument.query(cmd)
 
     @range.setter
     def range(self, range):
-        cmd = "SENSe:" + self._measf + ":RANGe " + str(range)
+        cmd = "SENS:{}:RANG {}".format(self._measf, range)
         self._instrument.write(cmd)
 
-    #--- autorange ---#
     @property
     def autorange(self):
-        cmd = "SENSe:" + self._measf + ":RANGe:AUTO?"
-        return bool(int(self._instrument.query(cmd)))
+        cmd = "SENS:{}:RANG:AUTO?".format(self._measf)
+        asw = self._instrument.query(cmd)
+        return bool(int(asw))
 
     @autorange.setter
     def autorange(self, autorange):
-        cmd = "SENSe:" + self._measf + ":RANGe:AUTO " + str(int(autorange))
+        cmd = "SENS:{}:RANG:AUTO {}".format(self._measf, int(autorange))
         self._instrument.write(cmd)
 
-    #--- speed ---#
     @property
     def speed(self):
-        cmd = "SENSe:" + self._measf + ":NPLCycles?"
+        cmd = "SENS:{}:NPLC?".format(self._measf)
         return self._instrument.query(cmd)
 
     @speed.setter
     def speed(self, speed):
-        cmd = "SENSe:" + self._measf + ":NPLCycles " + str(speed)
+        cmd = "SENS:{}:NPLC {}".format(self._measf, speed)
         self._instrument.write(cmd)
 
-    #--- read ---#
     @ChannelRead._readmethod
     def read(self):
-        cmd = (":SENS:FUNC:CONC 0" + ';' + 
-               ":SENSe:FUNCtion '" + self._measf + "'" + ";" +
-               ":READ?")
+        cmd = ":SENS:FUNC:CONC 0;:SENS:FUNC '{}';:READ?".format(self._measf)
         return [self._instrument.query_ascii_values(cmd)[self._rindex]]
 
 
@@ -142,36 +148,33 @@ class _Keithley2400SourceMeterChannelMeasureVoltage(_Keithley2400SourceMeterChan
         self.unit = 'volt'
         self._config += ['compliance']
 
-    #--- compliance ---#
     @property
     def compliance(self):
-        cmd = "SENSe:" + self._measf + ":PROTection?"
+        cmd = "SENS:{}:PROT?".format(self._measf)
         return self._instrument.query(cmd)
 
     @compliance.setter
     def compliance(self, compliance):
-        cmd = "SENSe:" + self._measf + ":PROTection " + str(compliance)
+        cmd = "SENS:{}:PROT {}".format(self._measf, compliance)
         self._instrument.write(cmd)
 
 
 class _Keithley2400SourceMeterChannelMeasureCurrent(_Keithley2400SourceMeterChannelMeasure):
 
     def __init__(self, instrument):
-        _Keithley2400SourceMeterChannelMeasure.__init__(self, instrument,
-                                                        'CURRent')
+        _Keithley2400SourceMeterChannelMeasure.__init__(self, instrument, 'CURR')
 
         self.unit = 'ampere'
         self._config += ['compliance']
 
-    #--- compliance ---#
     @property
     def compliance(self):
-        cmd = "SENSe:" + self._measf + ":PROTection?"
+        cmd = "SENS:{}:PROT?".format(self._measf)
         return self._instrument.query(cmd)
 
     @compliance.setter
     def compliance(self, compliance):
-        cmd = "SENSe:" + self._measf + ":PROTection " + str(compliance)
+        cmd = "SENS:{}:PROT {}".format(self._measf, compliance)
         self._instrument.write(cmd)
 
 
@@ -185,12 +188,12 @@ class _Keithley2400SourceMeterChannelMeasureResistance(_Keithley2400SourceMeterC
 
     @property
     def mode(self):
-        cmd = "SENSe:" + self._measf + ":MODE?"
+        cmd = "SENS:{}:MODE?".format(self._measf)
         return self._instrument.query(cmd)
 
     @mode.setter
     def mode(self, mode):
-        cmd = "SENSe:" + self._measf + ":MODE " + str(mode)
+        cmd = "SENS:{}:MODE {}".format(self._measf, mode)
         self._instrument.write(cmd)
 
 
@@ -199,7 +202,7 @@ class Keithley2400SourceMeter(PyVisaInstrument):
     #--- constructor ---#
     def __init__(self, rm, address, name='', defaults=False, reset=False):
         PyVisaInstrument.__init__(self, rm, address, name)
-        
+
         # Setting the termination characters
         self._instrument.read_termination = self._instrument.LF
 
@@ -219,10 +222,10 @@ class Keithley2400SourceMeter(PyVisaInstrument):
 
     #--- defaults ---#
     def defaults(self):
-        self._instrument.write("SENSe:FUNCtion:CONCurrent 0")
+        self._instrument.write("SENS:FUNC:CONC 0")
         for channel in self.__iter__():
             channel.autorange = True
-            
+
             if isinstance(channel, _Keithley2400SourceMeterChannelSource):
                 channel.steptime = 0.020
                 channel.steprate = 0.1
@@ -241,15 +244,17 @@ class Keithley2400SourceMeter(PyVisaInstrument):
     #--- error ---#
     @property
     def errors(self):
-        return self._instrument.query("SYSTem:ERRor?")
+        return self._instrument.query("SYST:ERR?")
 
     #--- output ---#
     @property
     def output(self):
-        return bool(int(self._instrument.query("OUTPut:STATe?")))
+        asw = self._instrument.query("OUTP:STAT?")
+        return bool(int(asw))
 
     @output.setter
     def output(self, boolean):
         if not (isinstance(boolean, int) and boolean in [0, 1]):
             raise ValueError('output must be bool, int with True = 1 or False = 0.')
-        self._instrument.write("OUTPUt:STATe " + str(int(boolean)))
+        cmd = "OUTPU:STAT {}".format(int(boolean))
+        self._instrument.write(cmd)
