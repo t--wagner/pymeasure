@@ -3,8 +3,7 @@
 from pymeasure.instruments.pyvisa_instrument import PyVisaInstrument
 from pymeasure.case import ChannelWrite
 import time
-from visa import VisaIOError
-
+import oxford as ox
 
 class _OxfordIPSFieldChannel(ChannelWrite):
 
@@ -32,74 +31,43 @@ class _OxfordIPSFieldChannel(ChannelWrite):
         else:
             return self.read()
 
-    def _send_command(self, cmd_string):
-        while True:
-
-            # Sending '\r' before every command makes the communication very
-            # stabel and is strongly recommendanded by Timo (after an entire
-            # weekend of fighting with the fucking ips)
-            self._instrument.query('')
-            answer = self._instrument.query(cmd_string)
-
-            try:
-                # The ips answers with the commands first letter if it
-                # understood otherwise with '?'
-                if answer[0] == cmd_string[0]:
-                    return answer[1:]
-            except IndexError:
-                # Once in a while IndexErrors occur if a previous command got
-                # interrupted.
-
-                #print '----- IndexError ----'
-                #print cmd_string
-                #print answer
-                #print '---------------------'
-
-                timeout = self._instrument.timeout
-                self._instrument.timeout = 1
-                try:
-                    self._instrument.read()
-                except VisaIOError:
-                    pass
-                self._instrument.timeout = timeout
-
     @property
     def setpoint(self):
-        return float(self._send_command('R8'))
+        return float(ox.write(self._instrument, 'R8'))
 
     @setpoint.setter
     def setpoint(self, tesla):
 
         #Set setpoint and verify that the ips got it right
         while True:
-            self._send_command('J' + '%.4f' % (float(tesla)))
+            ox.write(self._instrument, 'J' + '%.4f' % (float(tesla)))
             if '%.4f' % (tesla) == '%.4f' % (self.setpoint):
                 break
 
     @property
     def sweeprate(self):
-        return float(self._send_command('R9'))
+        return float(ox.write(self._instrument, 'R9'))
 
     @sweeprate.setter
     def sweeprate(self, rate):
         #Set sweeprate and verify that the ips got it right
         while True:
-            self._send_command('T' + '%.4f' % (float(rate)))
+            ox.write(self._instrument, 'T' + '%.4f' % (float(rate)))
             if '%.4f' % (rate) == '%.4f' % (self.sweeprate):
                 break
 
     @property
     def persistant_field(self):
-        return float(self._send_command('R18'))
+        return float(ox.write(self._instrument, 'R18'))
 
     # What the heck is a trip field?
     #@property
     #def trip_field(self):
-    #    return float(self._send_command('R19'))
+    #    return float(ox.write(self._instrument, 'R19'))
 
     @property
     def heater(self):
-        heater = int(self._send_command('X')[7:8])
+        heater = int(ox.write(self._instrument, 'X')[7:8])
 
         if heater == 1:
             return True
@@ -120,9 +88,9 @@ class _OxfordIPSFieldChannel(ChannelWrite):
 
         # Turn heater on or off
         if boolean == 0:
-            self._send_command('H0')
+            ox.write(self._instrument, 'H0')
         elif boolean == 1:
-            self._send_command('H1')
+            ox.write(self._instrument, 'H1')
 
         # Wait 10seconds to make sure the heater chaged state
         waitingtime = 20
@@ -141,16 +109,16 @@ class _OxfordIPSFieldChannel(ChannelWrite):
             raise ValueError('switch heater did not change its state.')
 
     def hold(self):
-        self._send_command('A0')
+        ox.write(self._instrument, 'A0')
 
     def goto_setpoint(self):
-        self._send_command('A1')
+        ox.write(self._instrument, 'A1')
 
     def goto_zero(self):
-        self._send_command('A2')
+        ox.write(self._instrument, 'A2')
 
     def read(self):
-        return [float(self._send_command('R7'))]
+        return [float(ox.write(self._instrument, 'R7'))]
 
     def write(self, tesla, verbose=False):
         if not isinstance(tesla, (int, float)):
@@ -164,7 +132,7 @@ class _OxfordIPSFieldChannel(ChannelWrite):
 
         last_time = time.time()
         # Wait until the oxford stops sweeping
-        while int(self._send_command('X')[10:11]):
+        while int(ox.write(self._instrument, 'X')[10:11]):
 
             if verbose:
                 if (time.time() - last_time) > verbose:
@@ -198,6 +166,10 @@ class QxfordIPS(PyVisaInstrument):
 
     def __init__(self, rm, address, name='', reset=True, defaults=True):
         PyVisaInstrument.__init__(self, rm, address, name)
+        self._instrument.read_termination = self._instrument.CR
+
+        # Set the communication protocol to normal
+        #ox.write(self._instrument, 'Q0')
 
         # Channels
         self.__setitem__('bfield', _OxfordIPSFieldChannel(self._instrument))
