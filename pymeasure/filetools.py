@@ -92,7 +92,7 @@ class IndexerBase(object):
     def __iter__(self):
         return self
 
-    def next(self):
+    def __next__(self):
         pass
 
     @property
@@ -122,7 +122,7 @@ class IndexerBase(object):
 
 class DirectoryIndexer(IndexerBase):
 
-    def next(self):
+    def __next__(self):
 
         # Create index string
         try:
@@ -150,7 +150,7 @@ class DirectoryIndexer(IndexerBase):
 
 class BasenameIndexer(IndexerBase):
 
-    def next(self):
+    def __next__(self):
 
         # Create index string
         try:

@@ -21,7 +21,6 @@
 """
 
 from pymeasure.indexdict import IndexDict
-import abc
 import time
 from functools import wraps
 import math
@@ -33,7 +32,6 @@ class Channel(object):
     """Channel class of pymeasure.case.
 
     """
-    __metaclass__ = abc.ABCMeta
 
     def __init__(self, name='', unit=''):
         self.name = name
@@ -42,7 +40,6 @@ class Channel(object):
         # Define config list
         self._config = ['name', 'unit']
 
-    @abc.abstractmethod
     def __call__(self, *values, **kw):
         pass
 
@@ -82,7 +79,6 @@ class Channel(object):
 
         return Config(config)
 
-    @abc.abstractmethod
     def read(self, *args, **kwargs):
         """Abstract read method. Every channel has to implement at least a
         read method.
@@ -292,7 +288,6 @@ class ChannelWrite(ChannelRead):
 
         return write
 
-    @abc.abstractmethod
     def write(self, *values):
         """Abstract write method. Every write channel has to implement a write
         method.
@@ -407,12 +402,12 @@ class ChannelStep(ChannelWrite):
                     # If verbose is True print every step
                     if verbose is True:
                         position, = self.read()
-                        print position
+                        print(position)
                     # If verbose is a time print the current step
                     elif (time.time() - verbose_time) > verbose:
                         verbose_time = time.time()
                         position, = self.read()
-                        print position
+                        print(position)
 
                 # Calculate left waiting time and wait for it
                 waiting_time = steptime - (time.time() - last_time)
@@ -447,25 +442,6 @@ class Instrument(IndexDict):
         else:
             raise TypeError('item must be a Channel')
 
-    @property
-    def name(self):
-        """Name of instrument.
-
-        Returns: string.
-        """
-        return self._name
-
-    @name.setter
-    def name(self, name):
-        self._name = str(name)
-
-    def channels(self):
-        """List all channels in instrument.
-
-        Returns: List of channel references.
-        """
-        return self._odict.values()
-
     def config(self):
 
         instr_config = OrderedDict()
@@ -488,13 +464,6 @@ class Rack(IndexDict):
             IndexDict.__setitem__(self, key, instrument)
         else:
             raise TypeError('item must be an Instrument')
-
-    def instruments(self):
-        """Return list of all instruments in rack.
-
-        """
-
-        return self._odict.values()
 
 
 class Config(object):
