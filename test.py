@@ -39,5 +39,11 @@ foo = pym.instruments.FooInstrument()
 #                self.graph['cos2d'].add_data(cos)
 
 
+class meas(object)
+
+    @MMeasurment.thread
+    def run(self):
+        pass
+
 if __name__ == '__main__':
     meas = MyMeasurment()
