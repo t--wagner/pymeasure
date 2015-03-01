@@ -8,7 +8,7 @@ class MeasurmentError(Exception):
     pass
 
 
-class Measurment():
+class Measurment(object):
     __metaclass__ = abc.ABCMeta
 
     def __init__(self):

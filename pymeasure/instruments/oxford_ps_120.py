@@ -1,34 +1,10 @@
 # -*- coding: utf-8 -*
 
 from pymeasure.instruments.pyvisa_instrument import PyVisaInstrument
-from pymeasure.case import Config, ChannelWrite
+from pymeasure.case import ChannelWrite
 import time
-from visa import VisaIOError
 from collections import OrderedDict
-
-
-def flush_buffer(instrument):
-    try:
-        # Clear buffer
-        while True:
-            instrument.read()
-            time.sleep(0.1)
-    except VisaIOError:
-        #Buffer is clear when nothing is returned
-        pass
-
-def send_command(instrument, command):
-    while True:
-        try:
-            # The ips answers with the commands first letter if it
-            # understood otherwise with '?'
-            answer = instrument.query(command, 0.1)
-            if answer[0] == command[0]:
-                return answer[1:]
-        except (VisaIOError, IndexError):
-            # Once in a while IndexErrors occur if a previous command got
-            # interrupted.
-            flush_buffer(instrument)
+import oxford as ox
 
 
 class _OxfordPS120FieldChannel(ChannelWrite):
@@ -58,7 +34,7 @@ class _OxfordPS120FieldChannel(ChannelWrite):
 
     @property
     def setpoint(self):
-        return float(send_command(self._instrument, 'R8')) / 1000
+        return float(ox.write(self._instrument, 'R8')) / 1000
 
     @setpoint.setter
     def setpoint(self, tesla):
@@ -66,13 +42,13 @@ class _OxfordPS120FieldChannel(ChannelWrite):
         zeros = '0' * (5 - len(tesla))
         value = zeros + tesla
         while True:
-             send_command(self._instrument, 'J' + value)
-             if tesla == str(int(send_command(self._instrument, 'R8'))):
+             ox.write(self._instrument, 'J' + value)
+             if tesla == str(int(ox.write(self._instrument, 'R8'))):
                  break
 
     @property
     def sweeprate(self):
-        return float(send_command(self._instrument, 'R9')) / 1000
+        return float(ox.write(self._instrument, 'R9')) / 1000
 
     @sweeprate.setter
     def sweeprate(self, rate):
@@ -80,17 +56,17 @@ class _OxfordPS120FieldChannel(ChannelWrite):
         zeros = '0' * (5 - len(rate))
         value = zeros + rate
         while True:
-            send_command(self._instrument, 'T' + value)
-            if rate == str(int(send_command(self._instrument, 'R9'))):
+            ox.write(self._instrument, 'T' + value)
+            if rate == str(int(ox.write(self._instrument, 'R9'))):
                  break
 
     @property
     def persistant_field(self):
-        return float(send_command(self._instrument, 'R18'))
+        return float(ox.write(self._instrument, 'R18'))
 
     @property
     def heater(self):
-        heater = int(send_command(self._instrument, 'X')[7:8])
+        heater = int(ox.write(self._instrument, 'X')[7:8])
 
         if heater == 1:
             return True
@@ -113,9 +89,9 @@ class _OxfordPS120FieldChannel(ChannelWrite):
 
         # Turn heater on or off
         if boolean == 0:
-            send_command(self._instrument, 'H0')
+            ox.write(self._instrument, 'H0')
         elif boolean == 1:
-            send_command(self._instrument, 'H1')
+            ox.write(self._instrument, 'H1')
 
         # Wait 10seconds to make sure the heater chaged state
         waitingtime = 20
@@ -134,16 +110,16 @@ class _OxfordPS120FieldChannel(ChannelWrite):
             raise ValueError('switch heater did not change its state.')
 
     def hold(self):
-        send_command(self._instrument, 'A0')
+        ox.write(self._instrument, 'A0')
 
     def goto_setpoint(self):
-        send_command(self._instrument, 'A1')
+        ox.write(self._instrument, 'A1')
 
     def goto_zero(self):
-        send_command(self._instrument, 'A2')
+        ox.write(self._instrument, 'A2')
 
     def read(self):
-        return [float(send_command(self._instrument, 'R7')) / 1000]
+        return [float(ox.write(self._instrument, 'R7')) / 1000]
 
     def write(self, tesla, verbose=False):
         if not isinstance(tesla, (int, float)):
@@ -157,7 +133,7 @@ class _OxfordPS120FieldChannel(ChannelWrite):
 
         last_time = time.time()
         # Wait until the oxford stops sweeping
-        while int(send_command(self._instrument, 'X')[10:11]):
+        while int(ox.write(self._instrument, 'X')[10:11]):
 
             if verbose:
                 if (time.time() - last_time) > verbose:
@@ -177,7 +153,7 @@ class QxfordPS120(PyVisaInstrument):
         self._instrument.read_termination = self._instrument.CR
 
         # Set the communication protocol to normal
-        send_command(self._instrument, 'Q0')
+        ox.write(self._instrument, 'Q0')
 
         # Channels
         self.__setitem__('bfield', _OxfordPS120FieldChannel(self._instrument))
@@ -186,10 +162,10 @@ class QxfordPS120(PyVisaInstrument):
             self.defaults()
 
     def defaults(self):
-        send_command(self._instrument, 'C3')
+        ox.write(self._instrument, 'C3')
 
     def _status_index(self):
-        status_str = send_command(self._instrument, 'X')
+        status_str = ox.write(self._instrument, 'X')
         status = {'system_m': int(status_str[0]),
                   'system_n': int(status_str[1]),
                   'activity': int(status_str[3]),
@@ -282,14 +258,14 @@ class QxfordPS120(PyVisaInstrument):
     def remote(self, boolean):
         if boolean:
             if self.locked:
-                send_command(self._instrument, 'C1')
+                ox.write(self._instrument, 'C1')
             else:
-                send_command(self._instrument, 'C3')
+                ox.write(self._instrument, 'C3')
         else:
             if self.locked:
-                send_command(self._instrument, 'C0')
+                ox.write(self._instrument, 'C0')
             else:
-                send_command(self._instrument, 'C2')
+                ox.write(self._instrument, 'C2')
 
     @property
     def locked(self):
@@ -303,17 +279,17 @@ class QxfordPS120(PyVisaInstrument):
     def locked(self, boolean):
         if boolean:
             if self.remote:
-                send_command(self._instrument, 'C1')
+                ox.write(self._instrument, 'C1')
             else:
-                send_command(self._instrument, 'C0')
+                ox.write(self._instrument, 'C0')
         else:
             if self.remote:
-                send_command(self._instrument, 'C3')
+                ox.write(self._instrument, 'C3')
             else:
-                send_command(self._instrument, 'C2')
+                ox.write(self._instrument, 'C2')
 
     @property
     def version(self):
-        return send_command(self._instrument, 'V')
+        return ox.write(self._instrument, 'V')
 
 
