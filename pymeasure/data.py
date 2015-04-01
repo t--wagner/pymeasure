@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*
 
+import h5py
 import datetime
 from textwrap import dedent
 
@@ -13,18 +14,33 @@ class FileContainer(object):
         pass
 
 
-class DatasetHdf(object):
+class DatasetBase(object):
     """Dynamic Hdf5 dataset class.
 
     """
 
-    def __init__(self, dataset):
+    def __init__(self, dataset, hdf_file=None, *file_args, **file_kwargs):
+
+        if hdf_file:
+            # Create or open hdf file
+            if isinstance(hdf_file, str):
+                hdf_file = h5py.File(hdf_file, *file_args, **file_kwargs)
+
+            # Get the dataset object for hdf file
+            dataset = hdf_file[dataset]
+
         self.__dict__['dataset'] = dataset
         self.__dict__['trim'] = True
 
+    # Context manager
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        self.close()
+
     @classmethod
-    def create(cls, hdf5_file, dataset_key, date=None, contact=None,
-               comment=None, **dset_kwargs):
+    def create(cls, dataset, hdf_file, date=None, **dset_kwargs):
         """Create a new HDF5 dataset and initalize Hdf5Base.
 
         """
@@ -32,16 +48,13 @@ class DatasetHdf(object):
         if date is None:
             # Standart date format '2014/10/31 14:25:57'
             date = datetime.datetime.now().strftime('%Y/%m/%d %H:%M:%S')
-        if comment is None:
-            comment = ''
-        if contact is None:
-            contact = ''
+
+        if isinstance(hdf_file, str):
+            hdf_file = h5py.File(hdf_file)
 
         # Initalize Hdf5Base instance with new dataset
-        hdf5base = cls(hdf5_file.create_dataset(dataset_key, **dset_kwargs))
+        hdf5base = cls(hdf_file.create_dataset(dataset, **dset_kwargs))
         hdf5base.date = date
-        hdf5base.comment = comment
-        hdf5base.contact = contact
 
         # Return
         return hdf5base
@@ -90,6 +103,12 @@ class DatasetHdf(object):
         """
         return self.dataset.size
 
+    def close(self):
+        """Close file instance in which the dataset resides.
+
+        """
+        self.dataset.file.close()
+
     @property
     def dtype(self):
         """Datatpye of the signal.
@@ -103,6 +122,21 @@ class DatasetHdf(object):
 
         """
         return self.dataset.shape
+
+    def extend(self, data):
+        """Append new data at the end of signal.
+
+        """
+
+        data = np.array(data, dtype=self.dtype, copy=False)
+
+        # Resize the dataset
+        size0 = self.__len__()
+        size1 = data.size + size0
+        self.dataset.resize((size1,))
+
+        # Insert new data
+        self.dataset[size0:size1] = data
 
 
 def dataset_copy(source, hdf_file, destionation, **kw_create_dataset):

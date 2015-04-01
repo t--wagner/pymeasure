@@ -32,7 +32,7 @@ from matplotlib.colors import Normalize, LogNorm
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from Queue import Queue
 from threading import Event
-
+import collections
 
 class LiveGraphBase(IndexDict):
     """Base class for differnt graphic backends.
@@ -221,6 +221,7 @@ class LiveGraphTk(LiveGraphBase):
         self._master.destroy()
         #self._master.quit()
 
+
 class DataplotBase(object):
     __metaclass__ = abc.ABCMeta
 
@@ -230,8 +231,13 @@ class DataplotBase(object):
         """
 
         self._graph = graph
-        if isinstance(axes, int):
-            axes = self._graph.add_subplot(axes)
+
+        # Check for integer like 221 and handle sequences (2,2,1)
+        if not isinstance(axes, mpl.axes.SubplotBase):
+            if isinstance(axes, int):
+                axes = tuple([int(c) for c in str(axes)])
+            axes = self._graph.add_subplot(*axes)
+
         self._axes = axes
         self._exchange_queue = Queue()
         self._request_update = Event()
