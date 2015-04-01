@@ -35,7 +35,7 @@ class DatasetHdf(object):
 
     @classmethod
     def create(cls, dataset, hdf_file, override=False, date=None,
-                fieldnames=None, fieldtype='float', fillvalue='nan', **dset_kwargs):
+                fieldnames=None, fieldtype='float', fillvalue=np.nan, **dset_kwargs):
         """Create a new HDF5 dataset and initalize Hdf5Base.
 
         """
@@ -68,7 +68,6 @@ class DatasetHdf(object):
 
             if not isinstance(fillvalue, collections.Sequence):
                 fillvalue = np.array(tuple([fillvalue] * len(fieldnames)), dtype)
-        else:
 
         dset_kwargs['fillvalue'] = fillvalue
 
