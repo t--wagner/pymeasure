@@ -5,15 +5,6 @@ import datetime
 from textwrap import dedent
 
 
-class FileContainer(object):
-    """Copy file to folder
-
-    """
-
-    def __init__(self, directory):
-        pass
-
-
 class DatasetBase(object):
     """Dynamic Hdf5 dataset class.
 
@@ -122,13 +113,3 @@ class DatasetBase(object):
 
         """
         return self.dataset.shape
-
-
-def dataset_copy(source, hdf_file, destionation, **kw_create_dataset):
-    """Copy the data and all attributes to a new dataset.
-
-    """
-
-    hdf_file.create_dataset(destionation, data=source[:], **kw_create_dataset)
-    for key, value in source.attrs.iteritems():
-        hdf_file[destionation].attrs[key] = value
