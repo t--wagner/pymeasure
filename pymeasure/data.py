@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*
 
 import h5py
+import os
 import datetime
 from textwrap import dedent
 
@@ -31,7 +32,7 @@ class DatasetBase(object):
         self.close()
 
     @classmethod
-    def create(cls, dataset, hdf_file, date=None, **dset_kwargs):
+    def create(cls, dataset, hdf_file, override=False, date=None, **dset_kwargs):
         """Create a new HDF5 dataset and initalize Hdf5Base.
 
         """
@@ -40,8 +41,22 @@ class DatasetBase(object):
             # Standart date format '2014/10/31 14:25:57'
             date = datetime.datetime.now().strftime('%Y/%m/%d %H:%M:%S')
 
+        # Hdf is filename
         if isinstance(hdf_file, str):
+            # Create directory if it does not exit
+            directory = os.path.dirname(hdf_file)
+            if directory:
+                if not os.path.exists(directory):
+                    os.makedirs(directory)
+
             hdf_file = h5py.File(hdf_file)
+
+        # Delete dataset if it exists
+        if override:
+            try:
+                del hdf_file[dataset]
+            except KeyError:
+                pass
 
         # Initalize Hdf5Base instance with new dataset
         hdf5base = cls(hdf_file.create_dataset(dataset, **dset_kwargs))
