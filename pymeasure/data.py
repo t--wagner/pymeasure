@@ -3,6 +3,7 @@
 import h5py
 import os
 import numpy as np
+import collections
 import datetime
 from textwrap import dedent
 
@@ -34,12 +35,10 @@ class DatasetHdf(object):
 
     @classmethod
     def create(cls, dataset, hdf_file, override=False, date=None,
-               fillvalue=np.nan, fieldnames=None,
-               **dset_kwargs):
+                fieldnames=None, fieldtype='float', fillvalue='nan', **dset_kwargs):
         """Create a new HDF5 dataset and initalize Hdf5Base.
 
         """
-
         if date is None:
             # Standart date format '2014/10/31 14:25:57'
             date = datetime.datetime.now().strftime('%Y/%m/%d %H:%M:%S')
@@ -61,9 +60,15 @@ class DatasetHdf(object):
             except KeyError:
                 pass
 
+
+        # Create dtype from fieldnames with fillvalue
         if fieldnames:
-            dtype = np.dtype([(name, np.float) for name in fieldnames])
+            dtype = np.dtype([(name, fieldtype) for name in fieldnames])
             dset_kwargs['dtype'] = dtype
+
+            if not isinstance(fillvalue, collections.Sequence):
+                fillvalue = np.array(tuple([fillvalue] * len(fieldnames)), dtype)
+        else:
 
         dset_kwargs['fillvalue'] = fillvalue
 
