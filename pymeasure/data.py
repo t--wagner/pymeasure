@@ -7,7 +7,7 @@ import datetime
 from textwrap import dedent
 
 
-class DatasetBase(object):
+class DatasetHdf(object):
     """Dynamic Hdf5 dataset class.
 
     """
