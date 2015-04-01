@@ -123,21 +123,6 @@ class DatasetBase(object):
         """
         return self.dataset.shape
 
-    def extend(self, data):
-        """Append new data at the end of signal.
-
-        """
-
-        data = np.array(data, dtype=self.dtype, copy=False)
-
-        # Resize the dataset
-        size0 = self.__len__()
-        size1 = data.size + size0
-        self.dataset.resize((size1,))
-
-        # Insert new data
-        self.dataset[size0:size1] = data
-
 
 def dataset_copy(source, hdf_file, destionation, **kw_create_dataset):
     """Copy the data and all attributes to a new dataset.
