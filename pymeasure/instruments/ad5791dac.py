@@ -123,10 +123,10 @@ class Ad5791Dac(PyVisaInstrument):
         self.__setitem__('6a', _Ad5791DacChannel(self._instrument, '6 A'))
         self.__setitem__('6b', _Ad5791DacChannel(self._instrument, '6 B'))
 
-        if reset is True:
+        if reset:
             self.reset()
 
-        if defaults is True:
+        if defaults:
             self.defaults()
 
     def reset(self):

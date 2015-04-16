@@ -36,7 +36,7 @@ class _Egg5210LockInAmplifierChannel(ChannelRead):
         '''
 
         index = int(self._instrument.query('XTC'))
-        return _Egg5210LockInAmplifierChannel._tcs[index]        
+        return _Egg5210LockInAmplifierChannel._tcs[index]
 
     @time_constant.setter
     def time_constant(self, seconds):
@@ -92,7 +92,7 @@ class _Egg5210LockInAmplifierOscillator(ChannelStep):
             self._instrument.write('IE 0')
         else:
             err_str = 'Unknown reference channel selected.'
-            raise valueError(err_str)
+            raise ValueError(err_str)
 
 
     @property
@@ -101,7 +101,7 @@ class _Egg5210LockInAmplifierOscillator(ChannelStep):
 
         '''
 
-        #device returns two values for frequency query. 
+        #device returns two values for frequency query.
         #First: A value that is proportional to the frequency within a given range
         # Second a index that correspond to a specific range
         self._instrument.write('OF')
@@ -118,7 +118,7 @@ class _Egg5210LockInAmplifierOscillator(ChannelStep):
 
         #Set the device to internal as reference channel source
         self._instrument.write('IE 1')
-        time.sleep(0.001)        
+        time.sleep(0.001)
         #Proof whether frequency is in the range of the device
         if ((frequency > 125E3) or (frequency < 0.5)):
             err_str = 'Frequency out of range'
@@ -131,7 +131,7 @@ class _Egg5210LockInAmplifierOscillator(ChannelStep):
         frequency_factor = int(float(frequency) / float(range) * 2000)
         #Writes the selected frequency to the device
         self._instrument.write('OF ' + str(frequency_factor) + ' ' + str(int(n)))
-        
+
     @ChannelStep._readmethod
     def read(self):
         '''Returns the amplitude of the Oscillator Output in Volts.
@@ -141,7 +141,7 @@ class _Egg5210LockInAmplifierOscillator(ChannelStep):
         value, = self._instrument.query_ascii_values('OA')
         return [value * 0.001]
 
-    @ChannelStep._writemethod 
+    @ChannelStep._writemethod
     def write(self, level):
         '''Sets the amplitude of the Oscillator Output.
         The amplitude ranges from 0V to 2V continiously or is 5V fix.
@@ -151,7 +151,7 @@ class _Egg5210LockInAmplifierOscillator(ChannelStep):
             level = 2
         if level >= 5:
             level = 5
-            
+
         level_in_milivolts = int(float(level) * 1000)
         self._instrument.write('OA ' + str(level_in_milivolts))
 
@@ -160,17 +160,17 @@ class _Egg5210LockInAmplifierSignalSubsystem(object):
 
     def __init__(self, instrument):
         self._instrument = instrument
-        
+
     _sens_dic = OrderedDict([(0, 100E-9), (1, 300E-9), (2, 1E-6), (3, 3E-6), (4, 10E-6),
                   (5, 30E-6), (6, 100E-6), (7, 300E-6), (8, 1E-3), (9, 3E-3),
                   (10, 10E-3), (11, 30E-3), (12, 100E-3), (13, 300E-3), (14, 1),
                   (15, 3)])
-                  
+
     @property
     def sensitivity(self):
         index = int(self._instrument.query_ascii_values('SEN')[0])
         return _Egg5210LockInAmplifierSignalSubsystem._sens_dic[index]
-    
+
     @sensitivity.setter
     def sensitivity(self, sens):
         for n, level in _Egg5210LockInAmplifierSignalSubsystem._sens_dic.items():
@@ -406,14 +406,14 @@ class Egg5210LockInAmplifier(PyVisaInstrument):
 
     def __init__(self, rm, address, name='', defaults=False, reset=False):
         PyVisaInstrument.__init__(self, rm, address, name)
-        
+
         # Setting the termination characters
         term_chars = self._instrument.CR
         self._instrument.read_termination = term_chars
-        
+
         #Setting the input term char at the instrument and for the driver
-        self._instrument.write('DD 13')                
-        
+        self._instrument.write('DD 13')
+
         # Channels
         x_channel = _Egg5210LockInAmplifierChannel(self._instrument, 'X')
         self.__setitem__('x', x_channel)
@@ -439,13 +439,13 @@ class Egg5210LockInAmplifier(PyVisaInstrument):
             self.reset()
         elif defaults:
             self.defaults()
-            
-        
+
+
 
     def reset(self):
         self.defaults()
         time.sleep(2)
-        
+
     def defaults(self):
         '''Set all instrument controls and displays to the factory set default
         values.
@@ -458,7 +458,7 @@ class Egg5210LockInAmplifier(PyVisaInstrument):
         self.__getitem__('oscillator').limit = [0, 5]
         self.__getitem__('oscillator').ramprate = 0.1
         self.__getitem__('oscillator').steptime = 0.02
-        
+
 
     @property
     def identification(self):
