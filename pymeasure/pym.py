@@ -2,7 +2,7 @@
 
 #import pymeasure.backends
 from pymeasure.case import Instrument, Rack
-from pymeasure.data import DatasetHdf
+from pymeasure.hdf5 import Dataset
 from pymeasure.filetools import (read_file, create_file, create_directory,
     index_str, cut_filetype, DirectoryIndexer, BasenameIndexer)
 from pymeasure.liveplot import LiveGraphTk, Dataplot1d, Dataplot2d
