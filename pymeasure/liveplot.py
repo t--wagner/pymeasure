@@ -32,7 +32,7 @@ from matplotlib.colors import Normalize, LogNorm
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from Queue import Queue
 from threading import Event
-import collections
+
 
 class LiveGraphBase(IndexDict):
     """Base class for differnt graphic backends.
@@ -52,15 +52,16 @@ class LiveGraphBase(IndexDict):
 
         # Define matplotlib Figure
         if figure is None:
-            self._figure = mpl.figure.Figure()
+            self.figure = mpl.figure.Figure()
         else:
-            self._figure = figure
+            self.figure = figure
 
         # Task queue
         self._tasks = Queue()
         self._tight_layout = True
         self.close_event = None
-        self.key = 'None'
+
+        self._draw = True
 
     def __setitem__(self, key, dataplot):
         """x.__setitem__(key, dataplot) <==> x['key'] = dataplot
@@ -85,7 +86,7 @@ class LiveGraphBase(IndexDict):
 
         """
 
-        return self._figure.add_subplot(*args, **kwargs)
+        return self.figure.add_subplot(*args, **kwargs)
 
     def subplot_grid(self, ysubs, xsubs):
         """ Create a grid of subplots and return all axes in a list.
@@ -102,6 +103,21 @@ class LiveGraphBase(IndexDict):
 
         """
         self._tasks.put((function, args, kargs))
+
+    @property
+    def draw(self):
+        return self._draw
+
+    @draw.setter
+    def draw(self, boolean):
+        if isinstance(boolean, bool):
+            self._draw = boolean
+        else:
+            raise TypeError('not boolean type')
+
+    @property
+    def visible(self):
+        return True
 
     def _update(self):
         """Update all dataplots and redraw the canvas if necassary.
@@ -130,15 +146,15 @@ class LiveGraphBase(IndexDict):
             self._tasks.task_done()
             up_to_date = False
 
-        # Redraw the canvas
-        if not up_to_date:
+        # Redraw the canvas if up_to_data and visible
+        if not up_to_date and self.draw and self.visible:
 
             # Use tight layout
             if self._tight_layout:
-                self._figure.tight_layout()
+                self.figure.tight_layout()
 
             # Redraw the graph
-            self._figure.canvas.draw()
+            self.figure.canvas.draw()
 
     @property
     def tight_layout(self):
@@ -158,15 +174,13 @@ class LiveGraphBase(IndexDict):
 
         """
 
-        self._add_task(self._figure.savefig, filename)
+        self._add_task(self.figure.savefig, filename)
 
 
 class LiveGraphTk(LiveGraphBase):
     """ LiveGraph backend for Tkinter.
 
     """
-
-    _events_key = {' ': None}
 
     def __init__(self, figure=None, master=None):
         LiveGraphBase.__init__(self, figure=figure)
@@ -178,7 +192,7 @@ class LiveGraphTk(LiveGraphBase):
             self._master = master
 
         # build canvas for Tk
-        canvas = FigureCanvasTkAgg(self._figure, master=self._master)
+        canvas = FigureCanvasTkAgg(self.figure, master=self._master)
         canvas.get_tk_widget().pack(side=Tk.TOP, fill=Tk.BOTH, expand=1)
 
         # Navigation Toolbar
@@ -186,16 +200,13 @@ class LiveGraphTk(LiveGraphBase):
         self._toolbar.update()
         canvas._tkcanvas.pack(side=Tk.TOP, fill=Tk.BOTH, expand=1)
 
+        # Menubar
+        menubar = Tk.Menu(self._master)
+        menubar.add_command(label='hide', command=self.hide)
+        self._master.config(menu=menubar)
+
+        # Close every
         self._master.protocol("WM_DELETE_WINDOW", self.close)
-        self._event = None
-        self.key = None
-
-        # Events
-        self._figure.canvas.mpl_connect('key_press_event', self._on_key)
-
-    def _on_key(self, event):
-        self.event = event
-        self.key = event.key
 
     def run(self, delay=25):
         """Calls the update method periodically with the delay in milliseconds.
@@ -215,11 +226,27 @@ class LiveGraphTk(LiveGraphBase):
         # Call run again afer the delay time
         self._master.after(delay, self.run, delay)
 
+    @property
+    def visible(self):
+        if self._master.state() == 'normal':
+            return True
+        else:
+            return False
+
+    @visible.setter
+    def visible(self, boolean):
+        if boolean:
+            self._master.deiconify()
+        else:
+            self._master.withdraw()
+
+    def hide(self):
+        self.visible = False
+
     def close(self):
         if self.close_event:
             self.close_event()
         self._master.destroy()
-        #self._master.quit()
 
 
 class DataplotBase(object):
@@ -304,7 +331,7 @@ class LineConf(object):
     def style(self, linestyle):
 
         # Handle wrong input to avoid crashing running liveplot
-        if not linestyle in self._line.lineStyles.keys():
+        if linestyle not in self._line.lineStyles.keys():
             raise ValueError('not a valid linestyle')
 
         self._graph._add_task(self._line.set_linestyle, linestyle)
@@ -317,7 +344,7 @@ class LineConf(object):
     def draw(self, drawstyle):
 
         # Handle wrong input to avoid crashing running liveplot
-        if not drawstyle in self._line.drawStyleKeys:
+        if drawstyle not in self._line.drawStyleKeys:
             raise ValueError('not a valid drawstyle')
 
         self._graph._add_task(self._line.set_drawstyle, drawstyle)
@@ -790,8 +817,7 @@ class Dataplot1d(DataplotBase):
                 self._xdata = xdata
                 self._ydata = ydata
 
-
-            #Set the up_to_date flag to True for redrawing
+            # Set the up_to_date flag to True for redrawing
             self._request_update.set()
 
         # Update the line with the new data if available
@@ -978,7 +1004,7 @@ class Dataplot2d(DataplotBase):
         # one value.
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            self._colorbar = self._graph._figure.colorbar(self._image, axes_cb)
+            self._colorbar = self._graph.figure.colorbar(self._image, axes_cb)
 
         self._image_conf = ImageConf(self._graph, self._image)
         self._label_conf = LabelConf2d(self._graph, self._axes, self._colorbar)
