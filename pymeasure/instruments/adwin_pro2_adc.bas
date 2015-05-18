@@ -1,5 +1,5 @@
 '<ADbasic Header, Headerversion 001.001>
-' Process_Number                 = 3
+' Process_Number                 = 1
 ' Initial_Processdelay           = 3000
 ' Eventsource                    = Timer
 ' Control_long_Delays_for_Stop   = No
@@ -8,26 +8,28 @@
 ' ADbasic_Version                = 5.0.8
 ' Optimize                       = Yes
 ' Optimize_Level                 = 1
-' Info_Last_Save                 = THOMSON  FKP2\wagner
+' Info_Last_Save                 = ORWELL  FKP2\bayer
 '<Header End>
 #Include ADwinPro_All.INC
 
 ' Define the ADC module number
-#Define ADC_MODULE 1
-#define ADC_OFFSET 8388608
-#Define INTEGRATION_TIME FPar_70 
-#Define INTEGRATION_POINTS Par_70
-#Define TRIGGER Par_71
-#Define CONTINUOUS Par_73
+#Define adc_module 1
+#define adc_offset 8388608
+#Define integration_time FPar_70 
+#Define integration_points Par_70
+#Define trigger Par_71
+#Define continuous Par_72
+#Define buffering Par_73
+#Define buffered_points Par_74
 
-'Dim Data_1[fifo1_size] As Long As Fifo
 
-Dim running_index As Long
-Dim factor As Float
- 
-Dim adc_values[8] As Long
+' Event-loop frequency
 Dim sampling_rate As Long
 
+' Targets for channel readings
+Dim adc_values[8] As Long
+
+' Running average
 Dim average1 As Float
 Dim average2 As Float
 Dim average3 As Float
@@ -37,18 +39,57 @@ Dim average6 As Float
 Dim average7 As Float
 Dim average8 As Float
 
+' Averaging helper
+Dim running_index As Long
+Dim factor As Float
+
+' Buffer
+#Define fifo_size 100000
+Dim Data_11[fifo_size] As Float As Fifo
+#Define chan1_buffer Data_11
+Dim Data_12[fifo_size] As Float As Fifo
+#Define chan2_buffer Data_12
+Dim Data_13[fifo_size] As Float As Fifo
+#Define chan3_buffer Data_13
+Dim Data_14[fifo_size] As Float As Fifo
+#Define chan4_buffer Data_14
+Dim Data_15[fifo_size] As Float As Fifo
+#Define chan5_buffer Data_15
+Dim Data_16[fifo_size] As Float As Fifo
+#Define chan6_buffer Data_16
+Dim Data_17[fifo_size] As Float As Fifo
+#Define chan7_buffer Data_17
+Dim Data_18[fifo_size] As Float As Fifo
+#Define chan8_buffer Data_18
+
 Init:
-  ' Turn off trigger
-  TRIGGER = 0
-  CONTINUOUS = 1
+  ' Turn off trigger and buffer
+  trigger = 0
+  buffering = 0
+  continuous = 1
+  
+  ' Counter for nr of points in buffer
+  buffered_points = 0
   
   ' Set sampling rate  
   sampling_rate = 400e3
-  INTEGRATION_TIME = 0.02
+  integration_time = 0.02
   
+  ' Calculate number of integration points
   ProcessDelay = 300e6 / sampling_rate
-  INTEGRATION_POINTS = sampling_rate * INTEGRATION_TIME
+  integration_points = sampling_rate * integration_time
   
+  ' Clear buffer and init FIFO-pointers
+  FIFO_clear(11)
+  FIFO_clear(12)
+  FIFO_clear(13)
+  FIFO_clear(14)
+  FIFO_clear(15)
+  FIFO_clear(16)
+  FIFO_clear(17)
+  FIFO_clear(18)
+  
+  ' Assign local variable values
   running_index = 1
     
   average1  = 0
@@ -67,8 +108,8 @@ Init:
   P2_Start_ConvF(adc_module, 011111111b)
   
 Event:
-  P2_Read_ADCF8_24B(ADC_MODULE, adc_values, 1)  
-  IF ((TRIGGER = 1) OR (CONTINUOUS = 1)) Then
+  P2_Read_ADCF8_24B(adc_module, adc_values, 1)  
+  IF ((trigger = 1) OR (continuous = 1)) Then
              
     ' Running average
     factor = 1 - 1 / running_index
@@ -82,16 +123,30 @@ Event:
     average8 = average8 * factor + adc_values[8] / running_index       
        
     If (running_index >= INTEGRATION_POINTS) Then
-        
+      
       ' Put out the average channel value
-      FPar_1 = (average1 / ADC_OFFSET - 1) * 10
-      FPar_2 = (average2 / ADC_OFFSET - 1) * 10
-      FPar_3 = (average3 / ADC_OFFSET - 1) * 10
-      FPar_4 = (average4 / ADC_OFFSET - 1) * 10
-      FPar_5 = (average5 / ADC_OFFSET - 1) * 10
-      FPar_6 = (average6 / ADC_OFFSET - 1) * 10
-      FPar_7 = (average7 / ADC_OFFSET - 1) * 10
-      FPar_8 = (average8 / ADC_OFFSET - 1) * 10
+      FPar_11 = (average1 / adc_offset - 1) * 10
+      FPar_12 = (average2 / adc_offset - 1) * 10
+      FPar_13 = (average3 / adc_offset - 1) * 10
+      FPar_14 = (average4 / adc_offset - 1) * 10
+      FPar_15 = (average5 / adc_offset - 1) * 10
+      FPar_16 = (average6 / adc_offset - 1) * 10
+      FPar_17 = (average7 / adc_offset - 1) * 10
+      FPar_18 = (average8 / adc_offset - 1) * 10
+      
+      If (trigger = 1) Then
+        
+        ' Put averaged values in buffer
+        chan1_buffer = FPar_11
+        chan2_buffer = FPar_12
+        chan3_buffer = FPar_13
+        chan4_buffer = FPar_14
+        chan5_buffer = FPar_15
+        chan6_buffer = FPar_16
+        chan7_buffer = FPar_17
+        chan8_buffer = FPar_18
+      
+      EndIf
       
       ' Set back running_index
       running_index = 0
@@ -106,7 +161,7 @@ Event:
       average8  = 0
         
       ' Turn off trigger
-      TRIGGER = 0
+      trigger = 0
                
     EndIf
       
@@ -114,4 +169,4 @@ Event:
     Inc(running_index)
   EndIf
     
-  INTEGRATION_POINTS = sampling_rate * INTEGRATION_TIME
+  integration_points = sampling_rate * integration_time

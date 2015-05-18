@@ -36,3 +36,19 @@ class PyVisaInstrument(Instrument):
     @property
     def pyvisa(self):
         return self._pyvisa_subsystem
+
+
+class PyVisaProxy(object):
+
+    def __init__(self, instr):
+        self.__dict__['_instr'] = instr
+
+    def __getattr__(self, name):
+        return getattr(self._instr, name)
+
+    def __setattr__(self, name, value):
+        if name in self.__dict__['_instr']:
+            self.__dict__['_instr'][name] = value
+        else:
+            setattr(self._instr, name, value)
+

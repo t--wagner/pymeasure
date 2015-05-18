@@ -40,8 +40,8 @@ class Dataset(object):
 
     @classmethod
     def create(cls, dataset, hdf_file, override=False, date=None,
-                fieldnames=None, fieldtype=float, fillvalue=nan,
-                **dset_kwargs):
+               fieldnames=None, fieldtype=float, fillvalue=nan,
+               **dset_kwargs):
         """Create a new HDF5 dataset and initalize DatasetHdf.
 
         """
@@ -133,6 +133,120 @@ class Dataset(object):
 
         """
         self.dataset.file.close()
+
+    def add_data(self, loop_pos, data):
+        """Append data to dset
+
+        """
+
+        # Check measurment dimension -> 1d
+        if len(self.dataset.shape) == 1:
+            self._add_data_1d(loop_pos, data)
+
+        # Check measurment dimension -> 2d
+        elif len(self.dataset.shape) == 2:
+            self._add_data_2d(loop_pos, data)
+
+        # Check measurment dimension -> 3d
+        elif len(self.dataset.shape) == 3:
+            self._add_data_3d(loop_pos, data)
+
+        else:
+            err_str = 'add_data only works in 1d, 2d and 3d'
+            raise NotImplementedError(err_str)
+
+    def _add_data_1d(self, loop_pos, data):
+
+        # Single datapoint
+        if len(data) == 1:
+            self.dataset[loop_pos] = data[0]
+        elif type(data) == tuple:
+            self.dataset[loop_pos] = data
+
+        # Multiple datapoints
+        else:
+            start_pos = list(loop_pos)
+            start_pos[-1] = loop_pos[-1] - (len(data) - 1)
+            self.dataset[start_pos[-1]:loop_pos[-1] + 1] = data
+
+    def _add_data_2d(self, loop_pos, data):
+
+        # Single datapoint
+        if len(data) == 1:
+            self.dataset[loop_pos] = data[0]
+        elif type(data) == tuple:
+            self.dataset[loop_pos] = data
+
+        # Multiple datapoints
+        else:
+            # in one line
+            if not (len(data) - 1) > loop_pos[-1]:
+                start_pos = list(loop_pos)
+                start_pos[-1] = loop_pos[-1] - (len(data) - 1)
+
+                self.dataset[loop_pos[-2], start_pos[-1]:loop_pos[-1] + 1] = data
+
+            # in multiple lines
+            else:
+                shape = self.dataset.shape
+
+                y_pos = loop_pos[-2]
+                x_pos = loop_pos[-1] - (len(data) - 1)
+                while x_pos < 0:
+                    y_pos -= 1
+                    x_pos = x_pos + shape[-1]
+                start_pos = list(loop_pos)
+                start_pos[-2] = y_pos
+                start_pos[-1] = x_pos
+                d_ind = [0, (shape[-1] - 1) - x_pos]
+                while y_pos < loop_pos[-2]:
+                    d_ind[0] += x_pos + (shape[-1])
+                    d_ind[1] += x_pos + (shape[-1])
+                    self.dataset[y_pos, x_pos:shape[-1]+1] = data[d_ind[0]:d_ind[1]+1]
+                    x_pos = 0
+                    y_pos += 1
+
+                self.dataset[loop_pos[-3], y_pos, 0:loop_pos[-1]+1] = data[d_ind[0]:]
+
+    def _add_data_3d(self, loop_pos, data):
+
+        # Single datapoint
+        if len(data) == 1:
+            self.dataset[loop_pos] = data[0]
+        elif type(data) == tuple:
+            self.dataset[loop_pos] = data
+
+        # Multiple datapoints
+        else:
+            # in one line
+            if not (len(data) - 1) > loop_pos[-1]:
+                start_pos = list(loop_pos)
+                start_pos[-1] = loop_pos[-1] - (len(data) - 1)
+
+                self.dataset[loop_pos[-3], loop_pos[-2], start_pos[-1]:loop_pos[-1] + 1] = data
+
+            # in multiple lines
+            else:
+                shape = self.dataset.shape
+
+                y_pos = loop_pos[-2]
+                x_pos = loop_pos[-1] - (len(data) - 1)
+                while x_pos < 0:
+                    y_pos -= 1
+                    x_pos = x_pos + shape[-1]
+                start_pos = list(loop_pos)
+                start_pos[-2] = y_pos
+                start_pos[-1] = x_pos
+                d_ind = [0, (shape[-1] - 1) - x_pos]
+                while y_pos < loop_pos[-2]:
+                    d_ind[0] += x_pos + (shape[-1])
+                    d_ind[1] += x_pos + (shape[-1])
+                    self.dataset[loop_pos[-3], y_pos, x_pos:shape[-1]+1] = data[d_ind[0]:d_ind[1]+1]
+                    x_pos = 0
+                    y_pos += 1
+
+                self.dataset[loop_pos[-3], y_pos, 0:loop_pos[-1]+1] = data[d_ind[0]:]
+
 
     @property
     def shape(self):
