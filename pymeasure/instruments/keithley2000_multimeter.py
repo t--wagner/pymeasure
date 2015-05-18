@@ -72,12 +72,9 @@ class _Keithley2000MultimeterChannel(ChannelRead):
 
     # --- measure and read --- #
     @ChannelRead._readmethod
-    def query(self, nr_of_samples=1, waiting_time=0):
-        '''
-        Triggers, reads and returns nr_of_samples measurments,
-        waiting_time between trigger and measurment
-
-        '''
+    def query(self, waiting_time=0, nr_of_samples=1):
+        '''Triggers, reads and returns nr_of_samples measurments,
+        waiting_time between trigger and measurment'''
 
         self.init()
         self._instrument.write("INIT:CONT 1")
@@ -95,9 +92,7 @@ class _Keithley2000MultimeterChannel(ChannelRead):
     # --- read buffer --- #
     @ChannelRead._readmethod
     def read(self):
-        '''Returns buffered data and clears the buffer
-
-        '''
+        '''Returns buffered data and clears the buffer'''
 
         try:
             self.init()
@@ -116,9 +111,7 @@ class _Keithley2000MultimeterChannel(ChannelRead):
 
     # Set Keithley2000 up for buffering
     def buffering(self, points=1024):
-        ''' Sets the Keithley2000 up for buffering measured datapoints
-
-        '''
+        ''' Sets the Keithley2000 up for buffering measured datapoints'''
 
         if not (validate_integer(points) and
                 validate_limits(points, [2, 1024])):
@@ -133,7 +126,7 @@ class _Keithley2000MultimeterChannel(ChannelRead):
         self._instrument.write(';'.join(cmds))
 
     # Send BUS-trigger
-    def trg(self, nr=1, waiting_time=0):
+    def trg(self, waiting_time=0, nr=1):
         for trigger in xrange(nr):
             self._instrument.write("*TRG")
             if waiting_time > 0:
@@ -208,6 +201,23 @@ class _Keithley2000MultimeterChannel(ChannelRead):
             raise ValueError(err_str)
 
         self._instrument.write("TRIG:SOUR {}".format(source))
+
+        # --- digits --- #
+    @property
+    def digits(self):
+        '''Reads/changes the number of digits per datapoint
+
+        '''
+        cmd = ("SENS:{}".format(self._measf), ":DIG?")
+        return int(self._instrument.query(''.join(cmd)))
+
+    @digits.setter
+    def digits(self, digits):
+        if not (isinstance(digits, int) and digits in [4, 5, 6, 7]):
+            raise ValueError('digits must be int and in (4, 5, 6, 7)')
+
+        cmd = ("SENS:{}".format(self._measf), ":DIG {}".format(digits))
+        self._instrument.write(''.join(cmd))
 
 
 class _Keithley2000MultimeterChannelVoltageDC(_Keithley2000MultimeterChannel):

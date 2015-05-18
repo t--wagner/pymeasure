@@ -64,11 +64,11 @@ class _Egg5302LockInAmplifierOscillator(ChannelStep):
         self._unit = 'volt'
 
         self._config += ['reference', 'frequency']
-        
+
     # Required Dictionaries
     _ref_dic = OrderedDict([[0, 'INT'], [1, 'EXT LOGIC'], [2, 'EXT']])
     _freq_dic = OrderedDict([(0, 0.001), (1, 0.01), (2, 0.1), (3, 1.0), (4, 10.0),
-                             (5, 100.0), (6, 1000.0), (7, 10000.0), (8, 100000.0)])    
+                             (5, 100.0), (6, 1000.0), (7, 10000.0), (8, 100000.0)])
     _osc_dic = OrderedDict([(0, 0.005), (1, 0.05), (2, 0.5)])
 
     @property
@@ -96,8 +96,8 @@ class _Egg5302LockInAmplifierOscillator(ChannelStep):
            if value == ref:
                self._instrument.write('IE ' + str(index))
                break
-         
-         
+
+
     @property
     def frequency(self):
         '''Returns the frequency of the Oscillator Output.
@@ -158,7 +158,7 @@ class _Egg5302LockInAmplifierOscillator(ChannelStep):
         if ((level > 5) or (level < 0.005)):
             err_str = 'Output amplitude out of range'
             raise ValueError(err_str)
-            
+
         #Find suitable range for desired output amplitude
         for range_index, range in reversed(_Egg5302LockInAmplifierOscillator._osc_dic.items()):
             if (level / range > 1):
@@ -171,7 +171,7 @@ class _Egg5302LockInAmplifierSignalSubsystem(object):
 
     def __init__(self, instrument):
         self._instrument = instrument
-        
+
     _sens_dic = OrderedDict([(0, 100E-9), (1, 200E-9), (2, 500E-9), (3, 1E-6), (4, 2E-6),
                   (5, 5E-6), (6, 10E-6), (7, 20E-6), (8, 50E-6), (9, 100E-6),
                   (10, 200E-6), (11, 500E-6), (12, 1E-3), (13, 2E-3), (14, 5E-3),
@@ -208,8 +208,8 @@ class _Egg5302LockInAmplifierSignalSubsystem(object):
         '''
 
         n = int(self._instrument.ask_for_values('SEN')[0])
-        return _Egg5302LockInAmplifierSignalSubsystem._sens_dic[n]        
-        
+        return _Egg5302LockInAmplifierSignalSubsystem._sens_dic[n]
+
     @sensitivity.setter
     def sensitivity(self, sens):
         '''Sets the sensitivity (rms sinusoid) in Volts.

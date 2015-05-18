@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*
 
 from pymeasure.case import ChannelRead, Instrument
+import time
 import ADwin
 
 
@@ -96,24 +97,69 @@ class AdwinInstrument(Instrument):
 class _AdwinPro2AdcChannel(ChannelRead):
 
     # Set names for global ADwin parameters
-    _fpar_integration_time = 1
-    _par_trigger = 2
-    _par_continous = 3
+    _fpar_integration_time = 70
+    _par_integration_points = 70
+    _par_trigger = 71
+    _par_continous = 72
+    _par_buffering = 73
+    _par_buffered_points = 74
+
+    _buffer_counter = 0
 
     def __init__(self, instrument, adc_number):
         ChannelRead.__init__(self)
         self._instrument = instrument
         self._adc_number = adc_number
-        self._config += ['continous', 'intergration_time']
+        self._config += ['continous', 'integration_time']
 
+    # Bind call method to query method (override of ChannelRead call --> read)
+    def __call__(self, *args, **kwargs):
+        return self.query(*args, **kwargs)
+
+    # Old read (one datapoint)
     @ChannelRead._readmethod
-    def read(self):
-        self._instrument.Set_Par(2, 1)
+    def query(self):
+        self._instrument.Set_Par(self._par_buffering, 0)
+        self._instrument.Set_Par(self._par_continous, 1)
         return [self._instrument.Get_FPar(self._adc_number)]
+
+    # Read buffer
+    @ChannelRead._readmethod
+    def read(self, clear=False):
+        if clear:
+            self._instrument.Fifo_Clear(self._adc_number)
+        elif not self._instrument.Fifo_Empty(self._adc_number):
+            raise ADwin.ADwinError('aquire', 'Fifo overrun.', 0)
+
+        if not self._buffer_counter == 1:
+            data = self._instrument.GetFifo_Float(self._adc_number, self._buffer_counter)
+        else :
+            data = [self._instrument.Get_FPar(self._adc_number)]
+        self._buffer_counter = 0
+        return [point for point in data]
+
+    # Send trigger
+    def trg(self, waiting_time=0, nr=1):
+        self._buffer_counter += 1
+        for trigger in xrange(nr):
+            self._instrument.Set_Par(self._par_trigger, 1)
+            if waiting_time > 0:
+                time.sleep(waiting_time)
+
+    # Set Adwin in buffering mode
+    def buffering(self, points=1024):
+        self._buffer_counter = 0
+#        self._instrument.Set_Par(self._par_continous, 0)
+#        self._instrument.Set_Par(self._par_buffering, 1)
+        self.clear_buffer()
+
+    # Clear the FIFO used for buffering
+    def clear_buffer(self):
+        self._instrument.Fifo_Clear(self._adc_number)
 
     @property
     def continous(self):
-        return bool(self._instrument.Get_Par(3))
+        return bool(self._instrument.Get_Par(self._par_continous))
 
     @continous.setter
     def continous(self, boolean):
@@ -125,12 +171,16 @@ class _AdwinPro2AdcChannel(ChannelRead):
             raise ValueError('Has to be boolean')
 
     @property
-    def intergration_time(self):
+    def integration_time(self):
         return self._instrument.Get_FPar(self._fpar_integration_time)
 
-    @intergration_time.setter
-    def intergration_time(self, seconds):
+    @integration_time.setter
+    def integration_time(self, seconds):
         self._instrument.Set_FPar(self._fpar_integration_time, seconds)
+
+    @property
+    def integration_points(self):
+        return self._instrument.Get_Par(self._par_integration_points)
 
 
 class AdwinPro2ADC(AdwinInstrument):
@@ -167,7 +217,8 @@ class AdwinPro2ADC(AdwinInstrument):
 
     def reboot(self):
         adwin_boot = 'C:\ADwin\ADwin11.btl'
-        adwin_dac_bin = 'E:/timo/pymeasure/pymeasure/instruments/adwin_pro2_adc.TB1'
+        #adwin_dac_bin = 'E:/timo/pymeasure/pymeasure/instruments/adwin_pro2_adc.TB1'
+        adwin_adc_bin = 'E:/bayer/python messskripte/pymeasure/pymeasure/instruments/adwin_pro2_adc.TB1'
         self._instrument.Boot(adwin_boot)
-        self._instrument.Load_Process(adwin_dac_bin)
+        self._instrument.Load_Process(adwin_adc_bin)
         self._instrument.Start_Process(1)

@@ -116,7 +116,7 @@ class AdwinPro2AdcChannel(ChannelRead):
         self._continous          = AdwinType(instrument, 'par',   3, True)
         self._adc                = AdwinType(instrument, 'fpar', adc_number)
         self._adc_number = adc_number
-        self._config += ['continous', 'intergration_time']
+        self._config += ['continous', 'integration_time']
 
     @ChannelRead._readmethod
     def read(self):
@@ -137,11 +137,11 @@ class AdwinPro2AdcChannel(ChannelRead):
             raise ValueError('Has to be boolean')
 
     @property
-    def intergration_time(self):
+    def integration_time(self):
         return self._integration_time()
 
-    @intergration_time.setter
-    def intergration_time(self, seconds):
+    @integration_time.setter
+    def integration_time(self, seconds):
         self._integration_time(seconds)
 
     @property
