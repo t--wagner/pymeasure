@@ -228,7 +228,7 @@ class LiveGraphTk(LiveGraphBase):
 
     @property
     def visible(self):
-        if self._master.state() == 'normal':
+        if self._master.state() in ['normal', 'zoomed']:
             return True
         else:
             return False
