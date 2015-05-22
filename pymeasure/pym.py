@@ -10,4 +10,3 @@ from pymeasure.measurment import Measurment
 from pymeasure.sweep import SweepSteps, SweepLinear, SweepTime, SweepZip
 from pymeasure.instruments import instruments_list as instruments
 from pymeasure.case import Config
-

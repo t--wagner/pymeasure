@@ -4,6 +4,7 @@ import os
 import glob
 from collections import OrderedDict
 import operator
+import textwrap
 
 try:
    import cPickle as pickle
@@ -17,7 +18,7 @@ from os.path import dirname as fdirname
 from os.path import basename as fbasename
 
 
-def mkfile(filename, override=False):
+def mkfile(filename, override=False, append=False):
     """Create directories and open file if not existing or override is True.
 
     """
@@ -33,8 +34,13 @@ def mkfile(filename, override=False):
         if fexists(filename):
             raise OSError('file exists.')
 
+    if append:
+        mode = 'a'
+    else:
+        mode = 'w'
+
     # Return file object
-    return open(filename, 'w')
+    return open(filename, mode)
 
 
 def fextension(filename):
@@ -136,6 +142,15 @@ def fread(filename, nr=None, strip=True):
         file_str = file_str.strip()
 
     return file_str
+
+
+def fwrite(filename, string, override=False, append=False, trim=True):
+
+    if trim:
+        string = textwrap.dedent(string).strip()
+
+    with mkfile(filename, override) as fobj:
+        fobj.write(string)
 
 
 class fopen(object):
