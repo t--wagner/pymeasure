@@ -141,7 +141,7 @@ class _AdwinPro2AdcChannel(ChannelRead):
     # Send trigger
     def trg(self, waiting_time=0, nr=1):
         self._buffer_counter += 1
-        for trigger in xrange(nr):
+        for trigger in range(nr):
             self._instrument.Set_Par(self._par_trigger, 1)
             if waiting_time > 0:
                 time.sleep(waiting_time)

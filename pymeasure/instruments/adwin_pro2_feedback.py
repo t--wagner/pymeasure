@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*
 
-from adwin import AdwinType, AdwinInstrument, AdwinPro2AdcChannel, \
+from .adwin import AdwinType, AdwinInstrument, AdwinPro2AdcChannel, \
     AdwinPro2DacChannel, AdwinPro2DaqChannel
 
 

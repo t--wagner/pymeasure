@@ -50,7 +50,7 @@ class _Egg5302LockInAmplifierChannel(ChannelRead):
 
         '''
 
-        for index, value in _Egg5302LockInAmplifierChannel._tcs.items():
+        for index, value in list(_Egg5302LockInAmplifierChannel._tcs.items()):
             if seconds <= value:
                 break
 
@@ -92,7 +92,7 @@ class _Egg5302LockInAmplifierOscillator(ChannelStep):
 
         '''
 
-        for index, value in _Egg5302LockInAmplifierOscillator._ref_dic.items():
+        for index, value in list(_Egg5302LockInAmplifierOscillator._ref_dic.items()):
            if value == ref:
                self._instrument.write('IE ' + str(index))
                break
@@ -127,7 +127,7 @@ class _Egg5302LockInAmplifierOscillator(ChannelStep):
             raise ValueError(err_str)
 
         #Find the siutable range
-        for range_index, range in reversed(_Egg5302LockInAmplifierOscillator._freq_dic.items()):
+        for range_index, range in reversed(list(_Egg5302LockInAmplifierOscillator._freq_dic.items())):
             if ((frequency / range) >= 1):
                 break
         frequency_factor = int(frequency / range * 1000)
@@ -160,7 +160,7 @@ class _Egg5302LockInAmplifierOscillator(ChannelStep):
             raise ValueError(err_str)
 
         #Find suitable range for desired output amplitude
-        for range_index, range in reversed(_Egg5302LockInAmplifierOscillator._osc_dic.items()):
+        for range_index, range in reversed(list(_Egg5302LockInAmplifierOscillator._osc_dic.items())):
             if (level / range > 1):
                 break
         # device_factor transforms the desired value in volts to a device specific output range
@@ -216,7 +216,7 @@ class _Egg5302LockInAmplifierSignalSubsystem(object):
 
         '''
 
-        for index, value in _Egg5302LockInAmplifierSignalSubsystem._sens_dic.items():
+        for index, value in list(_Egg5302LockInAmplifierSignalSubsystem._sens_dic.items()):
             if sens <= value:
                 break
 

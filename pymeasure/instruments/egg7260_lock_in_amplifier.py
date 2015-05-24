@@ -54,7 +54,7 @@ class _Egg7260LockInAmplifierChannel(ChannelRead):
 
         '''
 
-        for value, nr in _Egg7260LockInAmplifierChannel._tcs.items():
+        for value, nr in list(_Egg7260LockInAmplifierChannel._tcs.items()):
             if seconds <= value:
                 break
 
@@ -94,7 +94,7 @@ class _Egg7260LockInAmplifierOscillator(ChannelStep):
         '''
 
         value_ok = False
-        for n, item in _Egg7260LockInAmplifierOscillator._ref_dic.items():
+        for n, item in list(_Egg7260LockInAmplifierOscillator._ref_dic.items()):
             if item == value:
                 value_ok = True
                 break

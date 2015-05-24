@@ -81,7 +81,7 @@ class _Keithley2000MultimeterChannel(ChannelRead):
 
         data = []
 
-        for i in xrange(nr_of_samples):
+        for i in range(nr_of_samples):
             self._instrument.write("TRIG:SIGN")
             if waiting_time > 0:
                 time.sleep(waiting_time)
@@ -127,7 +127,7 @@ class _Keithley2000MultimeterChannel(ChannelRead):
 
     # Send BUS-trigger
     def trg(self, waiting_time=0, nr=1):
-        for trigger in xrange(nr):
+        for trigger in range(nr):
             self._instrument.write("*TRG")
             if waiting_time > 0:
                 time.sleep(waiting_time)

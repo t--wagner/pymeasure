@@ -26,7 +26,7 @@ class _QxfordILMChannel(Channel):
 
 class QxfordILM(PyVisaInstrument):
 
-    def __init__(self, address, isobus name='', reset=True, defaults=True):
+    def __init__(self, address, isobus, name='', reset=True, defaults=True):
         PyVisaInstrument.__init__(self, address, name)
 
         # Channels

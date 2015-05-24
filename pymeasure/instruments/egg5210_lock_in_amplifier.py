@@ -48,7 +48,7 @@ class _Egg5210LockInAmplifierChannel(ChannelRead):
 
         '''
 
-        for nr, value in _Egg5210LockInAmplifierChannel._tcs.items():
+        for nr, value in list(_Egg5210LockInAmplifierChannel._tcs.items()):
             if seconds <= value:
                 break
 
@@ -125,7 +125,7 @@ class _Egg5210LockInAmplifierOscillator(ChannelStep):
             raise ValueError(err_str)
         #List of the frequencies corresponding to the lower boundary of the ranges
         #Find the siutable range
-        for n, range in reversed(_Egg5210LockInAmplifierOscillator._freq_dic.items()):
+        for n, range in reversed(list(_Egg5210LockInAmplifierOscillator._freq_dic.items())):
             if ((frequency / range) >= 1):
                 break
         frequency_factor = int(float(frequency) / float(range) * 2000)
@@ -173,7 +173,7 @@ class _Egg5210LockInAmplifierSignalSubsystem(object):
 
     @sensitivity.setter
     def sensitivity(self, sens):
-        for n, level in _Egg5210LockInAmplifierSignalSubsystem._sens_dic.items():
+        for n, level in list(_Egg5210LockInAmplifierSignalSubsystem._sens_dic.items()):
             if level >= sens:
                 break
         self._instrument.write('SEN ' + str(n))
