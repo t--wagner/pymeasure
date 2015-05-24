@@ -3,6 +3,7 @@
 import threading
 import time
 
+
 class Loop(object):
 
     def __init__(self, sweep):
@@ -79,8 +80,8 @@ class LoopNested(object):
         """Initialize NestedLoop with a list of sweeps.
 
         """
-
-        self._loop_list = [Loop(sweep) for sweep in sweeps]
+        self._loop_list = []
+        self.extend(sweeps)
 
         setattr(cls, 'step', self.step)
         setattr(cls, 'pause', self.pause)
@@ -94,6 +95,13 @@ class LoopNested(object):
         """
 
         return self._loop_list[key]
+
+    def append(self, sweep):
+        self._loop_list.append(Loop(sweep))
+
+    def extend(self, sweeps):
+        for sweep in sweeps:
+            self.append(sweep)
 
     def step(self):
         steps = []
@@ -121,19 +129,13 @@ class LoopNested(object):
         else:
             loop._pause.set()
 
-    def stop(self, loop_nr=-1):
+    def stop(self, loop_nr=0):
         """Stop looping in loop_nr. If loop_nr is None stop immediately.
 
         """
 
-        # Increase index for right slicing
-        if loop_nr == -1:
-            loop_nr = None
-        else:
-            loop_nr += 1
-
         # Set all loops above loop_nr to stop
-        for loop in self._loop_list[:loop_nr]:
+        for loop in self._loop_list[loop_nr:]:
             loop.stop()
 
     @property

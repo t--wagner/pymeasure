@@ -48,7 +48,7 @@ class LiveGraphBase(IndexDict):
 
         """
 
-        IndexDict.__init__(self)
+        super(LiveGraphBase, self).__init__()
 
         # Define matplotlib Figure
         if figure is None:
@@ -70,7 +70,7 @@ class LiveGraphBase(IndexDict):
         """
 
         if isinstance(dataplot, DataplotBase):
-            IndexDict.__setitem__(self, key, dataplot)
+            super(LiveGraphBase, self).__setitem__(key, dataplot)
         else:
             raise TypeError('item must be a Dataplot.')
 
@@ -183,7 +183,7 @@ class LiveGraphTk(LiveGraphBase):
     """
 
     def __init__(self, figure=None, master=None):
-        LiveGraphBase.__init__(self, figure=figure)
+        super(LiveGraphTk, self).__init__(figure)
 
         # Setup the TKInter window with the canvas and a toolbar
         if not master:
@@ -659,8 +659,7 @@ class Dataplot1d(DataplotBase):
         """Initiate Dataplot1d class.
 
         """
-
-        DataplotBase.__init__(self, graph, axes)
+        super(Dataplot1d, self).__init__(graph, axes)
 
         # Create emtpy line instance for axes
         self._line, = self._axes.plot([], [])
@@ -968,7 +967,7 @@ class ColorbarConf(object):
 class LabelConf2d(LabelConf1d):
 
     def __init__(self, graph, axes, colorbar):
-        LabelConf1d.__init__(self, graph, axes)
+        super(LabelConf2d, self).__init__(graph, axes)
         self._colorbar = colorbar
 
     @property
@@ -983,7 +982,7 @@ class LabelConf2d(LabelConf1d):
 class Dataplot2d(DataplotBase):
 
     def __init__(self, graph, axes, length):
-        DataplotBase.__init__(self, graph, axes)
+        super(Dataplot2d, self).__init__(graph, axes)
 
         self._length = length
 

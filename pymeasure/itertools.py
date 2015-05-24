@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*
+
 def counter(iterable, steps):
     """Sends after number of steps a True status.
 

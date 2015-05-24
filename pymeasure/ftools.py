@@ -7,9 +7,9 @@ import operator
 import textwrap
 
 try:
-   import cPickle as pickle
+    import cPickle as pickle
 except:
-   import pickle
+    import pickle
 
 # Wrappers
 from os import makedirs as mkdir

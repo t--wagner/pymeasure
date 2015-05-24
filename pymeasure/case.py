@@ -96,7 +96,7 @@ class ChannelRead(Channel):
     def __init__(self, name='', unit=''):
 
         # Call Channel constructor
-        Channel.__init__(self, name, unit)
+        super(ChannelRead, self).__init__(name, unit)
 
         self.factor = None
 
@@ -199,7 +199,7 @@ class ChannelWrite(ChannelRead):
 
     def __init__(self, name='', unit=''):
 
-        ChannelRead.__init__(self, name, unit)
+        super(ChannelWrite, self).__init__(name, unit)
 
         self.limit = (None, None)
 
@@ -304,7 +304,7 @@ class ChannelWrite(ChannelRead):
 class ChannelStep(ChannelWrite):
 
     def __init__(self):
-        ChannelWrite.__init__(self)
+        super(ChannelStep, self).__init__()
 
         # Update config list
         self._config += ['steprate', 'steptime', 'stepsize']
@@ -377,6 +377,7 @@ class ChannelStep(ChannelWrite):
 
         # Decortae the writemethod
         writemethod = ChannelWrite._writemethod(writemethod)
+        #writemethod = ChannelWrite._writemethod(writemethod)
 
         def write(self, stop, verbose=False):
 
@@ -437,12 +438,12 @@ class Instrument(IndexDict):
         """Initiate Instrument class.
 
         """
-        IndexDict.__init__(self)
+        super(Instrument, self).__init__()
         self._name = name
 
     def __setitem__(self, key, channel):
         if isinstance(channel, Channel):
-            IndexDict.__setitem__(self, key, channel)
+            super(Instrument, self).__setitem__(key, channel)
             channel.name = key
         else:
             raise TypeError('item must be a Channel')
@@ -481,11 +482,11 @@ class Rack(IndexDict):
     """
 
     def __init__(self):
-        IndexDict.__init__(self)
+        super(Rack, self).__init__()
 
     def __setitem__(self, key, instrument):
         if isinstance(instrument, Instrument):
-            IndexDict.__setitem__(self, key, instrument)
+            super(Rack, self).__setitem__(key, instrument)
         else:
             raise TypeError('item must be an Instrument')
 
