@@ -20,7 +20,7 @@ from pymeasure.indexdict import IndexDict
 import abc
 import sys
 if sys.version_info[0] < 3:
-    import Tkinter as Tk
+    import tkinter as Tk
 else:
     import tkinter as Tk
 import warnings
@@ -30,7 +30,7 @@ from matplotlib.backends.backend_tkagg import (FigureCanvasTkAgg,
                                                NavigationToolbar2TkAgg)
 from matplotlib.colors import Normalize, LogNorm
 from mpl_toolkits.axes_grid1 import make_axes_locatable
-from Queue import Queue
+from queue import Queue
 from threading import Event
 
 
@@ -249,9 +249,7 @@ class LiveGraphTk(LiveGraphBase):
         self._master.destroy()
 
 
-class DataplotBase(object):
-    __metaclass__ = abc.ABCMeta
-
+class DataplotBase(object, metaclass=abc.ABCMeta):
     def __init__(self, graph, axes):
         """Initiate DataplotBase class.
 
@@ -331,7 +329,7 @@ class LineConf(object):
     def style(self, linestyle):
 
         # Handle wrong input to avoid crashing running liveplot
-        if linestyle not in self._line.lineStyles.keys():
+        if linestyle not in list(self._line.lineStyles.keys()):
             raise ValueError('not a valid linestyle')
 
         self._graph._add_task(self._line.set_linestyle, linestyle)
@@ -395,7 +393,7 @@ class MarkerConf(object):
         # Handle wrong input to avoid crashing running liveplot
         if marker in [None, False]:
             marker = 'None'
-        elif marker not in self._line.markers.keys():
+        elif marker not in list(self._line.markers.keys()):
             raise ValueError('not a valid marker')
 
         self._graph._add_task(self._line.set_marker, marker)

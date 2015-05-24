@@ -5,11 +5,7 @@ import glob
 from collections import OrderedDict
 import operator
 import textwrap
-
-try:
-    import cPickle as pickle
-except:
-    import pickle
+import pickle
 
 # Wrappers
 from os import makedirs as mkdir
@@ -129,7 +125,7 @@ def fread(filename, nr=None, strip=True):
     with open(filename) as fobj:
         if nr:
             lines = []
-            for x in xrange(nr):
+            for x in range(nr):
                 try:
                     lines.append(next(fobj))
                 except StopIteration:
@@ -160,17 +156,17 @@ class fopen(object):
         # Handle dictonaries
         if isinstance(container, (OrderedDict, dict)):
             self._files = container.__class__()
-            for key, filename in container.items():
+            for key, filename in list(container.items()):
                 self._files[key] = open(filename, *open_args, **open_kwargs)
         else:
             # Handle tuple types ((key0, filename0), (key1, filename1), ...)
             try:
-                self._files = ((key, open(filename, *open_args, **open_kwargs)) \
+                self._files = ((key, open(filename, *open_args, **open_kwargs))
                                for key, filename in container)
                 self._files = container.__class__(self._files)
             # Handle everything else
             except (ValueError, TypeError):
-                self._files = (open(filename, *open_args, **open_kwargs) \
+                self._files = (open(filename, *open_args, **open_kwargs)
                                for filename in container)
                 self._files = container.__class__(self._files)
 
@@ -197,7 +193,7 @@ class fopen(object):
 
     def close(self):
         if isinstance(self._files, (OrderedDict, dict)):
-            for fobj in self._files.values():
+            for fobj in list(self._files.values()):
                 fobj.close()
         else:
             try:
@@ -206,6 +202,7 @@ class fopen(object):
             except (ValueError, AttributeError):
                 for fobj in self._files:
                     fobj.close()
+
 
 def pload(file):
     if isinstance(file, str):

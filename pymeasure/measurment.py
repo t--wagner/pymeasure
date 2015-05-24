@@ -8,9 +8,7 @@ class MeasurmentError(Exception):
     pass
 
 
-class Measurment(object):
-    __metaclass__ = abc.ABCMeta
-
+class Measurment(object, metaclass=abc.ABCMeta):
     def __init__(self):
 
         self._thread = None

@@ -29,11 +29,10 @@ from collections import OrderedDict
 import numpy as np
 
 
-class Channel(object):
+class Channel(object, metaclass=abc.ABCMeta):
     """Channel class of pymeasure.case.
 
     """
-    __metaclass__ = abc.ABCMeta
 
     def __init__(self, name='', unit=''):
         self.name = name
@@ -258,8 +257,8 @@ class ChannelWrite(ChannelRead):
 
         for value in values:
 
-            if not ((limit[0] <= value or limit[0] is None) and
-                    (limit[1] >= value or limit[1] is None)):
+            if not ((limit[0] is None or limit[0] <= value) and
+                    (limit[1] is None or limit[1] >= value)):
                 return False
 
         return True
@@ -393,9 +392,9 @@ class ChannelStep(ChannelWrite):
 
             # Return generator for negative or positive step direction
             if math.copysign(1, points) > 0:
-                points = xrange(1, points + 1, 1)
+                points = range(1, points + 1, 1)
             else:
-                points = xrange(-1, points - 1, -1)
+                points = range(-1, points - 1, -1)
 
             # Do stepping
             last_time = verbose_time = time.time()
@@ -408,12 +407,12 @@ class ChannelStep(ChannelWrite):
                     # If verbose is True print every step
                     if verbose is True:
                         position, = self.read()
-                        print position
+                        print(position)
                     # If verbose is a time print the current step
                     elif (time.time() - verbose_time) > verbose:
                         verbose_time = time.time()
                         position, = self.read()
-                        print position
+                        print(position)
 
                 # Calculate left waiting time and wait for it
                 waiting_time = steptime - (time.time() - last_time)
@@ -465,12 +464,12 @@ class Instrument(IndexDict):
 
         Returns: List of channel references.
         """
-        return self._odict.values()
+        return list(self._odict.values())
 
     def config(self):
 
         instr_config = OrderedDict()
-        for key, channel in self.items():
+        for key, channel in list(self.items()):
             instr_config[key] = channel.config()
 
         return InstrumentConfig(instr_config)
@@ -495,7 +494,7 @@ class Rack(IndexDict):
 
         """
 
-        return self._odict.values()
+        return list(self._odict.values())
 
 
 class Config(object):
@@ -528,7 +527,7 @@ class Config(object):
         Return a configuration iterator.
 
         """
-        return iter(self._config.items())
+        return iter(list(self._config.items()))
 
     def __repr__(self):
         """x.__repr__() <==> rapr(x)
@@ -550,19 +549,19 @@ class Config(object):
         """Return list with configuraten keys.
 
         """
-        return self._config.keys()
+        return list(self._config.keys())
 
     def values(self):
         """Retrun list with configuration values.
 
         """
-        return self._config.values()
+        return list(self._config.values())
 
     def items(self):
         """Return list with configuration items.
 
         """
-        return self._config.items()
+        return list(self._config.items())
 
     def to_str(self, key_delimiter=': ', item_delimiter='; ', item_space=''):
         """Make a string out of configuration.
@@ -571,7 +570,7 @@ class Config(object):
 
         # Create configuration string
         config_str = ''
-        for attribute, value in self._config.items():
+        for attribute, value in list(self._config.items()):
             config_str += str(item_space)
             config_str += str(attribute) + key_delimiter
             config_str += str(value) + item_delimiter
@@ -608,7 +607,7 @@ class InstrumentConfig(Config):
 
         # Create configuration string
         config_str = ''
-        for channel, config in self._config.items():
+        for channel, config in list(self._config.items()):
             config_str += str(channel) + key_delimiter
             config_str += config_boundary[0]
             config_str += config.to_str(config_key_delimiter,

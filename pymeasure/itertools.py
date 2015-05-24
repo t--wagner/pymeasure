@@ -8,7 +8,7 @@ def counter(iterable, steps):
     iterator = iter(iterable)
 
     while True:
-        for value in xrange(steps):
+        for value in range(steps):
             status = False
             if value == steps - 1:
                 status = True

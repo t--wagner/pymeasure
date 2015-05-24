@@ -37,7 +37,7 @@ class IndexDict(object):
 
         """
 
-        return iter(self._odict.values())
+        return iter(list(self._odict.values()))
 
     def __len__(self):
         """x.__len__() <==> len(x)
@@ -62,7 +62,7 @@ class IndexDict(object):
         except KeyError:
             try:
                 # Get the key that bekongs ot the index
-                key = self._odict.keys()[key]
+                key = list(self._odict.keys())[key]
                 return self._odict[key]
             except:
                 raise KeyError
@@ -90,7 +90,7 @@ class IndexDict(object):
             del self._odict[key]
         except KeyError:
             try:
-                key = self._odict.keys()[key]
+                key = list(self._odict.keys())[key]
                 del self._odict[key]
             except:
                 raise KeyError
@@ -127,8 +127,8 @@ class IndexDict(object):
         """Return list of keys in IndexDict
 
         """
-        return self._odict.keys()
+        return list(self._odict.keys())
 
     def items(self):
 
-        return self._odict.items()
+        return list(self._odict.items())

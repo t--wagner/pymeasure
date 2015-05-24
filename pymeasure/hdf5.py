@@ -98,7 +98,7 @@ class Dataset(object):
         return self.dataset[key]
 
     def __dir__(self):
-        return self.dataset.attrs.keys() + self.__dict__.keys()
+        return list(self.dataset.attrs.keys()) + list(self.__dict__.keys())
 
     def __setitem__(self, key, value):
         self.dataset[key] = value

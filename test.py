@@ -8,7 +8,7 @@ foo = pym.instruments.FooInstrument()
 class MyMeasurment1d(pym.Measurment):
 
     def __init__(self):
-        super(MyMeasurment1d, self).__init__()
+        super().__init__()
         self.sweep0 = pym.SweepLinear(foo['out1'], 0, 10, 101, 0.01)
         self.loop = pym.LoopNested(self, self.sweep0)
 
@@ -55,7 +55,7 @@ class MyMeasurment2d(MyMeasurment1d):
 class MyMeasurment3d(MyMeasurment2d):
     def __init__(self):
         super(MyMeasurment3d, self).__init__()
-        self.loop.append(range(10))
+        self.loop.append(list(range(10)))
 
     def _run(self):
 

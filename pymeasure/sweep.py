@@ -2,12 +2,10 @@
 
 import abc
 import time
-import itertools
+from . import itertools
 
 
-class Sweep(object):
-
-    __metaclass__ = abc.ABCMeta
+class Sweep(object, metaclass=abc.ABCMeta):
 
     def __init__(self, channel, waiting_time=0, readback=False, name=None):
 
@@ -124,11 +122,11 @@ class SweepLinear(Sweep):
         """
 
         # Create generator expressions for up sweep
-        points = xrange(self.points)
+        points = range(self.points)
         up = (self.start + n * self.stepsize for n in points)
 
         # Create generator expressions for down sweep
-        points = xrange(self.points - 1, -1, -1)
+        points = range(self.points - 1, -1, -1)
         down = (self.start + n * self.stepsize for n in points)
 
         # Return genorator for the sweep direction
@@ -206,7 +204,7 @@ class SweepTime(Sweep):
     def steps(self):
         """Time step generator.
         """
-        return (self.waiting_time * n for n in xrange(1, self._points))
+        return (self.waiting_time * n for n in range(1, self._points))
 
     @property
     def points(self):
@@ -224,7 +222,7 @@ class SweepZip(object):
         return self._sweeps[index]
 
     def __iter__(self):
-        return itertools.izip(*self._sweeps)
+        return zip(*self._sweeps)
 
     @property
     def sweeps(self):
@@ -240,4 +238,4 @@ class SweepZip(object):
         for sweep in self._sweeps:
             steps.append(sweep.steps)
 
-        return itertools.izip(*steps)
+        return zip(*steps)

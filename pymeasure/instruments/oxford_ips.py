@@ -3,7 +3,7 @@
 from pymeasure.instruments.pyvisa_instrument import PyVisaInstrument
 from pymeasure.case import ChannelWrite
 import time
-import oxford as ox
+from . import oxford as ox
 
 class _OxfordIPSFieldChannel(ChannelWrite):
 
@@ -95,17 +95,17 @@ class _OxfordIPSFieldChannel(ChannelWrite):
         # Wait 10seconds to make sure the heater chaged state
         waitingtime = 20
         steptime = 2
-        print 'Waiting for heater:',
+        print('Waiting for heater:', end=' ')
         while waitingtime:
-            print '.',
+            print('.', end=' ')
             waitingtime -= steptime
             time.sleep(steptime)
 
         #Confirm the heater state
         if self.heater == boolean:
-            print boolean
+            print(boolean)
         else:
-            print ''
+            print('')
             raise ValueError('switch heater did not change its state.')
 
     def hold(self):
@@ -137,7 +137,7 @@ class _OxfordIPSFieldChannel(ChannelWrite):
             if verbose:
                 if (time.time() - last_time) > verbose:
                     last_time = time.time()
-                    print self.read()
+                    print(self.read())
 
         # Put on hold
         self.hold()
