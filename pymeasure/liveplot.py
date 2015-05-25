@@ -19,10 +19,7 @@ from pymeasure.indexdict import IndexDict
 
 import abc
 import sys
-if sys.version_info[0] < 3:
-    import tkinter as Tk
-else:
-    import tkinter as Tk
+import tkinter as Tk
 import warnings
 import numpy as np
 import matplotlib as mpl
@@ -32,6 +29,7 @@ from matplotlib.colors import Normalize, LogNorm
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from queue import Queue
 from threading import Event
+from functools import partial
 
 
 class LiveGraphBase(IndexDict):
@@ -48,7 +46,7 @@ class LiveGraphBase(IndexDict):
 
         """
 
-        super(LiveGraphBase, self).__init__()
+        super().__init__()
 
         # Define matplotlib Figure
         if figure is None:
@@ -70,7 +68,7 @@ class LiveGraphBase(IndexDict):
         """
 
         if isinstance(dataplot, DataplotBase):
-            super(LiveGraphBase, self).__setitem__(key, dataplot)
+            super().__setitem__(key, dataplot)
         else:
             raise TypeError('item must be a Dataplot.')
 
@@ -97,12 +95,6 @@ class LiveGraphBase(IndexDict):
         for nr in range(1, ysubs * xsubs + 1):
             axes.append(self.add_subplot(ysubs, xsubs, nr))
         return axes
-
-    def _add_task(self, function, *args, **kargs):
-        """Add a task function(*args, **kwargs) to the task queue.
-
-        """
-        self._tasks.put((function, args, kargs))
 
     @property
     def draw(self):
@@ -133,18 +125,17 @@ class LiveGraphBase(IndexDict):
         up_to_date = True
 
         # Iterate through all subplots and check for updates
-        for subplot in self.__iter__():
-            subplot._update()
-            if subplot._request_update.is_set():
-                subplot._request_update.clear()
-                up_to_date = False
-
-        # Process all tasks
         while not self._tasks.empty():
-            func, args, kargs = self._tasks.get()
-            func(*args, **kargs)
+            task = self._tasks.get()
+            task()
             self._tasks.task_done()
             up_to_date = False
+
+        for subplot in self.__iter__():
+            if subplot._request_update.is_set():
+                subplot._update()
+                subplot._request_update.clear()
+                up_to_date = False
 
         # Redraw the canvas if up_to_data and visible
         if not up_to_date and self.draw and self.visible:
@@ -173,8 +164,8 @@ class LiveGraphBase(IndexDict):
         """Make a snapshot and save it as filename.
 
         """
-
-        self._add_task(self.figure.savefig, filename)
+        task = partial(self.figure.savefig, filename)
+        self._graph._tasks.put(task)
 
 
 class LiveGraphTk(LiveGraphBase):
@@ -183,7 +174,7 @@ class LiveGraphTk(LiveGraphBase):
     """
 
     def __init__(self, figure=None, master=None):
-        super(LiveGraphTk, self).__init__(figure)
+        super().__init__(figure)
 
         # Setup the TKInter window with the canvas and a toolbar
         if not master:
@@ -250,6 +241,7 @@ class LiveGraphTk(LiveGraphBase):
 
 
 class DataplotBase(object, metaclass=abc.ABCMeta):
+
     def __init__(self, graph, axes):
         """Initiate DataplotBase class.
 
@@ -296,7 +288,7 @@ class LabelConf1d(object):
 
     @title.setter
     def title(self, string):
-        self._graph._add_task(self._axes.set_title, string)
+        self._graph._tasks.put(partial(self._axes.set_title, string))
 
     @property
     def xaxis(self):
@@ -304,7 +296,7 @@ class LabelConf1d(object):
 
     @xaxis.setter
     def xaxis(self, string):
-        self._graph._add_task(self._axes.set_xlabel, string)
+        self._graph._tasks.put(partial(self._axes.set_xlabel, string))
 
     @property
     def yaxis(self):
@@ -312,7 +304,8 @@ class LabelConf1d(object):
 
     @yaxis.setter
     def yaxis(self, string):
-        self._graph._add_task(self._axes.set_ylabel, string)
+        task = partial(self._axes.set_ylabel, string)
+        self._graph._tasks.put(task)
 
 
 class LineConf(object):
@@ -332,7 +325,8 @@ class LineConf(object):
         if linestyle not in list(self._line.lineStyles.keys()):
             raise ValueError('not a valid linestyle')
 
-        self._graph._add_task(self._line.set_linestyle, linestyle)
+        task = partial(self._line.set_linestyle, linestyle)
+        self._graph._tasks.put(task)
 
     @property
     def draw(self):
@@ -345,7 +339,8 @@ class LineConf(object):
         if drawstyle not in self._line.drawStyleKeys:
             raise ValueError('not a valid drawstyle')
 
-        self._graph._add_task(self._line.set_drawstyle, drawstyle)
+        task = partial(self._line.set_drawstyle, drawstyle)
+        self._graph._tasks.put(task)
 
     @property
     def color(self):
@@ -358,7 +353,8 @@ class LineConf(object):
         if not mpl.colors.is_color_like(color):
             raise ValueError('not a valid color')
 
-        self._graph._add_task(self._line.set_color, color)
+        task = partial(self._line.set_color, color)
+        self._graph._tasks.put(task)
 
     @property
     def width(self):
@@ -369,7 +365,8 @@ class LineConf(object):
 
         # Handle wrong input to avoid crashing running liveplot
         linewidth = float(linewidth)
-        self._graph._add_task(self._line.set_linewidth, linewidth)
+        task = partial(self._line.set_linewidth, linewidth)
+        self._graph._tasks.put(task)
 
 
 class MarkerConf(object):
@@ -396,7 +393,8 @@ class MarkerConf(object):
         elif marker not in list(self._line.markers.keys()):
             raise ValueError('not a valid marker')
 
-        self._graph._add_task(self._line.set_marker, marker)
+        task = partial(self._line.set_marker, marker)
+        self._graph._tasks.put(task)
 
     @property
     def color(self):
@@ -421,7 +419,8 @@ class MarkerConf(object):
         if not mpl.colors.is_color_like(color):
             raise ValueError('not a valid color')
 
-        self._graph._add_task(self._line.set_markerfacecolor, color)
+        task = partial(self._line.set_markerfacecolor, color)
+        self._graph._tasks.put(task)
 
     @property
     def edgecolor(self):
@@ -434,7 +433,8 @@ class MarkerConf(object):
         if not mpl.colors.is_color_like(color):
             raise ValueError('not a valid color')
 
-        self._graph._add_task(self._line.set_markeredgecolor, color)
+        task = partial(self._line.set_markeredgecolor, color)
+        self._graph._tasks.put(task)
 
     @property
     def size(self):
@@ -446,7 +446,8 @@ class MarkerConf(object):
         # Handle wrong input to avoid crashing running liveplot
         markersize = float(markersize)
 
-        self._graph._add_task(self._line.set_markersize, markersize)
+        task = partial(self._line.set_markersize, markersize)
+        self._graph._tasks.put(task)
 
 
 class XaxisConf(object):
@@ -467,7 +468,8 @@ class XaxisConf(object):
         if not isinstance(boolean, bool):
             raise TypeError('not bool')
 
-        self._graph._add_task(self._axes.set_autoscalex_on, boolean)
+        task = partial(self._axes.set_autoscalex_on, boolean)
+        self._graph._tasks.put(task)
 
     @property
     def lim_left(self):
@@ -482,7 +484,8 @@ class XaxisConf(object):
         if limit == self.lim_right:
             raise ValueError('left and right limits are identical.')
 
-        self._graph._add_task(self._axes.set_xlim, left=limit)
+        task = partial(self._axes.set_xlim, left=limit)
+        self._graph._tasks.put(task)
 
     @property
     def lim_right(self):
@@ -497,7 +500,8 @@ class XaxisConf(object):
         if limit == self.lim_left:
             raise ValueError('left and right limits are identical.')
 
-        self._graph._add_task(self._axes.set_xlim, right=limit)
+        task = partial(self._axes.set_xlim, right=limit)
+        self._graph._tasks.put(task)
 
     @property
     def inverted(self):
@@ -514,8 +518,11 @@ class XaxisConf(object):
                 return
 
         autoscale = self.autoscale
-        self._graph._add_task(self._axes.invert_xaxis)
-        self._graph._add_task(self._axes.set_autoscalex_on, autoscale)
+
+        def task():
+            self._axes.invert_xaxis()
+            self._axes.set_autoscalex_on(autoscale)
+        self._graph._tasks.put(task)
 
     @property
     def ticks(self):
@@ -523,7 +530,8 @@ class XaxisConf(object):
 
     @ticks.setter
     def ticks(self, ticks):
-        self._graph._add_task(self._axes.set_xticks, ticks)
+        task = partial(self._axes.set_xticks, ticks)
+        self._graph._tasks.put(task)
 
     @property
     def scale(self):
@@ -569,7 +577,8 @@ class YaxisConf(object):
         if not isinstance(boolean, bool):
             raise TypeError('not bool')
 
-        self._graph._add_task(self._axes.set_autoscaley_on, boolean)
+        task = partial(self._axes.set_autoscaley_on, boolean)
+        self._graph._tasks.put(task)
 
     @property
     def lim_bottom(self):
@@ -584,7 +593,8 @@ class YaxisConf(object):
         if limit == self.lim_top:
             raise ValueError('bottom and top limits are identical.')
 
-        self._graph._add_task(self._axes.set_ylim, bottom=limit)
+        task = partial(self._axes.set_ylim, bottom=limit)
+        self._graph._tasks.put(task)
 
     @property
     def lim_top(self):
@@ -599,7 +609,8 @@ class YaxisConf(object):
         if limit == self.lim_bottom:
             raise ValueError('left and right limits are identical.')
 
-        self._graph._add_task(self._axes.set_ylim, top=limit)
+        task = partial(self._axes.set_ylim, top=limit)
+        self._graph._tasks.put(task)
 
     @property
     def inverted(self):
@@ -616,8 +627,11 @@ class YaxisConf(object):
                 return
 
         autoscale = self.autoscale
-        self._graph._add_task(self._axes.invert_yaxis)
-        self._graph._add_task(self._axes.set_autoscaley_on, autoscale)
+
+        def task():
+            self._axes.invert_yaxis()
+            self._axes.set_autoscaley_on(autoscale)
+        self._graph._tasks.put(task)
 
     @property
     def ticks(self):
@@ -625,7 +639,8 @@ class YaxisConf(object):
 
     @ticks.setter
     def ticks(self, ticks):
-        self._graph._add_task(self._axes.set_yticks, ticks)
+        task = partial(self._axes.set_yticks, ticks)
+        self._graph._tasks.put(task)
 
     @property
     def scale(self):
@@ -657,7 +672,7 @@ class Dataplot1d(DataplotBase):
         """Initiate Dataplot1d class.
 
         """
-        super(Dataplot1d, self).__init__(graph, axes)
+        super().__init__(graph, axes)
 
         # Create emtpy line instance for axes
         self._line, = self._axes.plot([], [])
@@ -753,22 +768,31 @@ class Dataplot1d(DataplotBase):
         """
 
         # Put the incoming data into the data exchange queue
-        self._exchange_queue.put([xdata, ydata])
+        task = partial(self._add_data, xdata, ydata)
+        self._graph._tasks.put(task)
 
-    def _clear(self):
-        """Clear the data.
+    def _add_data(self, xdata, ydata):
+        if self._length:
+            self._xdata.extend(xdata)
+            self._ydata.extend(ydata)
 
-        """
+            # Clear if data is to long
+            while len(self._xdata) > self._length:
+                # Remove oldest datapoints if plotting continuously.
+                if self._continuously:
+                    del self._xdata[:-self._length]
+                    del self._ydata[:-self._length]
 
-        # Remove oldest datapoints if plotting continuously.
-        if self._continuously:
-            del self._xdata[:-self._length]
-            del self._ydata[:-self._length]
+                # Clear all displayed datapoints otherwise.
+                else:
+                    del self._xdata[:self._length]
+                    del self._ydata[:self._length]
 
-        # Clear all displayed datapoints otherwise.
         else:
-            del self._xdata[:self._length]
-            del self._ydata[:self._length]
+            self._xdata = xdata
+            self._ydata = ydata
+
+        self._request_update.set()
 
     def _update(self):
         """Update the dataplot with the incoming data.
@@ -780,85 +804,45 @@ class Dataplot1d(DataplotBase):
 
         """
 
-        # Keep going until the data exchange queue is empty.
-        while not self._exchange_queue.empty():
+        xdata = np.array(self._xdata)
+        ydata = np.array(self._ydata)
 
-            # Get a new package out of the exchange queue.
-            package = self._exchange_queue.get()
-            self._exchange_queue.task_done()
+        # Prepare displayed xdata
+        if self.xaxis.log:
+            xdata = np.abs(xdata)
 
-            # Try to add data to the x and y lists for plotting
-            ydata = package.pop()
-            xdata = package.pop()
+        # Prepare displayed ydata
+        if self.yaxis.log:
+            ydata = np.abs(ydata)
 
-            if self._length:
-                try:
-                    for xdatapoint in xdata:
-                        self._xdata.append(xdatapoint)
+        # Update displayed data.
+        if not self.switch_xy:
+            self._line.set_data(xdata, ydata)
+        else:
+            self._line.set_data(ydata, xdata)
 
-                    for ydatapoint in ydata:
-                        self._ydata.append(ydatapoint)
+        # Recompute the data limits.
+        self._axes.relim()
 
-                # Look for a clearing request if the pop() attribute failed
-                except AttributeError:
-                    meassage = package
-                    if meassage == 'clear':
-                        del self._xdata[:]
-                        del self._ydata[:]
+        # Set the xaxis scale
+        xscale = self.xaxis.scale
+        try:
+            self._axes.set_xscale(xscale)
+        except ValueError:
+            pass
 
-                # Handle the maximum number of displayed points.
-                while len(self._xdata) > self._length:
-                    self._clear()
+        # Set the yaxis scale
+        yscale = self.yaxis.scale
+        try:
+            self._axes.set_yscale(yscale)
+        except ValueError:
+            pass
 
-            else:
-                self._xdata = xdata
-                self._ydata = ydata
-
-            # Set the up_to_date flag to True for redrawing
-            self._request_update.set()
-
-        # Update the line with the new data if available
-        if self._request_update.is_set():
-
-            xdata = np.array(self._xdata)
-            ydata = np.array(self._ydata)
-
-            # Prepare displayed xdata
-            if self.xaxis.log:
-                xdata = np.abs(xdata)
-
-            # Prepare displayed ydata
-            if self.yaxis.log:
-                ydata = np.abs(ydata)
-
-            # Update displayed data.
-            if not self.switch_xy:
-                self._line.set_data(xdata, ydata)
-            else:
-                self._line.set_data(ydata, xdata)
-
-            # Recompute the data limits.
-            self._axes.relim()
-
-            # Set the xaxis scale
-            xscale = self.xaxis.scale
-            try:
-                self._axes.set_xscale(xscale)
-            except ValueError:
-                pass
-
-            # Set the yaxis scale
-            yscale = self.yaxis.scale
-            try:
-                self._axes.set_yscale(yscale)
-            except ValueError:
-                pass
-
-            # Resacale the view limits using the previous computed data limit.
-            try:
-                self._axes.autoscale_view()
-            except ValueError:
-                pass
+        # Resacale the view limits using the previous computed data limit.
+        try:
+            self._axes.autoscale_view()
+        except ValueError:
+            pass
 
 
 class ImageConf(object):
@@ -887,7 +871,8 @@ class ImageConf(object):
         if interpolation not in self._image._interpd:
             raise ValueError('Illegal interpolation string')
 
-        self._graph._add_task(self._image.set_interpolation, interpolation)
+        task = partial(self._image.set_interpolation, interpolation)
+        self._graph._tasks.put(task)
 
     @property
     def auto_extent(self):
@@ -909,7 +894,8 @@ class ImageConf(object):
     @extent.setter
     def extent(self, extent):
         self._auto_extent = False
-        self._graph._add_task(self._image.set_extent, extent)
+        task = partial(self._image.set_extent, extent)
+        self._graph._tasks.put(task)
 
 
 class ColorbarConf(object):
@@ -933,7 +919,8 @@ class ColorbarConf(object):
         if colormap not in self.colormap_names:
             raise TypeError('colormap is not valid')
 
-        self._graph._add_task(self._image.set_cmap, colormap)
+        task = partial(self._image.set_cmap, colormap)
+        self._graph._tasks.put(task)
 
     @property
     def scale(self):
@@ -965,7 +952,7 @@ class ColorbarConf(object):
 class LabelConf2d(LabelConf1d):
 
     def __init__(self, graph, axes, colorbar):
-        super(LabelConf2d, self).__init__(graph, axes)
+        super().__init__(graph, axes)
         self._colorbar = colorbar
 
     @property
@@ -974,13 +961,14 @@ class LabelConf2d(LabelConf1d):
 
     @zaxis.setter
     def zaxis(self, string):
-        self._graph._add_task(self._colorbar.set_label, string)
+        task = partial(self._colorbar.set_label, string)
+        self._graph._tasks.put(task)
 
 
 class Dataplot2d(DataplotBase):
 
     def __init__(self, graph, axes, length):
-        super(Dataplot2d, self).__init__(graph, axes)
+        super().__init__(graph, axes)
 
         self._length = length
 
@@ -1019,7 +1007,6 @@ class Dataplot2d(DataplotBase):
         """Colorbar options.
 
         """
-
         return self._colorbar_conf
 
     @property
@@ -1027,13 +1014,7 @@ class Dataplot2d(DataplotBase):
         """Label options.
 
         """
-
         return self._label_conf
-
-    def add_data(self, data):
-
-        # Put the incoming data into the data exchange queue
-        self._exchange_queue.put([data])
 
     @property
     def diff(self):
@@ -1048,84 +1029,81 @@ class Dataplot2d(DataplotBase):
         else:
             raise ValueError('diff musste be True, False or integer greater 0')
 
-    def next_line(self):
+    def add_data(self, data):
+        """Add a list of data to the plot.
 
-        # Put a 'next' meassage into the data exchange queue
-        self._exchange_queue.put('next')
+        """
+        task = partial(self._add_data, data)
+        self._graph._tasks.put(task)
+
+    def _add_data(self, data):
+
+        if isinstance(data, Dataplot1d):
+            self._trace.extend(data._ydata)
+        else:
+            self._trace.extend(data)
+
+        # Handle the maximum number of displayed points.
+        while len(self._trace) >= self._length:
+
+            trace = self._trace[:self._length]
+            del self._trace[:self._length]
+
+            if self._data.size:
+                self._data = np.vstack((self._data, trace))
+            else:
+                self._data = np.array([trace])
+
+        self._request_update.set()
+
+    def new_line(self):
+        self._graph._tasks.put(self._clear)
+
+    def _new_line(self):
+        self._data.append([])
+        self._request_update.set()
+
+    def clear(self):
+        self._graph._tasks.put(self._clear)
+
+    def _clear(self):
+        self._data = np.array([[]])
+        self._request_update.set()
 
     def _update(self):
 
-        # Check the queues for new data
-        while not self._exchange_queue.empty():
+        # Prepare displayed data
+        data = self._data.copy()
 
-            # Get new package out of the exchange queue.
-            package = self._exchange_queue.get()
-            self._exchange_queue.task_done()
+        # Differentiate data
+        if self.diff:
+            data = data[:, self.diff:] - data[:, :-self.diff]
 
-            # Try to add data to plotting list
-            try:
-                for datapoint in package.pop():
-                    self._trace.append(datapoint)
+        # Take absolute value if log scaled
+        if self.colorbar.log:
+            data[data <= 0] = np.nan
 
-            # Look for a clearing request if the pop() attribute failed
-            except:
-                message = package
-                if message == 'clear':
-                    self._data = np.array([[]])
-                    self._request_update.set()
-                # Fix it later
-                # elif message == 'next':
-                #     self._data.append([])
+        if self.colorbar.scale == 'linear':
+            self._colorbar.set_norm(Normalize())
+        elif self.colorbar.scale == 'log':
+            self._colorbar.set_norm(LogNorm())
 
-            # Handle the maximum number of displayed points.
-            while len(self._trace) >= self._length:
+        # Set image data
+        try:
+            self._image.set_data(data)
 
-                trace = self._trace[:self._length]
-                del self._trace[:self._length]
+            # Extent image automaticaly
+            if self.image.auto_extent:
+                extent = [0, self._length, len(data), 0]
+                self._image.set_extent(extent)
 
-                if self._data.size:
-                    self._data = np.vstack((self._data, trace))
-                else:
-                    self._data = np.array([trace])
+        except TypeError:
+            self._image.set_data([[np.nan]])
+            self._axes.set_xticks([])
+            self._axes.set_yticks([])
 
-                # Set the up_to_date flag to True for redrawing
-                self._request_update.set()
-
-        # Update the image with the new data if available
-        if self._request_update.is_set():
-
-            # Prepare displayed data
-            data = self._data.copy()
-
-            # Differentiate data
-            if self.diff:
-                data = data[:, self.diff:] - data[:, :-self.diff]
-
-            # Take absolute value if log scaled
-            if self.colorbar.log:
-                data[data <= 0] = np.nan
-
-            if self.colorbar.scale == 'linear':
-                self._colorbar.set_norm(Normalize())
-            elif self.colorbar.scale == 'log':
-                self._colorbar.set_norm(LogNorm())
-
-            # Set image data
-            try:
-                self._image.set_data(data)
-
-                # Extent image automaticaly
-                if self.image.auto_extent:
-                    extent = [0, self._length, len(data), 0]
-                    self._image.set_extent(extent)
-
-            except TypeError:
-                self._image.set_data([[np.nan]])
-                self._axes.set_xticks([])
-                self._axes.set_yticks([])
-
-            # Resacale the image
-            try:
-                self._image.autoscale()
-            except ValueError:
-                pass
+        # Resacale the image
+        try:
+            self._image.autoscale()
+        except ValueError:
+            pass
