@@ -95,7 +95,7 @@ class ChannelRead(Channel):
     def __init__(self, name='', unit=''):
 
         # Call Channel constructor
-        super(ChannelRead, self).__init__(name, unit)
+        super().__init__(name, unit)
 
         self.factor = None
 
@@ -198,7 +198,7 @@ class ChannelWrite(ChannelRead):
 
     def __init__(self, name='', unit=''):
 
-        super(ChannelWrite, self).__init__(name, unit)
+        super().__init__(name, unit)
 
         self.limit = (None, None)
 
@@ -303,7 +303,7 @@ class ChannelWrite(ChannelRead):
 class ChannelStep(ChannelWrite):
 
     def __init__(self):
-        super(ChannelStep, self).__init__()
+        super().__init__()
 
         # Update config list
         self._config += ['steprate', 'steptime', 'stepsize']
@@ -375,7 +375,7 @@ class ChannelStep(ChannelWrite):
     def _writemethod(cls, writemethod):
 
         # Decortae the writemethod
-        writemethod = ChannelWrite._writemethod(writemethod)
+        writemethod = super()._writemethod(writemethod)
         #writemethod = ChannelWrite._writemethod(writemethod)
 
         def write(self, stop, verbose=False):
@@ -437,12 +437,12 @@ class Instrument(IndexDict):
         """Initiate Instrument class.
 
         """
-        super(Instrument, self).__init__()
+        super().__init__()
         self._name = name
 
     def __setitem__(self, key, channel):
         if isinstance(channel, Channel):
-            super(Instrument, self).__setitem__(key, channel)
+            super().__setitem__(key, channel)
             channel.name = key
         else:
             raise TypeError('item must be a Channel')
@@ -481,11 +481,11 @@ class Rack(IndexDict):
     """
 
     def __init__(self):
-        super(Rack, self).__init__()
+        super().__init__()
 
     def __setitem__(self, key, instrument):
         if isinstance(instrument, Instrument):
-            super(Rack, self).__setitem__(key, instrument)
+            super().__setitem__(key, instrument)
         else:
             raise TypeError('item must be an Instrument')
 

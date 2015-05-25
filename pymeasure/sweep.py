@@ -74,7 +74,7 @@ class SweepSteps(Sweep):
     def __init__(self, channel, steps, waiting_time=0, readback=False,
                  name=None):
 
-        super(SweepSteps, self).__init__(channel, waiting_time, readback)
+        super().__init__(channel, waiting_time, readback)
 
         self._steps = steps
 
@@ -95,7 +95,7 @@ class SweepLinear(Sweep):
     def __init__(self, channel, start, stop, points,
                  waiting_time=0, direction='one', readback=False, name=None):
 
-        super(SweepLinear, self).__init__(channel, waiting_time, readback)
+        super().__init__(channel, waiting_time, readback)
 
         # Set start and stop values
         self._start = start

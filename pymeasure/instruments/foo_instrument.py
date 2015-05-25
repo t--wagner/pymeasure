@@ -7,7 +7,7 @@ import random
 class _FooRandomChannel(ChannelRead):
 
     def __init__(self):
-        ChannelRead.__init__(self)
+        super().__init__()
         self.name = 'foo_random'
         self.unit = 'abu'
 

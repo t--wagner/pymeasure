@@ -27,7 +27,7 @@ class _PyVisaSubsystem(object):
 class PyVisaInstrument(Instrument):
 
     def __init__(self, rm, instrument_address, name='', *args, **kwargs):
-        Instrument.__init__(self, name)
+        super().__init__(name)
         self._instrument = rm.open_resource(instrument_address, *args, **kwargs)
         #self._instrument = visa.instrument(instrument_address, *args, **kwargs)
         self._pyvisa_subsystem = _PyVisaSubsystem(self._instrument,
