@@ -121,23 +121,23 @@ class LiveGraphBase(IndexDict):
 
         """
 
-        # Set up_to_date flag back to True
         up_to_date = True
 
-        # Iterate through all subplots and check for updates
+        # Execute all tasks
         while not self._tasks.empty():
             task = self._tasks.get()
             task()
             self._tasks.task_done()
             up_to_date = False
 
+        # Iterate through all subplots and check for updates
         for subplot in self.__iter__():
             if subplot._request_update.is_set():
                 subplot._update()
                 subplot._request_update.clear()
                 up_to_date = False
 
-        # Redraw the canvas if up_to_data and visible
+        # Redraw the canvas if not up_to_data and visible
         if not up_to_date and self.draw and self.visible:
 
             # Use tight layout
