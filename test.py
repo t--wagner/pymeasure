@@ -9,7 +9,7 @@ class MyMeasurment1d(pym.Measurment):
 
     def __init__(self):
         super().__init__()
-        self.sweep0 = pym.SweepLinear(foo['out1'], 0, 10, 101, 0.01)
+        self.sweep0 = pym.SweepLinear(foo['out1'], 0, 10, 101, 0.001)
         self.loop = pym.LoopNested(self, self.sweep0)
         self._graph()
 
