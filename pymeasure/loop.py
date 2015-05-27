@@ -4,7 +4,7 @@ import threading
 import time
 
 
-class Loop(object):
+class LoopItem(object):
 
     def __init__(self, sweep):
         """Initialize Loop with a sweep.
@@ -74,7 +74,7 @@ class Loop(object):
         self._stop.set()
 
 
-class LoopNested(object):
+class Loop(object):
 
     def __init__(self, cls, *sweeps):
         """Initialize NestedLoop with a list of sweeps.
@@ -97,7 +97,7 @@ class LoopNested(object):
         return self._loop_list[key]
 
     def append(self, sweep):
-        self._loop_list.append(Loop(sweep))
+        self._loop_list.append(LoopItem(sweep))
 
     def extend(self, sweeps):
         for sweep in sweeps:

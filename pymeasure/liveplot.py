@@ -30,6 +30,18 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 from queue import Queue
 from threading import Event
 from functools import partial
+from collections import ChainMap
+
+
+def live_graph(*fig_args, **fig_kwargs):
+
+    backend = mpl.get_backend()
+    if backend == 'TkAgg':
+        livegraph = LiveGraphTk(*fig_args, **fig_kwargs)
+    else:
+        raise TypeError('backend is not supported')
+
+    return livegraph
 
 
 class LiveGraphBase(IndexDict):
@@ -37,26 +49,18 @@ class LiveGraphBase(IndexDict):
 
     """
 
-    def __init__(self, figure=None):
+    def __init__(self, *fig_args, **fig_kwargs):
         """Initiate LivegraphBase class.
-
-        Keyword arguments:
-        figure -- Can take an instance of matplotlib.figure.Figure otherwise it
-                  will be created.
 
         """
 
         super().__init__()
 
         # Define matplotlib Figure
-        if figure is None:
-            self.figure = mpl.figure.Figure()
-        else:
-            self.figure = figure
+        self.figure = mpl.figure.Figure(*fig_args, **fig_kwargs)
 
         # Task queue
         self._tasks = Queue()
-        self._tight_layout = True
         self.close_event = None
 
         self._draw = True
@@ -130,26 +134,26 @@ class LiveGraphBase(IndexDict):
             self._tasks.task_done()
             up_to_date = False
 
+        if not up_to_date:
+            self._update_data()
+
+        # Redraw the canvas if not up_to_data and visible
+        if not up_to_date and self.draw and self.visible:
+
+            # Redraw the graph
+            self.figure.canvas.draw()
+
+    def _update_data(self):
+
         # Iterate through all subplots and check for updates
         for subplot in self.__iter__():
             if subplot._request_update.is_set():
                 subplot._update()
                 subplot._request_update.clear()
-                up_to_date = False
-
-        # Redraw the canvas if not up_to_data and visible
-        if not up_to_date and self.draw and self.visible:
-
-            # Use tight layout
-            if self._tight_layout:
-                self.figure.tight_layout()
-
-            # Redraw the graph
-            self.figure.canvas.draw()
 
     @property
     def tight_layout(self):
-        return self._tight_layout
+        return self.figure.get_tight_layout()
 
     @tight_layout.setter
     def tight_layout(self, boolean):
@@ -158,14 +162,17 @@ class LiveGraphBase(IndexDict):
         if not isinstance(boolean, bool):
             raise TypeError('not bool')
 
-        self._tight_layout = boolean
+        task = partial(self.figure.set_tight_layout, boolean)
+        self._tasks.put(task)
 
     def snapshot(self, filename):
         """Make a snapshot and save it as filename.
 
         """
-        task = partial(self.figure.savefig, filename)
-        self._graph._tasks.put(task)
+        def task():
+            self._update_data()
+            self.figure.savefig(filename)
+        self._tasks.put(task)
 
 
 class LiveGraphTk(LiveGraphBase):
@@ -173,8 +180,8 @@ class LiveGraphTk(LiveGraphBase):
 
     """
 
-    def __init__(self, figure=None, master=None):
-        super().__init__(figure)
+    def __init__(self, master=None, *fig_args, **fig_kwargs):
+        super().__init__(*fig_args, **fig_kwargs)
 
         # Setup the TKInter window with the canvas and a toolbar
         if not master:
@@ -192,9 +199,9 @@ class LiveGraphTk(LiveGraphBase):
         canvas._tkcanvas.pack(side=Tk.TOP, fill=Tk.BOTH, expand=1)
 
         # Menubar
-        menubar = Tk.Menu(self._master)
-        menubar.add_command(label='hide', command=self.hide)
-        self._master.config(menu=menubar)
+        # menubar = Tk.Menu(self._master)
+        # menubar.add_command(label='hide', command=self.hide)
+        # self._master.config(menu=menubar)
 
         # Close every
         self._master.protocol("WM_DELETE_WINDOW", self.close)
@@ -256,16 +263,7 @@ class DataplotBase(object, metaclass=abc.ABCMeta):
             axes = self._graph.add_subplot(*axes)
 
         self._axes = axes
-        self._exchange_queue = Queue()
         self._request_update = Event()
-
-    def clear(self):
-        """Clear the Dataplot immediately.
-
-        """
-
-        # Put a 'clear' meassage into the data exchange queue
-        self._exchange_queue.put('clear')
 
     @abc.abstractmethod
     def add_data(self):
@@ -967,7 +965,7 @@ class LabelConf2d(LabelConf1d):
 
 class Dataplot2d(DataplotBase):
 
-    def __init__(self, graph, axes, length, cmap='hot', aspect='auto', *imshow_args, **imshow_kwargs):
+    def __init__(self, graph, axes, length, *imshow_args, **imshow_kwargs):
         super().__init__(graph, axes)
 
         self._length = length
@@ -977,7 +975,9 @@ class Dataplot2d(DataplotBase):
         self._data = np.array([[]])
 
         # Draw an empty image
-        self._image = self._axes.imshow([[np.nan]], *imshow_args, cmap=cmap, aspect=aspect, **imshow_kwargs)
+        defaults = {'cmap': 'hot', 'aspect': 'auto'}
+        imshow_kwargs = ChainMap(defaults, imshow_kwargs)
+        self._image = self._axes.imshow([[np.nan]], *imshow_args, **imshow_kwargs)
 
         # Divide axes to fit colorbar (this works but don't aks me why)
         # http://matplotlib.org/examples/axes_grid/demo_axes_divider.html

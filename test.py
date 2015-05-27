@@ -9,14 +9,14 @@ class MyMeasurment1d(pym.Measurment):
 
     def __init__(self):
         super().__init__()
-        self.sweep0 = pym.SweepLinear(foo['out1'], 0, 10, 101, 0.1)
-        self.loop = pym.LoopNested(self, self.sweep0)
+        self.sweep0 = pym.SweepLinear(foo['out1'], 0, 10, 101, 0.02)
+        self.loop = pym.Loop(self, self.sweep0)
         self._graph()
 
     def _graph(self):
-        self.graph = pym.LiveGraphTk()
+        self.graph = pym.live_graph()
         self.graph['sin'] = pym.Dataplot1d(self.graph1d, 211, 101)
-        self.graph['cos'] = pym.Dataplot1d(self.graph1d, 212, 101)
+        self.graph['cos'] = pym.Dataplot1d(self.graph1d, 211, 101)
         self.graph.close_event = self.loop.stop
         self.graph.run()
 
@@ -40,8 +40,8 @@ class MyMeasurment2d(MyMeasurment1d):
         self.loop.append(self.sweep1)
 
     def _graph(self):
-        self.graph = pym.LiveGraphTk()
-        self.graph['sin'] = pym.Dataplot1d(self.graph, 221, 101, 'g--o')
+        self.graph = pym.live_graph(figsize=(15, 10), tight_layout=True)
+        self.graph['sin'] = pym.Dataplot1d(self.graph, 222, 101, 'g--o')
         self.graph['cos'] = pym.Dataplot1d(self.graph, 222, 101, 'y--d')
         self.graph['sin2d'] = pym.Dataplot2d(self.graph, 223, 101)
         self.graph['cos2d'] = pym.Dataplot2d(self.graph, 224, 101)
@@ -55,6 +55,7 @@ class MyMeasurment2d(MyMeasurment1d):
             super()._run(val0)
             self.graph['sin2d'].add_data(self.graph['sin'])
             self.graph['cos2d'].add_data(self.graph['cos'])
+            meas.graph.snapshot('snap.png')
 
 
 class MyMeasurment3d(MyMeasurment2d):
