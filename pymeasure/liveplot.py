@@ -668,14 +668,14 @@ class YaxisConf(object):
 
 class Dataplot1d(DataplotBase):
 
-    def __init__(self, graph, axes, length=None, continuously=False):
+    def __init__(self, graph, axes, length=None, *plt_args, continuously=False, **plt_kwargs):
         """Initiate Dataplot1d class.
 
         """
         super().__init__(graph, axes)
 
         # Create emtpy line instance for axes
-        self._line, = self._axes.plot([], [])
+        self._line, = self._axes.plot([], [], *plt_args, **plt_kwargs)
 
         # Attributes for displayed number of points
         self._length = length
@@ -967,7 +967,7 @@ class LabelConf2d(LabelConf1d):
 
 class Dataplot2d(DataplotBase):
 
-    def __init__(self, graph, axes, length):
+    def __init__(self, graph, axes, length, cmap='hot', aspect='auto', *imshow_args, **imshow_kwargs):
         super().__init__(graph, axes)
 
         self._length = length
@@ -977,8 +977,7 @@ class Dataplot2d(DataplotBase):
         self._data = np.array([[]])
 
         # Draw an empty image
-        self._image = self._axes.imshow([[np.nan]])
-        self._axes.set_aspect('auto')
+        self._image = self._axes.imshow([[np.nan]], *imshow_args, cmap=cmap, aspect=aspect, **imshow_kwargs)
 
         # Divide axes to fit colorbar (this works but don't aks me why)
         # http://matplotlib.org/examples/axes_grid/demo_axes_divider.html
@@ -995,7 +994,6 @@ class Dataplot2d(DataplotBase):
         self._label_conf = LabelConf2d(self._graph, self._axes, self._colorbar)
         self._colorbar_conf = ColorbarConf(self._graph, self._image,
                                            self._colorbar)
-        self._colorbar_conf.colormap = 'hot'
         self._diff = False
 
     @property
