@@ -18,15 +18,15 @@
 from pymeasure.indexdict import IndexDict
 
 import abc
-import sys
 import tkinter as Tk
 import warnings
 import numpy as np
 import matplotlib as mpl
 from matplotlib.backends.backend_tkagg import (FigureCanvasTkAgg,
                                                NavigationToolbar2TkAgg)
+from PyQt4 import QtCore
+from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg
 from matplotlib.colors import Normalize, LogNorm
-from mpl_toolkits.axes_grid1 import make_axes_locatable
 from queue import Queue
 from threading import Event
 from functools import partial
@@ -36,7 +36,9 @@ from collections import ChainMap
 def live_graph(*fig_args, **fig_kwargs):
 
     backend = mpl.get_backend()
-    if backend == 'TkAgg':
+    if backend == 'Qt4Agg':
+        livegraph = LiveGraphQt4(*fig_args, **fig_kwargs)
+    elif backend == 'TkAgg':
         livegraph = LiveGraphTk(*fig_args, **fig_kwargs)
     else:
         raise TypeError('backend is not supported')
@@ -58,7 +60,6 @@ class LiveGraphBase(IndexDict):
 
         # Define matplotlib Figure
         self.figure = mpl.figure.Figure(*fig_args, **fig_kwargs)
-
         # Task queue
         self._tasks = Queue()
         self.close_event = None
@@ -100,16 +101,16 @@ class LiveGraphBase(IndexDict):
             axes.append(self.add_subplot(ysubs, xsubs, nr))
         return axes
 
-    @property
-    def draw(self):
-        return self._draw
+    #@property
+    #def draw(self):
+    #    return self._draw
 
-    @draw.setter
-    def draw(self, boolean):
-        if isinstance(boolean, bool):
-            self._draw = boolean
-        else:
-            raise TypeError('not boolean type')
+    #@draw.setter
+    #def draw(self, boolean):
+    #    if isinstance(boolean, bool):
+    #        self._draw = boolean
+    #    else:
+    #        raise TypeError('not boolean type')
 
     @property
     def visible(self):
@@ -138,7 +139,8 @@ class LiveGraphBase(IndexDict):
             self._update_data()
 
         # Redraw the canvas if not up_to_data and visible
-        if not up_to_date and self.draw and self.visible:
+        #if not up_to_date and self.draw and self.visible:
+        if not up_to_date and self.visible:
 
             # Redraw the graph
             self.figure.canvas.draw()
@@ -206,7 +208,7 @@ class LiveGraphTk(LiveGraphBase):
         # Close every
         self._master.protocol("WM_DELETE_WINDOW", self.close)
 
-    def run(self, delay=25):
+    def run(self, delay=50):
         """Calls the update method periodically with the delay in milliseconds.
 
         Decrease the delay to make the plotting smoother and increase it to
@@ -238,13 +240,25 @@ class LiveGraphTk(LiveGraphBase):
         else:
             self._master.withdraw()
 
-    def hide(self):
         self.visible = False
 
     def close(self):
         if self.close_event:
             self.close_event()
         self._master.destroy()
+
+
+class LiveGraphQt4(LiveGraphBase, FigureCanvasQTAgg):
+    """Ultimately, this is a QWidget (as well as a FigureCanvasAgg, etc.)."""
+    def __init__(self, *fig_args, **fig_kwargs):
+        LiveGraphBase.__init__(self, *fig_args, **fig_kwargs)
+
+        FigureCanvasQTAgg.__init__(self, self.figure)
+        #self.setParent(parent)
+
+        timer = QtCore.QTimer(self)
+        timer.timeout.connect(self._update)
+        timer.start(50)
 
 
 class DataplotBase(object, metaclass=abc.ABCMeta):
@@ -965,7 +979,7 @@ class LabelConf2d(LabelConf1d):
 
 class Dataplot2d(DataplotBase):
 
-    def __init__(self, graph, axes, length, *imshow_args, **imshow_kwargs):
+    def __init__(self, graph, axes, length, *imshow, colorbar=True, **kw_imshow):
         super().__init__(graph, axes)
 
         self._length = length
@@ -976,36 +990,32 @@ class Dataplot2d(DataplotBase):
 
         # Draw an empty image
         defaults = {'cmap': 'hot', 'aspect': 'auto'}
-        imshow_kwargs = ChainMap(defaults, imshow_kwargs)
-        self._image = self._axes.imshow([[np.nan]], *imshow_args, **imshow_kwargs)
+        kw_imshow = ChainMap(kw_imshow, defaults)
+        self._image = self._axes.imshow([[np.nan]], *imshow, **kw_imshow)
 
-        # Divide axes to fit colorbar (this works but don't aks me why)
-        # http://matplotlib.org/examples/axes_grid/demo_axes_divider.html
-        axes_divider = make_axes_locatable(self._axes)
-        axes_cb = axes_divider.append_axes("right", size="2.5%", pad=0.05)
 
+        if colorbar is True:
+            self.add_colorbar()
+
+            #self._label_conf = LabelConf2d(self._graph, self._axes, self._colorbar)
+
+            #self._colorbar_conf = ColorbarConf(self._graph, self._image, self._colorbar)
+
+        self._image_conf = ImageConf(self._graph, self._image)
+        self._diff = False
+
+    def add_colorbar(self, *colorbar, **kw_colorbar):
         # Create colorbar and ignor warning caused because figure has only
         # one value.
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            self._colorbar = self._graph.figure.colorbar(self._image, axes_cb)
 
-        self._image_conf = ImageConf(self._graph, self._image)
-        self._label_conf = LabelConf2d(self._graph, self._axes, self._colorbar)
-        self._colorbar_conf = ColorbarConf(self._graph, self._image,
-                                           self._colorbar)
-        self._diff = False
+        self._colorbar = self._graph.figure.colorbar(self._image, ax=self._axes,
+                                                     *colorbar, **kw_colorbar)
 
     @property
     def image(self):
         return self._image_conf
-
-    @property
-    def colorbar(self):
-        """Colorbar options.
-
-        """
-        return self._colorbar_conf
 
     @property
     def label(self):
@@ -1078,13 +1088,13 @@ class Dataplot2d(DataplotBase):
             data = data[:, self.diff:] - data[:, :-self.diff]
 
         # Take absolute value if log scaled
-        if self.colorbar.log:
-            data[data <= 0] = np.nan
-
-        if self.colorbar.scale == 'linear':
-            self._colorbar.set_norm(Normalize())
-        elif self.colorbar.scale == 'log':
-            self._colorbar.set_norm(LogNorm())
+#        if self.colorbar.log:
+#            data[data <= 0] = np.nan
+#
+#        if self.colorbar.scale == 'linear':
+#            self._colorbar.set_norm(Normalize())
+#        elif self.colorbar.scale == 'log':
+#            self._colorbar.set_norm(LogNorm())
 
         # Set image data
         try:
