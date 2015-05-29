@@ -23,6 +23,8 @@ class IndexDict(object):
 
     """
 
+    _current_instance = None
+
     def __init__(self):
         """Initialize an indexable dictionary.
 

@@ -32,6 +32,10 @@ from threading import Event
 from functools import partial
 from collections import ChainMap
 
+# Set ggplot as custom style
+from matplotlib.pyplot import style
+style.use('fivethirtyeight')
+
 
 def live_graph(*fig_args, **fig_kwargs):
 
@@ -51,6 +55,8 @@ class LiveGraphBase(IndexDict):
 
     """
 
+    _current_graph = None
+
     def __init__(self, *fig_args, **fig_kwargs):
         """Initiate LivegraphBase class.
 
@@ -65,6 +71,7 @@ class LiveGraphBase(IndexDict):
         self.close_event = None
 
         self._draw = True
+        LiveGraphBase._current_graph = self
 
     def __setitem__(self, key, dataplot):
         """x.__setitem__(key, dataplot) <==> x['key'] = dataplot
@@ -76,6 +83,11 @@ class LiveGraphBase(IndexDict):
             super().__setitem__(key, dataplot)
         else:
             raise TypeError('item must be a Dataplot.')
+
+    def __getitem___(self, key):
+
+        return super().__getitem___(key)
+
 
     def dataplots(self):
         """Return a list of (index, key) pairs in Graph.
@@ -141,13 +153,12 @@ class LiveGraphBase(IndexDict):
         # Redraw the canvas if not up_to_data and visible
         #if not up_to_date and self.draw and self.visible:
         if not up_to_date and self.visible:
-
-            # Redraw the graph
             self.figure.canvas.draw()
 
     def _update_data(self):
 
         # Iterate through all subplots and check for updates
+        # Heres must be a little bug.
         for subplot in self.__iter__():
             if subplot._request_update.is_set():
                 subplot._update()
@@ -208,7 +219,7 @@ class LiveGraphTk(LiveGraphBase):
         # Close every
         self._master.protocol("WM_DELETE_WINDOW", self.close)
 
-    def run(self, delay=50):
+    def run(self, delay=25):
         """Calls the update method periodically with the delay in milliseconds.
 
         Decrease the delay to make the plotting smoother and increase it to
@@ -256,19 +267,24 @@ class LiveGraphQt4(LiveGraphBase, FigureCanvasQTAgg):
         FigureCanvasQTAgg.__init__(self, self.figure)
         #self.setParent(parent)
 
+    def run(self):
         timer = QtCore.QTimer(self)
         timer.timeout.connect(self._update)
-        timer.start(50)
+        timer.start(25)
+        self.show()
 
 
 class DataplotBase(object, metaclass=abc.ABCMeta):
 
-    def __init__(self, graph, axes):
+    def __init__(self, axes, graph=None):
         """Initiate DataplotBase class.
 
         """
 
-        self._graph = graph
+        if graph:
+            self._graph = graph
+        else:
+            self._graph = LiveGraphBase._current_graph
 
         # Check for integer like 221 and handle sequences (2,2,1)
         if not isinstance(axes, mpl.axes.SubplotBase):
@@ -680,11 +696,11 @@ class YaxisConf(object):
 
 class Dataplot1d(DataplotBase):
 
-    def __init__(self, graph, axes, length=None, *plt_args, continuously=False, **plt_kwargs):
+    def __init__(self, axes, length=None, *plt_args, continuously=False, graph=None, **plt_kwargs):
         """Initiate Dataplot1d class.
 
         """
-        super().__init__(graph, axes)
+        super().__init__(axes, graph)
 
         # Create emtpy line instance for axes
         self._line, = self._axes.plot([], [], *plt_args, **plt_kwargs)
@@ -698,52 +714,14 @@ class Dataplot1d(DataplotBase):
         self._ydata = list()
 
         # Dataplot1d Configs
-        self._line_conf = LineConf(self._graph, self._line)
-        self._marker_conf = MarkerConf(self._graph, self._line)
-        self._xaxis_conf = XaxisConf(self._graph, self._axes)
-        self._yaxis_conf = YaxisConf(self._graph, self._axes)
-        self._label_conf = LabelConf1d(self._graph, self._axes)
+        self.line = LineConf(self._graph, self._line)
+        self.marker = MarkerConf(self._graph, self._line)
+        self.xaxis = XaxisConf(self._graph, self._axes)
+        self.yaxis = YaxisConf(self._graph, self._axes)
+        self.label = LabelConf1d(self._graph, self._axes)
 
         self.switch_xy = False
 
-    @property
-    def line(self):
-        """Line options.
-
-        """
-        return self._line_conf
-
-    @property
-    def marker(self):
-        """Marker options.
-
-        """
-
-        return self._marker_conf
-
-    @property
-    def xaxis(self):
-        """Xaxis options.
-
-        """
-
-        return self._xaxis_conf
-
-    @property
-    def yaxis(self):
-        """Yaxis options.
-
-        """
-
-        return self._yaxis_conf
-
-    @property
-    def label(self):
-        """Label options.
-
-        """
-
-        return self._label_conf
 
     @property
     def length(self):
@@ -979,8 +957,8 @@ class LabelConf2d(LabelConf1d):
 
 class Dataplot2d(DataplotBase):
 
-    def __init__(self, graph, axes, length, *imshow, colorbar=True, **kw_imshow):
-        super().__init__(graph, axes)
+    def __init__(self, axes, length, *imshow, colorbar=True, graph=None, **kw_imshow):
+        super().__init__(axes, graph)
 
         self._length = length
 
@@ -1001,7 +979,7 @@ class Dataplot2d(DataplotBase):
 
             #self._colorbar_conf = ColorbarConf(self._graph, self._image, self._colorbar)
 
-        self._image_conf = ImageConf(self._graph, self._image)
+        self.image = ImageConf(self._graph, self._image)
         self._diff = False
 
     def add_colorbar(self, *colorbar, **kw_colorbar):
@@ -1013,16 +991,6 @@ class Dataplot2d(DataplotBase):
         self._colorbar = self._graph.figure.colorbar(self._image, ax=self._axes,
                                                      *colorbar, **kw_colorbar)
 
-    @property
-    def image(self):
-        return self._image_conf
-
-    @property
-    def label(self):
-        """Label options.
-
-        """
-        return self._label_conf
 
     @property
     def diff(self):
