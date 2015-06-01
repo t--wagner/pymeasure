@@ -33,11 +33,10 @@ from functools import partial
 from collections import ChainMap
 
 # Set ggplot as custom style
-from matplotlib.pyplot import style
-style.use('fivethirtyeight')
+mpl.style.use('ggplot')
+mpl.rcParams['grid.alpha'] = 0.6
 
-
-def live_graph(*fig_args, **fig_kwargs):
+def live_graph(*fig_args, loop=None, **fig_kwargs):
 
     backend = mpl.get_backend()
     if backend == 'Qt4Agg':
@@ -57,20 +56,19 @@ class LiveGraphBase(IndexDict):
 
     _current_graph = None
 
-    def __init__(self, *fig_args, **fig_kwargs):
+    def __init__(self, **fig_kwargs):
         """Initiate LivegraphBase class.
 
         """
 
         super().__init__()
 
-        # Define matplotlib Figure
-        self.figure = mpl.figure.Figure(*fig_args, **fig_kwargs)
-        # Task queue
+        self.figure = mpl.figure.Figure(**fig_kwargs)
         self._tasks = Queue()
+        self._draw = True
+        self.shape = ()
         self.close_event = None
 
-        self._draw = True
         LiveGraphBase._current_graph = self
 
     def __setitem__(self, key, dataplot):
@@ -187,14 +185,19 @@ class LiveGraphBase(IndexDict):
             self.figure.savefig(filename)
         self._tasks.put(task)
 
+    def connect_loop(self, loop, shape=True):
+        self.close_event = loop.stop
+        if shape:
+            self.shape = loop.shape
+
 
 class LiveGraphTk(LiveGraphBase):
     """ LiveGraph backend for Tkinter.
 
     """
 
-    def __init__(self, master=None, *fig_args, **fig_kwargs):
-        super().__init__(*fig_args, **fig_kwargs)
+    def __init__(self, master=None, **fig_kwargs):
+        super().__init__(**fig_kwargs)
 
         # Setup the TKInter window with the canvas and a toolbar
         if not master:
@@ -261,11 +264,9 @@ class LiveGraphTk(LiveGraphBase):
 
 class LiveGraphQt4(LiveGraphBase, FigureCanvasQTAgg):
     """Ultimately, this is a QWidget (as well as a FigureCanvasAgg, etc.)."""
-    def __init__(self, *fig_args, **fig_kwargs):
-        LiveGraphBase.__init__(self, *fig_args, **fig_kwargs)
-
+    def __init__(self, **fig_kwargs):
+        LiveGraphBase.__init__(self, **fig_kwargs)
         FigureCanvasQTAgg.__init__(self, self.figure)
-        #self.setParent(parent)
 
     def run(self):
         timer = QtCore.QTimer(self)
@@ -696,7 +697,7 @@ class YaxisConf(object):
 
 class Dataplot1d(DataplotBase):
 
-    def __init__(self, axes, length=None, *plt_args, continuously=False, graph=None, **plt_kwargs):
+    def __init__(self, axes, *plt_args, length=None, continuously=False, graph=None, **plt_kwargs):
         """Initiate Dataplot1d class.
 
         """
@@ -706,7 +707,11 @@ class Dataplot1d(DataplotBase):
         self._line, = self._axes.plot([], [], *plt_args, **plt_kwargs)
 
         # Attributes for displayed number of points
-        self._length = length
+        if length is None:
+            self._length = self._graph.shape[0]
+        else:
+            self._length = length
+
         self._continuously = continuously
 
         # Create list to contain plotting data
@@ -957,10 +962,13 @@ class LabelConf2d(LabelConf1d):
 
 class Dataplot2d(DataplotBase):
 
-    def __init__(self, axes, length, *imshow, colorbar=True, graph=None, **kw_imshow):
+    def __init__(self, axes, *imshow, length=None, colorbar=True, graph=None, **kw_imshow):
         super().__init__(axes, graph)
 
-        self._length = length
+        if length is None:
+            self._length = self._graph.shape[0]
+        else:
+            self._length = length
 
         self._exchange_queue = Queue()
         self._trace = []

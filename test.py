@@ -9,15 +9,15 @@ class MyMeasurment1d(pym.Measurment):
 
     def __init__(self):
         super().__init__()
-        self.sweep0 = pym.SweepLinear(foo['out1'], 0, 10, 201, 0.01)
+        self.sweep0 = pym.SweepLinear(foo['out1'], 0, 10, 101, 0.02)
         self.loop = pym.Loop(self, self.sweep0)
-        self._graph()
 
     def _graph(self):
         self.graph = live_graph()
-        self.graph['sin1'] = Dataplot1d(211, 201)
-        self.graph['cos1'] = Dataplot1d(211, 201)
-        self.graph['sin2'] = Dataplot1d(211, 201)
+        self.graph.connect_loop(self.loop)
+        self.graph['sin1'] = Dataplot1d(211)
+        self.graph['cos1'] = Dataplot1d(211)
+        self.graph['sin2'] = Dataplot1d(212)
         self.graph.close_event = self.loop.stop
         self.graph.show()
 
@@ -40,18 +40,16 @@ class MyMeasurment2d(MyMeasurment1d):
         super().__init__()
         self.sweep1 = pym.SweepLinear(foo['out0'], 0, 10, 11, 0.1)
         self.loop.append(self.sweep1)
+        self._graph()
 
     def _graph(self):
-        self.graph = live_graph(figsize=(15, 10), tight_layout=True)
-        ax0 = self.graph.add_subplot(221, title='my world', xlabel='time / s', ylabel='world')
-        self.graph['sin1'] = Dataplot1d(ax0, 201)
-        self.graph['cos1'] = Dataplot1d(ax0, 201)
-        self.graph['sin2'] = Dataplot1d(222, 201)
-        self.graph['sin2d'] = Dataplot2d(223, 201, cmap='seismic')
-        self.graph['cos2d'] = Dataplot2d(224, 201, colorbar=False)
-        self.graph['cos2d'].add_colorbar()
-        self.graph['cos2d'].add_colorbar(shrink=1.0, orientation='horizontal')
-        self.graph.close_event = self.loop.stop
+        self.graph = live_graph(figsize=(15, 10))
+        self.graph.connect_loop(self.loop)
+        self.graph['sin1'] = Dataplot1d(221)
+        self.graph['cos1'] = Dataplot1d(221)
+        self.graph['sin2'] = Dataplot1d(222)
+        self.graph['sin2d'] = Dataplot2d(223, cmap='hot_r')
+        self.graph['cos2d'] = Dataplot2d(224)
         self.graph.run()
 
     def _run(self):
