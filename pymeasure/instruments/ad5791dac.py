@@ -1,13 +1,11 @@
 # -*- coding: utf-8 -*
 
 from pymeasure.instruments.pyvisa_instrument import PyVisaInstrument
-#from pymeasure.case import Channel, RampDecorator
 from pymeasure.case import ChannelStep
-#from pymeasure.sweep import SweepLinear
 import time
+
+#from pymeasure.sweep import SweepLinear
 #from math import ceil
-
-
 #class LinearSweepAd5791Dac(SweepLinear):
 #
 #    def __init__(self, channels, start, stop, points, waiting_time=0):
@@ -47,7 +45,6 @@ class _Ad5791DacChannel(ChannelStep):
 
         ChannelStep.__init__(self)
         self.unit = 'volt'
-
 
     # --- read --- #
     @ChannelStep._readmethod
