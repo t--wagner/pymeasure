@@ -33,20 +33,40 @@ from functools import partial
 from collections import ChainMap
 
 # Set ggplot as custom style
-mpl.style.use('ggplot')
-mpl.rcParams['grid.alpha'] = 0.6
 
-def live_graph(*fig_args, loop=None, **fig_kwargs):
+def live_graph(style='pymeasure', **fig_kwargs):
 
     backend = mpl.get_backend()
     if backend == 'Qt4Agg':
-        livegraph = LiveGraphQt4(*fig_args, **fig_kwargs)
+        livegraph = LiveGraphQt4(style=style, **fig_kwargs)
     elif backend == 'TkAgg':
-        livegraph = LiveGraphTk(*fig_args, **fig_kwargs)
+        livegraph = LiveGraphTk(style=style, **fig_kwargs)
     else:
         raise TypeError('backend is not supported')
 
     return livegraph
+
+
+class Manager(object):
+
+    def __init__(self, graph):
+        self.tasks = Queue()
+        self.graphs = [graph]
+
+    def add_graph(self, graph):
+        self.graphs.append(graph)
+
+    def update(self):
+
+        # Execute all tasks
+        while not self.tasks.empty():
+            task = self.tasks.get()
+            task()
+            self.tasks.task_done()
+            #graph.up_to_date = False
+
+        for graph in self.graphs:
+            graph._update()
 
 
 class LiveGraphBase(IndexDict):
@@ -56,18 +76,32 @@ class LiveGraphBase(IndexDict):
 
     _current_graph = None
 
-    def __init__(self, **fig_kwargs):
+    def __init__(self, style='pymeasure', manager=None, **fig_kwargs):
         """Initiate LivegraphBase class.
 
         """
-
         super().__init__()
 
+        if manager is None:
+            self._manager = Manager(self)
+        else:
+            manager.add_graph(self)
+            self._manager = manager
+
+        if style == 'pymeasure':
+            mpl.style.use('ggplot')
+            mpl.rcParams['grid.alpha'] = 0.6
+        elif isinstance(style, str):
+            mpl.style.use(style)
+        else:
+            pass
+
         self.figure = mpl.figure.Figure(**fig_kwargs)
-        self._tasks = Queue()
+        self._tasks = self._manager.tasks
         self._draw = True
         self.shape = ()
         self.close_event = None
+
 
         LiveGraphBase._current_graph = self
 
@@ -127,33 +161,6 @@ class LiveGraphBase(IndexDict):
         return True
 
     def _update(self):
-        """Update all dataplots and redraw the canvas if necassary.
-
-        Calls the update methods of all dataplots and makes requested
-        snapshots.
-        The update method is called periodically by the run method of the
-        backend and should not be used directly.
-
-        """
-
-        up_to_date = True
-
-        # Execute all tasks
-        while not self._tasks.empty():
-            task = self._tasks.get()
-            task()
-            self._tasks.task_done()
-            up_to_date = False
-
-        if not up_to_date:
-            self._update_data()
-
-        # Redraw the canvas if not up_to_data and visible
-        #if not up_to_date and self.draw and self.visible:
-        if not up_to_date and self.visible:
-            self.figure.canvas.draw()
-
-    def _update_data(self):
 
         # Iterate through all subplots and check for updates
         # Heres must be a little bug.
@@ -161,6 +168,8 @@ class LiveGraphBase(IndexDict):
             if subplot._request_update.is_set():
                 subplot._update()
                 subplot._request_update.clear()
+
+        self.figure.canvas.draw()
 
     @property
     def tight_layout(self):
@@ -181,7 +190,7 @@ class LiveGraphBase(IndexDict):
 
         """
         def task():
-            self._update_data()
+            self._update()
             self.figure.savefig(filename)
         self._tasks.put(task)
 
@@ -205,7 +214,7 @@ class LiveGraphTk(LiveGraphBase):
         else:
             self._master = master
 
-        # build canvas for Tk
+        # Canvas for Tk
         canvas = FigureCanvasTkAgg(self.figure, master=self._master)
         canvas.get_tk_widget().pack(side=Tk.TOP, fill=Tk.BOTH, expand=1)
 
@@ -214,12 +223,6 @@ class LiveGraphTk(LiveGraphBase):
         self._toolbar.update()
         canvas._tkcanvas.pack(side=Tk.TOP, fill=Tk.BOTH, expand=1)
 
-        # Menubar
-        # menubar = Tk.Menu(self._master)
-        # menubar.add_command(label='hide', command=self.hide)
-        # self._master.config(menu=menubar)
-
-        # Close every
         self._master.protocol("WM_DELETE_WINDOW", self.close)
 
     def run(self, delay=25):
@@ -235,7 +238,7 @@ class LiveGraphTk(LiveGraphBase):
         """
 
         # Call the update function
-        self._update()
+        self._manager.update()
 
         # Call run again afer the delay time
         self._master.after(delay, self.run, delay)
