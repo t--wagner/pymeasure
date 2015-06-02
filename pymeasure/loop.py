@@ -121,7 +121,7 @@ class Loop(object):
         """
 
         # Get inner loop
-        loop = self._loop_list[-1]
+        loop = self._loop_list[0]
 
         # Set or clear pause Event of inner loop
         if loop._pause.is_set():
