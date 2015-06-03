@@ -37,9 +37,9 @@ def live_graph(style='pymeasure', **fig_kwargs):
 
     backend = mpl.get_backend()
     if backend == 'Qt4Agg':
-        livegraph = LiveGraphQt4(style=style, **fig_kwargs)
+        livegraph = LiveGraph(LiveGraphQt4, style=style, **fig_kwargs)
     elif backend == 'TkAgg':
-        livegraph = LiveGraphTk(style=style, **fig_kwargs)
+        livegraph = LiveGraph(LiveGraphTk, style=style, **fig_kwargs)
     else:
         raise TypeError('backend is not supported')
 
@@ -81,7 +81,7 @@ class Manager(object):
             graph._update()
 
 
-class LiveGraphBase(IndexDict):
+class LiveGraph(IndexDict):
     """Base class for differnt graphic backends.
 
     """
@@ -89,7 +89,7 @@ class LiveGraphBase(IndexDict):
     _current_graph = None
     _manager = None
 
-    def __init__(self, style='pymeasure', manager=None, **fig_kwargs):
+    def __init__(self, backend, style='pymeasure', manager=None, **fig_kwargs):
         """Initiate LivegraphBase class.
 
         """
@@ -108,13 +108,16 @@ class LiveGraphBase(IndexDict):
         else:
             pass
 
+
         self.figure = mpl.figure.Figure(**fig_kwargs)
+        self._backend = backend(self.figure, self._manager)
+
         self._draw = True
         self.shape = ()
         self.close_event = None
 
 
-        LiveGraphBase._current_graph = self
+        LiveGraph._current_graph = self
 
     def __setitem__(self, key, dataplot):
         """x.__setitem__(key, dataplot) <==> x['key'] = dataplot
@@ -159,7 +162,6 @@ class LiveGraphBase(IndexDict):
             axes.append(self.add_subplot(ysubs, xsubs, nr))
         return axes
 
-
     @property
     def visible(self):
         return True
@@ -197,32 +199,34 @@ class LiveGraphBase(IndexDict):
         self.add_task(task)
 
     def connect_loop(self, loop, shape=True):
-        self.close_event = loop.stop
+        self._backend.close_event = loop.stop
         if shape:
             self.shape = loop.shape
 
+    def run(self):
+        self._backend.run()
 
-class LiveGraphTk(LiveGraphBase):
+
+class LiveGraphTk(object):
     """ LiveGraph backend for Tkinter.
 
     """
 
-    def __init__(self, master=None, **fig_kwargs):
-        super().__init__(**fig_kwargs)
+    def __init__(self, figure, manager, master=None):
+        super().__init__()
 
-        # Setup the TKInter window with the canvas and a toolbar
         if not master:
             self._master = Tk.Tk()
         else:
             self._master = master
 
-        # Canvas for Tk
-        canvas = FigureCanvasTkAgg(self.figure, master=self._master)
+        self._manager = manager
+
+        canvas = FigureCanvasTkAgg(figure, master=self._master)
         canvas.get_tk_widget().pack(side=Tk.TOP, fill=Tk.BOTH, expand=1)
 
-        # Navigation Toolbar
-        self._toolbar = NavigationToolbar2TkAgg(canvas, self._master)
-        self._toolbar.update()
+        toolbar = NavigationToolbar2TkAgg(canvas, self._master)
+        toolbar.update()
         canvas._tkcanvas.pack(side=Tk.TOP, fill=Tk.BOTH, expand=1)
 
         self._master.protocol("WM_DELETE_WINDOW", self.close)
@@ -239,10 +243,7 @@ class LiveGraphTk(LiveGraphBase):
 
         """
 
-        # Call the update function
         self._manager.update()
-
-        # Call run again afer the delay time
         self._master.after(delay, self.run, delay)
 
     @property
@@ -267,7 +268,7 @@ class LiveGraphTk(LiveGraphBase):
         self._master.destroy()
 
 
-class LiveGraphQt4(LiveGraphBase, FigureCanvasQTAgg):
+class LiveGraphQt4(LiveGraph, FigureCanvasQTAgg):
     """Ultimately, this is a QWidget (as well as a FigureCanvasAgg, etc.)."""
     def __init__(self, **fig_kwargs):
         LiveGraphBase.__init__(self, **fig_kwargs)
@@ -290,7 +291,7 @@ class DataplotBase(object, metaclass=abc.ABCMeta):
         if graph:
             self._graph = graph
         else:
-            self._graph = LiveGraphBase._current_graph
+            self._graph = LiveGraph._current_graph
 
         # Check for integer like 221 and handle sequences (2,2,1)
         if not isinstance(axes, mpl.axes.SubplotBase):
