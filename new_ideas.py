@@ -60,4 +60,10 @@ ch_s.write.limit = (-10, 10)
 ch_s.write.ramp = 100
 ch_s.write.steptime = 20e-3
 
-ch_s(12)
+
+
+meas = Measurment3d()
+meas.sweep0 = LinearSweep()
+meas.sweep1 = LinearSweep()
+meas.sweep2 = LinearSweep()
+meas.start()
