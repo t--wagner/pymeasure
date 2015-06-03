@@ -16,6 +16,7 @@ class Measurment1d(pym.Measurment):
         self.graph.connect_loop(self.loop)
         self.graph['sin'] = Dataplot1d(111)
         self.graph['cos'] = Dataplot1d(111)
+        self.graph.run()
 
     def _run(self, val0=0):
 
