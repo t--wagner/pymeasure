@@ -32,7 +32,6 @@ from threading import Event
 from functools import partial
 from collections import ChainMap
 
-# Set ggplot as custom style
 
 def live_graph(style='pymeasure', **fig_kwargs):
 
@@ -49,23 +48,36 @@ def live_graph(style='pymeasure', **fig_kwargs):
 
 class Manager(object):
 
-    def __init__(self, graph):
-        self.tasks = Queue()
-        self.graphs = [graph]
+    managers = []
 
-    def add_graph(self, graph):
-        self.graphs.append(graph)
+    def __init__(self):
+        Manager.managers.append(self)
+        self.tasks = Queue()
+
+    @staticmethod
+    def get_manager():
+
+        if len(Manager.managers):
+            manager = Manager.managers[-1]
+        else:
+            manager = Manager()
+
+        return manager
 
     def update(self):
 
+        graphs = []
+
         # Execute all tasks
         while not self.tasks.empty():
-            task = self.tasks.get()
+            graph, task = self.tasks.get()
             task()
             self.tasks.task_done()
-            #graph.up_to_date = False
 
-        for graph in self.graphs:
+            if graph not in graphs:
+                graphs.append(graph)
+
+        for graph in graphs:
             graph._update()
 
 
@@ -75,6 +87,7 @@ class LiveGraphBase(IndexDict):
     """
 
     _current_graph = None
+    _manager = None
 
     def __init__(self, style='pymeasure', manager=None, **fig_kwargs):
         """Initiate LivegraphBase class.
@@ -83,21 +96,19 @@ class LiveGraphBase(IndexDict):
         super().__init__()
 
         if manager is None:
-            self._manager = Manager(self)
+            self._manager = Manager.get_manager()
         else:
-            manager.add_graph(self)
             self._manager = manager
 
         if style == 'pymeasure':
             mpl.style.use('ggplot')
-            mpl.rcParams['grid.alpha'] = 0.6
+            mpl.rcParams['grid.alpha'] = 0.7
         elif isinstance(style, str):
             mpl.style.use(style)
         else:
             pass
 
         self.figure = mpl.figure.Figure(**fig_kwargs)
-        self._tasks = self._manager.tasks
         self._draw = True
         self.shape = ()
         self.close_event = None
@@ -120,6 +131,9 @@ class LiveGraphBase(IndexDict):
 
         return super().__getitem___(key)
 
+    def add_task(self, function, *args, **kwargs):
+        task = (self, partial(function, *args, **kwargs))
+        self._manager.tasks.put(task)
 
     def dataplots(self):
         """Return a list of (index, key) pairs in Graph.
@@ -145,16 +159,6 @@ class LiveGraphBase(IndexDict):
             axes.append(self.add_subplot(ysubs, xsubs, nr))
         return axes
 
-    #@property
-    #def draw(self):
-    #    return self._draw
-
-    #@draw.setter
-    #def draw(self, boolean):
-    #    if isinstance(boolean, bool):
-    #        self._draw = boolean
-    #    else:
-    #        raise TypeError('not boolean type')
 
     @property
     def visible(self):
@@ -163,7 +167,6 @@ class LiveGraphBase(IndexDict):
     def _update(self):
 
         # Iterate through all subplots and check for updates
-        # Heres must be a little bug.
         for subplot in self.__iter__():
             if subplot._request_update.is_set():
                 subplot._update()
@@ -182,8 +185,7 @@ class LiveGraphBase(IndexDict):
         if not isinstance(boolean, bool):
             raise TypeError('not bool')
 
-        task = partial(self.figure.set_tight_layout, boolean)
-        self._tasks.put(task)
+        self.add_task(self.figure.set_tight_layout, boolean)
 
     def snapshot(self, filename):
         """Make a snapshot and save it as filename.
@@ -192,7 +194,7 @@ class LiveGraphBase(IndexDict):
         def task():
             self._update()
             self.figure.savefig(filename)
-        self._tasks.put(task)
+        self.add_task(task)
 
     def connect_loop(self, loop, shape=True):
         self.close_event = loop.stop
@@ -225,7 +227,7 @@ class LiveGraphTk(LiveGraphBase):
 
         self._master.protocol("WM_DELETE_WINDOW", self.close)
 
-    def run(self, delay=25):
+    def run(self, delay=50):
         """Calls the update method periodically with the delay in milliseconds.
 
         Decrease the delay to make the plotting smoother and increase it to
@@ -320,7 +322,7 @@ class LabelConf1d(object):
 
     @title.setter
     def title(self, string):
-        self._graph._tasks.put(partial(self._axes.set_title, string))
+        self._graph.add_task(self._axes.set_title, string)
 
     @property
     def xaxis(self):
@@ -328,7 +330,7 @@ class LabelConf1d(object):
 
     @xaxis.setter
     def xaxis(self, string):
-        self._graph._tasks.put(partial(self._axes.set_xlabel, string))
+        self._graph.add_task(self._axes.set_xlabel, string)
 
     @property
     def yaxis(self):
@@ -336,8 +338,7 @@ class LabelConf1d(object):
 
     @yaxis.setter
     def yaxis(self, string):
-        task = partial(self._axes.set_ylabel, string)
-        self._graph._tasks.put(task)
+        self._graph.add_task(self._axes.set_ylabel, string)
 
 
 class LineConf(object):
@@ -357,8 +358,7 @@ class LineConf(object):
         if linestyle not in list(self._line.lineStyles.keys()):
             raise ValueError('not a valid linestyle')
 
-        task = partial(self._line.set_linestyle, linestyle)
-        self._graph._tasks.put(task)
+        self._graph.add_task(self._line.set_linestyle, linestyle)
 
     @property
     def draw(self):
@@ -371,8 +371,7 @@ class LineConf(object):
         if drawstyle not in self._line.drawStyleKeys:
             raise ValueError('not a valid drawstyle')
 
-        task = partial(self._line.set_drawstyle, drawstyle)
-        self._graph._tasks.put(task)
+        self._graph.add_task(self._line.set_drawstyle, drawstyle)
 
     @property
     def color(self):
@@ -385,8 +384,7 @@ class LineConf(object):
         if not mpl.colors.is_color_like(color):
             raise ValueError('not a valid color')
 
-        task = partial(self._line.set_color, color)
-        self._graph._tasks.put(task)
+        self._graph.add_task(self._line.set_color, color)
 
     @property
     def width(self):
@@ -394,11 +392,9 @@ class LineConf(object):
 
     @width.setter
     def width(self, linewidth):
-
         # Handle wrong input to avoid crashing running liveplot
         linewidth = float(linewidth)
-        task = partial(self._line.set_linewidth, linewidth)
-        self._graph._tasks.put(task)
+        self._graph.add_task(self._line.set_linewidth, linewidth)
 
 
 class MarkerConf(object):
@@ -425,8 +421,7 @@ class MarkerConf(object):
         elif marker not in list(self._line.markers.keys()):
             raise ValueError('not a valid marker')
 
-        task = partial(self._line.set_marker, marker)
-        self._graph._tasks.put(task)
+        self._graph.add_task(self._line.set_marker, marker)
 
     @property
     def color(self):
@@ -451,8 +446,7 @@ class MarkerConf(object):
         if not mpl.colors.is_color_like(color):
             raise ValueError('not a valid color')
 
-        task = partial(self._line.set_markerfacecolor, color)
-        self._graph._tasks.put(task)
+        self._graph.add_task(self._line.set_markerfacecolor, color)
 
     @property
     def edgecolor(self):
@@ -465,8 +459,7 @@ class MarkerConf(object):
         if not mpl.colors.is_color_like(color):
             raise ValueError('not a valid color')
 
-        task = partial(self._line.set_markeredgecolor, color)
-        self._graph._tasks.put(task)
+        self._graph.add_task(self._line.set_markeredgecolor, color)
 
     @property
     def size(self):
@@ -474,12 +467,8 @@ class MarkerConf(object):
 
     @size.setter
     def size(self, markersize):
-
-        # Handle wrong input to avoid crashing running liveplot
         markersize = float(markersize)
-
-        task = partial(self._line.set_markersize, markersize)
-        self._graph._tasks.put(task)
+        self._graph.add_task(self._line.set_markersize, markersize)
 
 
 class XaxisConf(object):
@@ -500,8 +489,7 @@ class XaxisConf(object):
         if not isinstance(boolean, bool):
             raise TypeError('not bool')
 
-        task = partial(self._axes.set_autoscalex_on, boolean)
-        self._graph._tasks.put(task)
+        self._graph.add_task(self._axes.set_autoscalex_on, boolean)
 
     @property
     def lim_left(self):
@@ -516,8 +504,7 @@ class XaxisConf(object):
         if limit == self.lim_right:
             raise ValueError('left and right limits are identical.')
 
-        task = partial(self._axes.set_xlim, left=limit)
-        self._graph._tasks.put(task)
+        self._graph.add_task(self._axes.set_xlim, left=limit)
 
     @property
     def lim_right(self):
@@ -532,8 +519,7 @@ class XaxisConf(object):
         if limit == self.lim_left:
             raise ValueError('left and right limits are identical.')
 
-        task = partial(self._axes.set_xlim, right=limit)
-        self._graph._tasks.put(task)
+        self._graph.add_task(self._axes.set_xlim, right=limit)
 
     @property
     def inverted(self):
@@ -554,7 +540,7 @@ class XaxisConf(object):
         def task():
             self._axes.invert_xaxis()
             self._axes.set_autoscalex_on(autoscale)
-        self._graph._tasks.put(task)
+        self._graph.add_task(task)
 
     @property
     def ticks(self):
@@ -562,8 +548,7 @@ class XaxisConf(object):
 
     @ticks.setter
     def ticks(self, ticks):
-        task = partial(self._axes.set_xticks, ticks)
-        self._graph._tasks.put(task)
+        self._graph.add_task(self._axes.set_xticks, ticks)
 
     @property
     def scale(self):
@@ -609,8 +594,7 @@ class YaxisConf(object):
         if not isinstance(boolean, bool):
             raise TypeError('not bool')
 
-        task = partial(self._axes.set_autoscaley_on, boolean)
-        self._graph._tasks.put(task)
+        self._graph.add_task(self._axes.set_autoscaley_on, boolean)
 
     @property
     def lim_bottom(self):
@@ -625,8 +609,7 @@ class YaxisConf(object):
         if limit == self.lim_top:
             raise ValueError('bottom and top limits are identical.')
 
-        task = partial(self._axes.set_ylim, bottom=limit)
-        self._graph._tasks.put(task)
+        self._graph.add_task(self._axes.set_ylim, bottom=limit)
 
     @property
     def lim_top(self):
@@ -641,8 +624,7 @@ class YaxisConf(object):
         if limit == self.lim_bottom:
             raise ValueError('left and right limits are identical.')
 
-        task = partial(self._axes.set_ylim, top=limit)
-        self._graph._tasks.put(task)
+        self._graph.add_task(self._axes.set_ylim, top=limit)
 
     @property
     def inverted(self):
@@ -663,7 +645,7 @@ class YaxisConf(object):
         def task():
             self._axes.invert_yaxis()
             self._axes.set_autoscaley_on(autoscale)
-        self._graph._tasks.put(task)
+        self._graph.add_task(task)
 
     @property
     def ticks(self):
@@ -671,8 +653,7 @@ class YaxisConf(object):
 
     @ticks.setter
     def ticks(self, ticks):
-        task = partial(self._axes.set_yticks, ticks)
-        self._graph._tasks.put(task)
+        self._graph.add_task(self._axes.set_yticks, ticks)
 
     @property
     def scale(self):
@@ -766,8 +747,7 @@ class Dataplot1d(DataplotBase):
         """
 
         # Put the incoming data into the data exchange queue
-        task = partial(self._add_data, xdata, ydata)
-        self._graph._tasks.put(task)
+        self._graph.add_task(self._add_data, xdata, ydata)
 
     def _add_data(self, xdata, ydata):
         if self._length:
@@ -869,8 +849,7 @@ class ImageConf(object):
         if interpolation not in self._image._interpd:
             raise ValueError('Illegal interpolation string')
 
-        task = partial(self._image.set_interpolation, interpolation)
-        self._graph._tasks.put(task)
+        self._graph.add_task(self._image.set_interpolation, interpolation)
 
     @property
     def auto_extent(self):
@@ -892,8 +871,7 @@ class ImageConf(object):
     @extent.setter
     def extent(self, extent):
         self._auto_extent = False
-        task = partial(self._image.set_extent, extent)
-        self._graph._tasks.put(task)
+        self._graph.add_task(self._image.set_extent, extent)
 
 
 class ColorbarConf(object):
@@ -917,8 +895,7 @@ class ColorbarConf(object):
         if colormap not in self.colormap_names:
             raise TypeError('colormap is not valid')
 
-        task = partial(self._image.set_cmap, colormap)
-        self._graph._tasks.put(task)
+        self._graph.add_task(self._image.set_cmap, colormap)
 
     @property
     def scale(self):
@@ -959,8 +936,7 @@ class LabelConf2d(LabelConf1d):
 
     @zaxis.setter
     def zaxis(self, string):
-        task = partial(self._colorbar.set_label, string)
-        self._graph._tasks.put(task)
+        self._graph.add_task(self._colorbar.set_label, string)
 
 
 class Dataplot2d(DataplotBase):
@@ -1020,8 +996,7 @@ class Dataplot2d(DataplotBase):
         """Add a list of data to the plot.
 
         """
-        task = partial(self._add_data, data)
-        self._graph._tasks.put(task)
+        self._graph.add_task(self._add_data, data)
 
     def _add_data(self, data):
 
@@ -1044,14 +1019,14 @@ class Dataplot2d(DataplotBase):
         self._request_update.set()
 
     def new_line(self):
-        self._graph._tasks.put(self._clear)
+        self._graph.add_task(self._clear)
 
     def _new_line(self):
         self._data.append([])
         self._request_update.set()
 
     def clear(self):
-        self._graph._tasks.put(self._clear)
+        self._graph.add_task(self._clear)
 
     def _clear(self):
         self._data = np.array([[]])

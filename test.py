@@ -9,13 +9,13 @@ class Measurment1d(pym.Measurment):
 
     def __init__(self):
         super().__init__()
-        self.sweep0 = pym.SweepLinear(foo['out1'], 0, 30, 501, 0.005)
+        self.sweep0 = pym.SweepLinear(foo['out1'], 0, 30, 601, 0.005)
         self.loop = pym.Loop(self, self.sweep0)
 
-        self.graph = live_graph(figsize=(10, 10))
+        self.graph = live_graph(figsize=(8, 8))
         self.graph.connect_loop(self.loop)
-        self.graph['sin'] = Dataplot1d(211)
-        self.graph['cos'] = Dataplot1d(212)
+        self.graph['sin'] = Dataplot1d(111)
+        self.graph['cos'] = Dataplot1d(111)
 
     def _run(self, val0=0):
 
@@ -25,7 +25,7 @@ class Measurment1d(pym.Measurment):
             sin = [np.sin(val0 + val1)]
             self.graph['sin'].add_data(step1, sin)
 
-            cos = [np.cos(val0 + val1)]
+            cos = [np.cos(val0 + val1 + np.pi/2)]
             self.graph['cos'].add_data(step1, cos)
 
 
@@ -36,11 +36,10 @@ class Measurment2d(Measurment1d):
         self.sweep1 = pym.SweepLinear(foo['out0'], 0, 10, 11)
         self.loop.append(self.sweep1)
 
-        manager = self.graph._manager
-        self.graph2 = live_graph(figsize=(10, 10), manager=manager)
+        self.graph2 = live_graph(figsize=(8, 8))
         self.graph2.connect_loop(self.loop)
-        self.graph2['sin2d'] = Dataplot2d(211, cmap='hot_r')
-        self.graph2['cos2d'] = Dataplot2d(212)
+        self.graph2['sin2d'] = Dataplot2d(211)
+        self.graph2['cos2d'] = Dataplot2d(212, cmap='seismic')
         self.graph2.run()
 
     def _run(self):
@@ -67,3 +66,4 @@ class MyMeasurment3d(Measurment2d):
 
 if __name__ == '__main__':
     meas = MyMeasurment3d()
+
