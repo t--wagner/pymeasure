@@ -24,45 +24,23 @@ import numpy as np
 import matplotlib as mpl
 from matplotlib.backends.backend_tkagg import (FigureCanvasTkAgg,
                                                NavigationToolbar2TkAgg)
-from PyQt4 import QtCore
+from PyQt4 import QtGui, QtCore
 from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg
 from matplotlib.colors import Normalize, LogNorm
 from queue import Queue
 from threading import Event
 from functools import partial
 from collections import ChainMap
+from matplotlib.backend_bases import key_press_handler
 
 
-def live_graph(style='pymeasure', **fig_kwargs):
-
-    backend = mpl.get_backend()
-    if backend == 'Qt4Agg':
-        livegraph = LiveGraph(LiveGraphQt4, style=style, **fig_kwargs)
-    elif backend == 'TkAgg':
-        livegraph = LiveGraph(LiveGraphTk, style=style, **fig_kwargs)
-    else:
-        raise TypeError('backend is not supported')
-
-    return livegraph
 
 
 class Manager(object):
 
-    managers = []
-
     def __init__(self):
-        Manager.managers.append(self)
         self.tasks = Queue()
-
-    @staticmethod
-    def get_manager():
-
-        if len(Manager.managers):
-            manager = Manager.managers[-1]
-        else:
-            manager = Manager()
-
-        return manager
+        self.running = False
 
     def update(self):
 
@@ -81,24 +59,25 @@ class Manager(object):
             graph._update()
 
 
+
 class LiveGraph(IndexDict):
     """Base class for differnt graphic backends.
 
     """
 
     _current_graph = None
-    _manager = None
 
-    def __init__(self, backend, style='pymeasure', manager=None, **fig_kwargs):
+    def __init__(self, master=None, style='pymeasure', manager=None, **fig_kwargs):
         """Initiate LivegraphBase class.
 
         """
         super().__init__()
 
-        if manager is None:
-            self._manager = Manager.get_manager()
+        if master is None:
+            self._manager = Manager()
         else:
-            self._manager = manager
+            self._manager = master._manager
+            master = master._window.root
 
         if style == 'pymeasure':
             mpl.style.use('ggplot')
@@ -108,9 +87,15 @@ class LiveGraph(IndexDict):
         else:
             pass
 
-
         self.figure = mpl.figure.Figure(**fig_kwargs)
-        self._backend = backend(self.figure, self._manager)
+
+        backend = mpl.get_backend()
+        if backend == 'Qt4Agg':
+            self._window = LiveGraphQt4(self.figure, self._manager, master)
+        elif backend == 'TkAgg':
+            self._window = LiveGraphTk(self.figure, self._manager, master)
+        else:
+            raise TypeError('backend is not supported')
 
         self._draw = True
         self.shape = ()
@@ -163,7 +148,7 @@ class LiveGraph(IndexDict):
 
     @property
     def visible(self):
-        return True
+        return self._window.visible
 
     def _update(self):
 
@@ -173,7 +158,8 @@ class LiveGraph(IndexDict):
                 subplot._update()
                 subplot._request_update.clear()
 
-        self.figure.canvas.draw()
+        if self._window.visible:
+            self.figure.canvas.draw()
 
     @property
     def tight_layout(self):
@@ -198,12 +184,15 @@ class LiveGraph(IndexDict):
         self.add_task(task)
 
     def connect_loop(self, loop, shape=True):
-        self._backend.close_event = loop.stop
+        self._window.close_events.append(loop.stop)
         if shape:
             self.shape = loop.shape
 
-    def show(self):
-        self._backend.show()
+    def close(self):
+        self._window.close()
+
+    def show(self, *, delay=50):
+        self._window.show(delay)
 
 
 class Backend(object):
@@ -212,14 +201,21 @@ class Backend(object):
         self.figure = figure
         self.manager = manager
         self.master = master
-        self.close_event = None
+        self.close_events = []
 
     @property
     def visible(self):
         return True
 
-    def close(self, boolean):
-        close_event()
+    def show(self, delay):
+
+        if not self.manager.running:
+            self.run(delay)
+            self.manager.running = True
+
+    def close(self):
+        for event in self.close_events:
+            event()
 
     def run(self):
         self.manager.update()
@@ -230,23 +226,34 @@ class LiveGraphTk(Backend):
 
     """
 
-    def show(self, delay=50):
+
+    def on_key_event(self, event):
+        key_press_handler(event, self.canvas, self.toolbar)
+
+
+
+    def show(self, delay):
 
         if self.master is None:
-            self.master = Tk.Tk()
+            self.root = Tk.Toplevel()
+            self.master = self.root
+        else:
+            self.root = Tk.Toplevel(self.master)
 
-        self.master.protocol("WM_DELETE_WINDOW", self.close)
+        self.canvas = FigureCanvasTkAgg(self.figure, master=self.root)
+        self.canvas.get_tk_widget().pack(side=Tk.TOP, fill=Tk.BOTH, expand=1)
 
-        canvas = FigureCanvasTkAgg(self.figure, master=self.master)
-        canvas.get_tk_widget().pack(side=Tk.TOP, fill=Tk.BOTH, expand=1)
+        self.toolbar = NavigationToolbar2TkAgg(self.canvas, self.root)
+        self.toolbar.update()
+        self.canvas._tkcanvas.pack(side=Tk.TOP, fill=Tk.BOTH, expand=1)
 
-        toolbar = NavigationToolbar2TkAgg(canvas, self.master)
-        toolbar.update()
-        canvas._tkcanvas.pack(side=Tk.TOP, fill=Tk.BOTH, expand=1)
+        self.canvas.mpl_connect('key_press_event', self.on_key_event)
 
-        self.run(delay)
+        self.root.protocol("WM_DELETE_WINDOW", self.close)
 
-    def run(self, delay=50):
+        super().show(delay)
+
+    def run(self, delay):
         """Calls the update method periodically with the delay in milliseconds.
 
         Decrease the delay to make the plotting smoother and increase it to
@@ -259,11 +266,11 @@ class LiveGraphTk(Backend):
         """
 
         super().run()
-        self.master.after(delay, self.run, delay)
+        self.root.after(delay, self.run, delay)
 
     @property
     def visible(self):
-        if self.master.state() in ['normal', 'zoomed']:
+        if self.root.state() in ['normal', 'zoomed']:
             return True
         else:
             return False
@@ -271,28 +278,28 @@ class LiveGraphTk(Backend):
     @visible.setter
     def visible(self, boolean):
         if boolean:
-            self.master.deiconify()
+            self.root.deiconify()
         else:
-            self.master.withdraw()
+            self.root.withdraw()
 
         self.visible = False
 
     def close(self):
-        if self.close_event:
-            self.close_event()
+        super().close()
         self.master.destroy()
 
 
 class LiveGraphQt4(Backend):
     """Ultimately, this is a QWidget (as well as a FigureCanvasAgg, etc.)."""
 
-    def show(self):
+    def show(self, delay=50):
         self.canvas = FigureCanvasQTAgg(self.figure)
+        self.canvas.show()
+
         self.timer = QtCore.QTimer(self.canvas)
         self.timer.timeout.connect(self.run)
 
-        self.timer.start(50)
-        self.canvas.show()
+        super().show(delay)
 
 
 class DataplotBase(object, metaclass=abc.ABCMeta):

@@ -9,11 +9,10 @@ class Measurment1d(pym.Measurment):
 
     def __init__(self):
         super().__init__()
-        self.sweep0 = pym.SweepLinear(foo['out1'], 0, 30, 601, 0.005)
+        self.sweep0 = pym.SweepLinear(foo['out1'], 0, 30, 1001, 0.005)
         self.loop = pym.Loop(self, self.sweep0)
 
-
-        self.graph = live_graph(figsize=(8, 8))
+        self.graph = LiveGraph(figsize=(8, 8))
         self.graph.connect_loop(self.loop)
         self.graph['sin'] = Dataplot1d(111)
         self.graph['cos'] = Dataplot1d(111)
@@ -38,7 +37,7 @@ class Measurment2d(Measurment1d):
         self.sweep1 = pym.SweepLinear(foo['out0'], 0, 10, 11)
         self.loop.append(self.sweep1)
 
-        self.graph2 = live_graph(figsize=(8, 8))
+        self.graph2 = LiveGraph(master=self.graph, figsize=(8, 8))
         self.graph2.connect_loop(self.loop)
         self.graph2['sin2d'] = Dataplot2d(211)
         self.graph2['cos2d'] = Dataplot2d(212, cmap='seismic')
@@ -51,9 +50,10 @@ class Measurment2d(Measurment1d):
             super()._run(val0)
             self.graph2['sin2d'].add_data(self.graph['sin'])
             self.graph2['cos2d'].add_data(self.graph['cos'])
+            self.graph2.snapshot('snap.png')
+        self.graph2.close()
 
-
-class MyMeasurment3d(Measurment2d):
+class Measurment3d(Measurment2d):
     def __init__(self):
         super().__init__()
         self.loop.append(range(10))
@@ -67,5 +67,5 @@ class MyMeasurment3d(Measurment2d):
 
 
 if __name__ == '__main__':
-    meas = MyMeasurment3d()
+    meas = Measurment2d()
 
