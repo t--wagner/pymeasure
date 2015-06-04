@@ -12,6 +12,7 @@ class Measurment1d(pym.Measurment):
         self.sweep0 = pym.SweepLinear(foo['out1'], 0, 30, 601, 0.005)
         self.loop = pym.Loop(self, self.sweep0)
 
+
         self.graph = live_graph(figsize=(8, 8))
         self.graph.connect_loop(self.loop)
         self.graph['sin'] = Dataplot1d(111)
