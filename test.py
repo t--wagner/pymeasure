@@ -16,7 +16,7 @@ class Measurment1d(pym.Measurment):
         self.graph.connect_loop(self.loop)
         self.graph['sin'] = Dataplot1d(111)
         self.graph['cos'] = Dataplot1d(111)
-        self.graph.run()
+        self.graph.show()
 
     def _run(self, val0=0):
 
@@ -41,7 +41,7 @@ class Measurment2d(Measurment1d):
         self.graph2.connect_loop(self.loop)
         self.graph2['sin2d'] = Dataplot2d(211)
         self.graph2['cos2d'] = Dataplot2d(212, cmap='seismic')
-        self.graph2.run()
+        self.graph2.show()
 
     def _run(self):
 

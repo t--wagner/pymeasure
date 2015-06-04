@@ -116,7 +116,6 @@ class LiveGraph(IndexDict):
         self.shape = ()
         self.close_event = None
 
-
         LiveGraph._current_graph = self
 
     def __setitem__(self, key, dataplot):
@@ -203,33 +202,49 @@ class LiveGraph(IndexDict):
         if shape:
             self.shape = loop.shape
 
+    def show(self):
+        self._backend.show()
+
+
+class Backend(object):
+
+    def __init__(self, figure, manager, master=None):
+        self.figure = figure
+        self.manager = manager
+        self.master = master
+        self.close_event = None
+
+    @property
+    def visible(self):
+        return True
+
+    def close(self, boolean):
+        close_event()
+
     def run(self):
-        self._backend.run()
+        self.manager.update()
 
 
-class LiveGraphTk(object):
+class LiveGraphTk(Backend):
     """ LiveGraph backend for Tkinter.
 
     """
 
-    def __init__(self, figure, manager, master=None):
-        super().__init__()
+    def show(self, delay=50):
 
-        if not master:
-            self._master = Tk.Tk()
-        else:
-            self._master = master
+        if self.master is None:
+            self.master = Tk.Tk()
 
-        self._manager = manager
+        self.master.protocol("WM_DELETE_WINDOW", self.close)
 
-        canvas = FigureCanvasTkAgg(figure, master=self._master)
+        canvas = FigureCanvasTkAgg(self.figure, master=self.master)
         canvas.get_tk_widget().pack(side=Tk.TOP, fill=Tk.BOTH, expand=1)
 
-        toolbar = NavigationToolbar2TkAgg(canvas, self._master)
+        toolbar = NavigationToolbar2TkAgg(canvas, self.master)
         toolbar.update()
         canvas._tkcanvas.pack(side=Tk.TOP, fill=Tk.BOTH, expand=1)
 
-        self._master.protocol("WM_DELETE_WINDOW", self.close)
+        self.run(delay)
 
     def run(self, delay=50):
         """Calls the update method periodically with the delay in milliseconds.
@@ -239,16 +254,16 @@ class LiveGraphTk(object):
         of the incoming data.
 
         Keyword arguments:
-        delay -- the delay in millisconds after each call (default 25)
+        delay -- the delay in millisconds after each call (default 50)
 
         """
 
-        self._manager.update()
-        self._master.after(delay, self.run, delay)
+        super().run()
+        self.master.after(delay, self.run, delay)
 
     @property
     def visible(self):
-        if self._master.state() in ['normal', 'zoomed']:
+        if self.master.state() in ['normal', 'zoomed']:
             return True
         else:
             return False
@@ -256,29 +271,28 @@ class LiveGraphTk(object):
     @visible.setter
     def visible(self, boolean):
         if boolean:
-            self._master.deiconify()
+            self.master.deiconify()
         else:
-            self._master.withdraw()
+            self.master.withdraw()
 
         self.visible = False
 
     def close(self):
         if self.close_event:
             self.close_event()
-        self._master.destroy()
+        self.master.destroy()
 
 
-class LiveGraphQt4(LiveGraph, FigureCanvasQTAgg):
+class LiveGraphQt4(Backend):
     """Ultimately, this is a QWidget (as well as a FigureCanvasAgg, etc.)."""
-    def __init__(self, **fig_kwargs):
-        LiveGraphBase.__init__(self, **fig_kwargs)
-        FigureCanvasQTAgg.__init__(self, self.figure)
 
-    def run(self):
-        timer = QtCore.QTimer(self)
-        timer.timeout.connect(self._update)
-        timer.start(25)
-        self.show()
+    def show(self):
+        self.canvas = FigureCanvasQTAgg(self.figure)
+        self.timer = QtCore.QTimer(self.canvas)
+        self.timer.timeout.connect(self.run)
+
+        self.timer.start(50)
+        self.canvas.show()
 
 
 class DataplotBase(object, metaclass=abc.ABCMeta):
