@@ -74,7 +74,7 @@ class LoopItem(object):
         self._stop.set()
 
 
-class Loop(object):
+class Looper(object):
 
     def __init__(self, cls, *sweeps):
         """Initialize NestedLoop with a list of sweeps.
@@ -95,6 +95,9 @@ class Loop(object):
         """
 
         return self._loop_list[key]
+
+    def __iter__(self):
+        return reversed(self._loop_list)
 
     def append(self, sweep):
         self._loop_list.append(LoopItem(sweep))
@@ -121,7 +124,7 @@ class Loop(object):
         """
 
         # Get inner loop
-        loop = self._loop_list[0]
+        loop = self._loop_list[-1]
 
         # Set or clear pause Event of inner loop
         if loop._pause.is_set():
@@ -129,13 +132,19 @@ class Loop(object):
         else:
             loop._pause.set()
 
-    def stop(self, loop_nr=0):
+    def stop(self, loop_nr=-1):
         """Stop looping in loop_nr. If loop_nr is None stop immediately.
 
         """
 
+        # Increase index for right slicing
+        if loop_nr == -1:
+            loop_nr = None
+        else:
+            loop_nr += 1
+
         # Set all loops above loop_nr to stop
-        for loop in self._loop_list[loop_nr:]:
+        for loop in self._loop_list[:loop_nr]:
             loop.stop()
 
     @property

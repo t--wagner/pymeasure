@@ -177,10 +177,10 @@ class LiveGraph(IndexDict):
             self.figure.savefig(filename)
         self.add_task(task)
 
-    def connect_loop(self, loop, shape=True):
-        self._window.close_events.append(loop.stop)
+    def connect_looper(self, looper, shape=True):
+        self._window.close_events.append(looper.stop)
         if shape:
-            self.shape = loop.shape
+            self.shape = looper.shape
 
     def close(self):
         self._window.close()
@@ -321,7 +321,7 @@ class DataplotBase(object, metaclass=abc.ABCMeta):
         self._request_update = Event()
 
     @abc.abstractmethod
-    def add_data(self):
+    def append(self):
         pass
 
     @abc.abstractmethod
@@ -713,7 +713,7 @@ class Dataplot1d(DataplotBase):
 
         # Attributes for displayed number of points
         if length is None:
-            self._length = self._graph.shape[0]
+            self._length = self._graph.shape[-1]
         else:
             self._length = length
 
@@ -762,15 +762,15 @@ class Dataplot1d(DataplotBase):
     def switch_xy(self, boolean):
         self._xy_switch = bool(boolean)
 
-    def add_data(self, xdata, ydata):
+    def append(self, xdata, ydata):
         """Add a list of data to the plot.
 
         """
 
         # Put the incoming data into the data exchange queue
-        self._graph.add_task(self._add_data, xdata, ydata)
+        self._graph.add_task(self._append, xdata, ydata)
 
-    def _add_data(self, xdata, ydata):
+    def _append(self, xdata, ydata):
         if self._length:
             self._xdata.extend(xdata)
             self._ydata.extend(ydata)
@@ -952,7 +952,7 @@ class Dataplot2d(DataplotBase):
         super().__init__(axes, graph)
 
         if length is None:
-            self._length = self._graph.shape[0]
+            self._length = self._graph.shape[-1]
         else:
             self._length = length
 
@@ -997,13 +997,13 @@ class Dataplot2d(DataplotBase):
         else:
             raise ValueError('diff musste be True, False or integer greater 0')
 
-    def add_data(self, data):
+    def append(self, data):
         """Add a list of data to the plot.
 
         """
-        self._graph.add_task(self._add_data, data)
+        self._graph.add_task(self._append, data)
 
-    def _add_data(self, data):
+    def _append(self, data):
 
         if isinstance(data, Dataplot1d):
             self._trace.extend(data._ydata)
