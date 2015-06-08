@@ -34,8 +34,6 @@ from collections import ChainMap
 from matplotlib.backend_bases import key_press_handler
 
 
-
-
 class Manager(object):
 
     def __init__(self):
@@ -57,7 +55,6 @@ class Manager(object):
 
         for graph in graphs:
             graph._update()
-
 
 
 class LiveGraph(IndexDict):
@@ -141,10 +138,7 @@ class LiveGraph(IndexDict):
 
         """
 
-        axes = []
-        for nr in range(1, ysubs * xsubs + 1):
-            axes.append(self.add_subplot(ysubs, xsubs, nr))
-        return axes
+        return[self.add_subplot(ysubs, xsubs, nr) for nr in range(1, ysubs * xsubs + 1)]
 
     @property
     def visible(self):
@@ -202,6 +196,7 @@ class Backend(object):
         self.manager = manager
         self.master = master
         self.close_events = []
+        self.closed = True
 
     @property
     def visible(self):
@@ -220,17 +215,19 @@ class Backend(object):
     def run(self):
         self.manager.update()
 
+    def on_key_event(self, event):
+        if event.key == 'a':
+            ax = event.inaxes
+            ax.set_autoscalex_on(True)
+            ax.set_autoscaley_on(True)
+        else:
+            key_press_handler(event, self.canvas, self.toolbar)
+
 
 class LiveGraphTk(Backend):
     """ LiveGraph backend for Tkinter.
 
     """
-
-
-    def on_key_event(self, event):
-        key_press_handler(event, self.canvas, self.toolbar)
-
-
 
     def show(self, delay):
 
@@ -574,28 +571,28 @@ class XaxisConf(object):
 
     @property
     def scale(self):
-        return self._scale
+        return self._axes.get_xscale()
 
     @property
     def log(self):
-        if self._scale == 'log':
+        if self.scale == 'log':
             return True
         else:
             return False
 
     @log.setter
-    def log(self, log):
+    def log(self, boolean):
 
         # Check for bool type
-        if not isinstance(log, bool):
+        if not isinstance(boolean, bool):
             raise TypeError('not bool')
 
-        if log:
-            self._scale = 'log'
+        if boolean:
+            scale = 'log'
         else:
-            self._scale = 'linear'
+            scale = 'linear'
 
-        self._request_update.set()
+        self._graph.add_task(self._axes.set_xscale, scale)
 
 
 class YaxisConf(object):
@@ -679,26 +676,28 @@ class YaxisConf(object):
 
     @property
     def scale(self):
-        return self._scale
+        return self._axes.get_yscale()
 
     @property
     def log(self):
-        if self._scale == 'log':
+        if self.scale == 'log':
             return True
         else:
             return False
 
     @log.setter
-    def log(self, log):
+    def log(self, boolean):
 
         # Check for bool type
-        if not isinstance(log, bool):
+        if not isinstance(boolean, bool):
             raise TypeError('not bool')
 
-        if log:
-            self._scale = 'log'
+        if boolean:
+            scale = 'log'
         else:
-            self._scale = 'linear'
+            scale = 'linear'
+
+        self._graph.add_task(self._axes.set_yscale, scale)
 
 
 class Dataplot1d(DataplotBase):
@@ -823,20 +822,6 @@ class Dataplot1d(DataplotBase):
 
         # Recompute the data limits.
         self._axes.relim()
-
-        # Set the xaxis scale
-        xscale = self.xaxis.scale
-        try:
-            self._axes.set_xscale(xscale)
-        except ValueError:
-            pass
-
-        # Set the yaxis scale
-        yscale = self.yaxis.scale
-        try:
-            self._axes.set_yscale(yscale)
-        except ValueError:
-            pass
 
         # Resacale the view limits using the previous computed data limit.
         try:
@@ -985,7 +970,6 @@ class Dataplot2d(DataplotBase):
             self.add_colorbar()
 
             #self._label_conf = LabelConf2d(self._graph, self._axes, self._colorbar)
-
             #self._colorbar_conf = ColorbarConf(self._graph, self._image, self._colorbar)
 
         self.image = ImageConf(self._graph, self._image)
@@ -999,7 +983,6 @@ class Dataplot2d(DataplotBase):
 
         self._colorbar = self._graph.figure.colorbar(self._image, ax=self._axes,
                                                      *colorbar, **kw_colorbar)
-
 
     @property
     def diff(self):
@@ -1064,13 +1047,13 @@ class Dataplot2d(DataplotBase):
             data = data[:, self.diff:] - data[:, :-self.diff]
 
         # Take absolute value if log scaled
-#        if self.colorbar.log:
-#            data[data <= 0] = np.nan
-#
-#        if self.colorbar.scale == 'linear':
-#            self._colorbar.set_norm(Normalize())
-#        elif self.colorbar.scale == 'log':
-#            self._colorbar.set_norm(LogNorm())
+        #if self.colorbar.log:
+        #    data[data <= 0] = np.nan
+
+        #if self.colorbar.scale == 'linear':
+        #    self._colorbar.set_norm(Normalize())
+        #elif self.colorbar.scale == 'log':
+        #    self._colorbar.set_norm(LogNorm())
 
         # Set image data
         try:

@@ -2,7 +2,7 @@
 
 #import pymeasure.backends
 from pymeasure.case import Instrument, Rack
-from pymeasure.hdf5 import Dataset
+from pymeasure.hdf5 import hdf_open
 from pymeasure.ftools import *
 from pymeasure.liveplot import Dataplot1d, Dataplot2d
 from pymeasure.loop import Loop
