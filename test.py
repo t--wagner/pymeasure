@@ -36,7 +36,7 @@ class Measurment2d(Measurment1d):
 
     def __init__(self):
         super().__init__()
-        self.sweep1 = pym.SweepLinear(foo['out0'], 0, 10, 11)
+        self.sweep1 = pym.SweepLinear(foo['out0'], 0, 3, 11)
         self.looper = pym.Looper(self, self.sweep1, self.sweep0)
 
         self.graph2d = LiveGraph(master=self.graph, figsize=(8, 8))
@@ -73,4 +73,4 @@ class Measurment3d(Measurment2d):
 
 
 if __name__ == '__main__':
-    meas = Measurment3d()
+    meas = Measurment2d()
