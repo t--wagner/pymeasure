@@ -238,7 +238,7 @@ class LiveGraphTk(Backend):
             self.root = Tk.Toplevel(self.master)
 
         self.canvas = FigureCanvasTkAgg(self.figure, master=self.root)
-        self.canvas.get_tk_widget().pack(side=Tk.TOP, fill=Tk.BOTH, expand=1)
+        #self.canvas.get_tk_widget().pack(side=Tk.TOP, fill=Tk.BOTH, expand=1)
 
         self.toolbar = NavigationToolbar2TkAgg(self.canvas, self.root)
         self.toolbar.update()
