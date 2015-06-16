@@ -74,3 +74,4 @@ class Measurment3d(Measurment2d):
 
 if __name__ == '__main__':
     meas = Measurment2d()
+    #pass
