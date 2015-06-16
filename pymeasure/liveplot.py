@@ -57,6 +57,116 @@ class Manager(object):
             graph._update()
 
 
+class Backend(object):
+
+    def __init__(self, figure, manager, master=None):
+        self.figure = figure
+        self.manager = manager
+        self.master = master
+        self.close_events = []
+        self.closed = True
+
+    @property
+    def visible(self):
+        return True
+
+    def show(self, delay):
+
+        if not self.manager.running:
+            self.run(delay)
+            self.manager.running = True
+
+    def close(self):
+        for event in self.close_events:
+            event()
+
+    def run(self):
+        self.manager.update()
+
+    def on_key_event(self, event):
+        if event.key == 'a':
+            ax = event.inaxes
+            ax.set_autoscalex_on(True)
+            ax.set_autoscaley_on(True)
+        else:
+            key_press_handler(event, self.canvas, self.toolbar)
+
+
+class LiveGraphTk(Backend):
+    """ LiveGraph backend for Tkinter.
+
+    """
+
+    def show(self, delay):
+
+        if self.master is None:
+            self.root = Tk.Toplevel()
+            self.master = self.root
+        else:
+            self.root = Tk.Toplevel(self.master)
+
+        self.canvas = FigureCanvasTkAgg(self.figure, master=self.root)
+        #self.canvas.get_tk_widget().pack(side=Tk.TOP, fill=Tk.BOTH, expand=1)
+
+        self.toolbar = NavigationToolbar2TkAgg(self.canvas, self.root)
+        self.toolbar.update()
+        self.canvas._tkcanvas.pack(side=Tk.TOP, fill=Tk.BOTH, expand=True)
+
+        self.canvas.mpl_connect('key_press_event', self.on_key_event)
+
+        self.root.protocol("WM_DELETE_WINDOW", self.close)
+
+        super().show(delay)
+
+    def run(self, delay):
+        """Calls the update method periodically with the delay in milliseconds.
+
+        Decrease the delay to make the plotting smoother and increase it to
+        reduce the preformance. For live plotting the delay must fit the rate
+        of the incoming data.
+
+        Keyword arguments:
+        delay -- the delay in millisconds after each call (default 50)
+
+        """
+
+        super().run()
+        self.root.after(delay, self.run, delay)
+
+    @property
+    def visible(self):
+        if self.root.state() in ['normal', 'zoomed']:
+            return True
+        else:
+            return False
+
+    @visible.setter
+    def visible(self, boolean):
+        if boolean:
+            self.root.deiconify()
+        else:
+            self.root.withdraw()
+
+        self.visible = False
+
+    def close(self):
+        super().close()
+        self.master.destroy()
+
+
+class LiveGraphQt4(Backend):
+    """Ultimately, this is a QWidget (as well as a FigureCanvasAgg, etc.)."""
+
+    def show(self, delay=50):
+        self.canvas = FigureCanvasQTAgg(self.figure)
+        self.canvas.show()
+
+        self.timer = QtCore.QTimer(self.canvas)
+        self.timer.timeout.connect(self.run)
+
+        super().show(delay)
+
+
 class LiveGraph(IndexDict):
     """Base class for differnt graphic backends.
 
@@ -86,6 +196,7 @@ class LiveGraph(IndexDict):
 
         self.figure = mpl.figure.Figure(**fig_kwargs)
 
+        # Get matplotlib backend
         backend = mpl.get_backend()
         if backend == 'Qt4Agg':
             self._window = LiveGraphQt4(self.figure, self._manager, master)
@@ -187,116 +298,6 @@ class LiveGraph(IndexDict):
 
     def show(self, *, delay=50):
         self._window.show(delay)
-
-
-class Backend(object):
-
-    def __init__(self, figure, manager, master=None):
-        self.figure = figure
-        self.manager = manager
-        self.master = master
-        self.close_events = []
-        self.closed = True
-
-    @property
-    def visible(self):
-        return True
-
-    def show(self, delay):
-
-        if not self.manager.running:
-            self.run(delay)
-            self.manager.running = True
-
-    def close(self):
-        for event in self.close_events:
-            event()
-
-    def run(self):
-        self.manager.update()
-
-    def on_key_event(self, event):
-        if event.key == 'a':
-            ax = event.inaxes
-            ax.set_autoscalex_on(True)
-            ax.set_autoscaley_on(True)
-        else:
-            key_press_handler(event, self.canvas, self.toolbar)
-
-
-class LiveGraphTk(Backend):
-    """ LiveGraph backend for Tkinter.
-
-    """
-
-    def show(self, delay):
-
-        if self.master is None:
-            self.root = Tk.Toplevel()
-            self.master = self.root
-        else:
-            self.root = Tk.Toplevel(self.master)
-
-        self.canvas = FigureCanvasTkAgg(self.figure, master=self.root)
-        #self.canvas.get_tk_widget().pack(side=Tk.TOP, fill=Tk.BOTH, expand=1)
-
-        self.toolbar = NavigationToolbar2TkAgg(self.canvas, self.root)
-        self.toolbar.update()
-        self.canvas._tkcanvas.pack(side=Tk.TOP, fill=Tk.BOTH, expand=1)
-
-        self.canvas.mpl_connect('key_press_event', self.on_key_event)
-
-        self.root.protocol("WM_DELETE_WINDOW", self.close)
-
-        super().show(delay)
-
-    def run(self, delay):
-        """Calls the update method periodically with the delay in milliseconds.
-
-        Decrease the delay to make the plotting smoother and increase it to
-        reduce the preformance. For live plotting the delay must fit the rate
-        of the incoming data.
-
-        Keyword arguments:
-        delay -- the delay in millisconds after each call (default 50)
-
-        """
-
-        super().run()
-        self.root.after(delay, self.run, delay)
-
-    @property
-    def visible(self):
-        if self.root.state() in ['normal', 'zoomed']:
-            return True
-        else:
-            return False
-
-    @visible.setter
-    def visible(self, boolean):
-        if boolean:
-            self.root.deiconify()
-        else:
-            self.root.withdraw()
-
-        self.visible = False
-
-    def close(self):
-        super().close()
-        self.master.destroy()
-
-
-class LiveGraphQt4(Backend):
-    """Ultimately, this is a QWidget (as well as a FigureCanvasAgg, etc.)."""
-
-    def show(self, delay=50):
-        self.canvas = FigureCanvasQTAgg(self.figure)
-        self.canvas.show()
-
-        self.timer = QtCore.QTimer(self.canvas)
-        self.timer.timeout.connect(self.run)
-
-        super().show(delay)
 
 
 class DataplotBase(object, metaclass=abc.ABCMeta):

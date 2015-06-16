@@ -18,6 +18,7 @@ class Measurment1d(pym.Measurment):
         self.graph['cos'] = Dataplot1d(111)
         self.graph.show()
 
+
     def _run(self, val0=0, hdf=None):
 
         for step1 in self.looper[-1]:
@@ -46,7 +47,6 @@ class Measurment2d(Measurment1d):
         self.graph2d.show()
 
     def _run(self):
-
         with pym.hdf_open('data.hdf') as hdf:
             hdf.create_dataset('data/sin', shape=self.looper.shape, override=True)
             hdf.create_dataset('data/cos', shape=self.looper.shape, override=True)
