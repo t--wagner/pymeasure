@@ -97,4 +97,3 @@ if __name__ == '__main__':
     meas.sweep.append(pym.SweepLinear(foo['out0'], 0, 10, 101, 0.005))
 
     meas.start()
-    #pass

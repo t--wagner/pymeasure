@@ -119,7 +119,7 @@ def fread(filename, nr=None, strip=True):
     with open(filename) as fobj:
         if nr:
             lines = []
-            for x in xrange(nr):
+            for x in range(nr):
                 try:
                     lines.append(next(fobj))
                 except StopIteration:

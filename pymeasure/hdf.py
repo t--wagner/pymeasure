@@ -101,14 +101,18 @@ class HdfInterface(HdfProxy):
             dset.attrs['IMAGE_SUBCLASS'] = np.string_('IMAGE_TRUECOLOR')
 
 
-    def add_txt(self, key, filename, override=False):
+    def add_txt(self, key, filename, override=False, unicode=True):
         """Load txt file into hdf dataset.
 
         """
 
         with open(filename, 'r') as txt:
             # We have to use a special type to unicode strings in hdf
-            dt = h5py.special_dtype(vlen=str)
+            if unicode:
+                dt = h5py.special_dtype(vlen=str)
+            else:
+                dt = h5py.special_dtype(vlen=bytes)
+
             content = txt.read()
             dset = self.create_dataset(key, override=override,
                                        shape=(1,), dtype=dt, fillvalue=None)
