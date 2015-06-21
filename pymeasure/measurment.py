@@ -9,9 +9,6 @@ class MeasurmentError(Exception):
 
 
 class Measurment(object, metaclass=abc.ABCMeta):
-    def __init__(self):
-
-        self._thread = None
 
     @property
     def comment(self):
@@ -27,7 +24,7 @@ class Measurment(object, metaclass=abc.ABCMeta):
 
         """
 
-        if self._thread is None:
+        if not hasattr(self, '_thread'):
             return False
         else:
             return self._thread.is_alive()
@@ -38,9 +35,8 @@ class Measurment(object, metaclass=abc.ABCMeta):
         """
 
         # Check if Measurment is already running
-        if self._thread is not None:
-            if self._thread.is_alive():
-                raise MeasurmentError('Measurment is running.')
+        if self.is_running:
+            raise MeasurmentError('Measurment is running.')
 
         self._thread = Thread(target=self._run)
         self._thread.start()
@@ -48,3 +44,4 @@ class Measurment(object, metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def _run(self):
         pass
+

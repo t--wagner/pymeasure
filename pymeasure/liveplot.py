@@ -322,7 +322,7 @@ class DataplotBase(object, metaclass=abc.ABCMeta):
         self._request_update = Event()
 
     @abc.abstractmethod
-    def append(self):
+    def add_data(self):
         pass
 
     @abc.abstractmethod
@@ -763,15 +763,15 @@ class Dataplot1d(DataplotBase):
     def switch_xy(self, boolean):
         self._xy_switch = bool(boolean)
 
-    def append(self, xdata, ydata):
+    def add_data(self, xdata, ydata):
         """Add a list of data to the plot.
 
         """
 
         # Put the incoming data into the data exchange queue
-        self._graph.add_task(self._append, xdata, ydata)
+        self._graph.add_task(self._add_data, xdata, ydata)
 
-    def _append(self, xdata, ydata):
+    def _add_data(self, xdata, ydata):
         if self._length:
             self._xdata.extend(xdata)
             self._ydata.extend(ydata)
@@ -998,13 +998,13 @@ class Dataplot2d(DataplotBase):
         else:
             raise ValueError('diff musste be True, False or integer greater 0')
 
-    def append(self, data):
+    def add_data(self, data):
         """Add a list of data to the plot.
 
         """
-        self._graph.add_task(self._append, data)
+        self._graph.add_task(self._add_data, data)
 
-    def _append(self, data):
+    def _add_data(self, data):
 
         if isinstance(data, Dataplot1d):
             self._trace.extend(data._ydata)
@@ -1028,7 +1028,7 @@ class Dataplot2d(DataplotBase):
         self._graph.add_task(self._clear)
 
     def _new_line(self):
-        self._data.append([])
+        self._data.add_data([])
         self._request_update.set()
 
     def clear(self):
