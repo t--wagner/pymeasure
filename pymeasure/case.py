@@ -527,7 +527,7 @@ class Config(object):
         Return a configuration iterator.
 
         """
-        return iter(list(self._config.items()))
+        return iter(list(self._config.keys()))
 
     def __repr__(self):
         """x.__repr__() <==> rapr(x)

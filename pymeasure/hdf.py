@@ -23,6 +23,33 @@ class HdfProxy(object):
     def __dir__(self):
         return dir(self._hdf)
 
+    def add_attrs(self, pairs, prefix='', suffix='', none_type=False):
+        """Adding a list of tuples or a dictonary type to the attributes.
+
+        To handle unsupported types it transforms none to False and tries to make a str
+        out of everything else.
+        str.
+
+        """
+
+        try:
+            pairs = pairs.items()
+        except AttributeError:
+            pass
+
+        for key, value in pairs:
+            # Ignor or convert None types
+            if value is None:
+                if none_type is None:
+                    continue
+                else:
+                    value = none_type
+
+            try:
+                self._hdf.attrs['{}{}{}'.format(prefix, key, suffix)] = value
+            except TypeError:
+                self._hdf.attrs['{}{}{}'.format(prefix, key, suffix)] = str(value)
+
 
 class HdfInterface(HdfProxy):
 
@@ -48,17 +75,14 @@ class HdfInterface(HdfProxy):
     def tree(self):
         return self._hdf.visit(print)
 
-    def _rm(self, key):
-        try:
-            del self[key]
-        except KeyError:
-            pass
-
     def create_dataset(self, key, override=False, date=True,
                        dtype=np.float64, fillvalue=np.nan, **kwargs):
 
-        if override is True:
-            self._rm(key)
+        if override:
+            try:
+                del self._hdf[key]
+            except KeyError:
+                pass
 
         dataset = self._hdf.create_dataset(key, dtype=dtype, fillvalue=fillvalue, **kwargs)
 
@@ -80,9 +104,6 @@ class HdfInterface(HdfProxy):
         """Load image into hdf dataset.
 
         """
-
-        if override is True:
-            self._rm(key)
 
         # Store the image as HDF dataset and save it after converting in RGB values
         # Open the image

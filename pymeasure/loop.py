@@ -24,6 +24,7 @@ class LoopItem(object):
 
         """
         self._start_time = time.time()
+        self._stop.clear()
 
         # Iterate through sweep
         for position, step in enumerate(self._sweep):
@@ -37,7 +38,6 @@ class LoopItem(object):
 
             # Check stop event and if true break iteration
             if self._stop.is_set():
-                self._stop.clear()
                 break
 
     @property
