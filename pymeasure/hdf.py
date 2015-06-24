@@ -121,7 +121,6 @@ class HdfInterface(HdfProxy):
             dset.attrs['IMAGE_VERSION'] = np.string_('1.2')
             dset.attrs['IMAGE_SUBCLASS'] = np.string_('IMAGE_TRUECOLOR')
 
-
     def add_txt(self, key, filename, override=False, unicode=True):
         """Load txt file into hdf dataset.
 
@@ -138,6 +137,7 @@ class HdfInterface(HdfProxy):
             dset = self.create_dataset(key, override=override,
                                        shape=(1,), dtype=dt, fillvalue=None)
             dset[0] = content
+
 
 class File(HdfInterface):
 
