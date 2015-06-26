@@ -21,11 +21,16 @@ class Measurment1d(pym.Measurment):
         self.looper = pym.Looper(self, *self.sweep)
         self._graph(self.looper)
 
-        with pym.HdfFile(self.filename) as data:
+        with File(self.filename) as data:
+
+            #data.create_composed_dataset('data/cdata', fieldnames=('sin', 'cos'), shape=self.looper.shape, override=True)
+
             data.create_dataset('data/sin', shape=self.looper.shape, override=True)
             data['data/sin'].add_attrs(foo['out0'].config())
+
             data.create_dataset('data/cos', shape=self.looper.shape, override=True)
             data['data/sin'].add_attrs(foo['out1'].config())
+
             data.add_txt('script', 'test.py', override=True)
 
             self._meas(data)

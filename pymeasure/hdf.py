@@ -100,13 +100,38 @@ class HdfInterface(HdfProxy):
 
         return Dataset(dataset)
 
+    def create_composed_dataset(self, key, override, fieldnames, fieldtype=np.float64,
+                                fillvalue=np.nan, **kwargs):
+
+        # Creating the composed dataytpe
+        try:
+            if not len(fieldnames) == len(fieldtype):
+                raise TypeError('fieldnames and fieldtypes have different len')
+            fields = zip(fieldnames, fieldtype)
+        except TypeError:
+            fields = ((fieldname, fieldtype) for fieldname in fieldnames)
+
+        composed_dtype = np.dtype(list(fields))
+
+        # Creating the composed fillvalue
+        try:
+            if not len(fillvalue) == len(fieldnames):
+                raise TypeError('fillvalues and fields have different len')
+            fillvalues = fillvalue
+        except TypeError:
+            fillvalues = (fillvalue for i in range(len(fieldnames)))
+
+        composed_fillvalue = np.array(tuple(fillvalues), dtype=composed_dtype)
+
+        return self.create_dataset(key, override, date=True, dtype=composed_dtype,
+                                   fillvalue=composed_fillvalue, **kwargs)
+
     def add_image(self, key, filename, override=False):
         """Load image into hdf dataset.
 
         """
 
-        # Store the image as HDF dataset and save it after converting in RGB values
-        # Open the image
+        # Store image as HDF dataset and after converting into RGB values
         with PIL.Image.open(filename) as im:
 
             # Convert the image in RGB numpy array
@@ -194,7 +219,8 @@ class Dataset(HdfProxy):
 
     def add_data(self, position, data):
 
-        data = np.array(data, copy=False)
+        # Transform input data to the right dataytpe
+        data = np.array(data, copy=False, dtype=self.dtype)
 
         size_dim0 = self.shape[-1]
         start = position[-1]
