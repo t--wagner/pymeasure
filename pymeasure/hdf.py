@@ -26,9 +26,8 @@ class HdfProxy(object):
     def add_attrs(self, pairs, prefix='', suffix='', none_type=False):
         """Adding a list of tuples or a dictonary type to the attributes.
 
-        To handle unsupported types it transforms none to False and tries to make a str
+        To handle unsupported types it transforms None to False and tries to make a str
         out of everything else.
-        str.
 
         """
 

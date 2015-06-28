@@ -769,7 +769,7 @@ class Dataplot1d(DataplotBase):
         """
 
         # Put the incoming data into the data exchange queue
-        self._graph.add_task(self._add_data, xdata, ydata)
+        self._graph.add_task(self._add_data, xdata[:], ydata[:])
 
     def _add_data(self, xdata, ydata):
         if self._length:
@@ -1002,7 +1002,7 @@ class Dataplot2d(DataplotBase):
         """Add a list of data to the plot.
 
         """
-        self._graph.add_task(self._add_data, data)
+        self._graph.add_task(self._add_data, data[:])
 
     def _add_data(self, data):
 
