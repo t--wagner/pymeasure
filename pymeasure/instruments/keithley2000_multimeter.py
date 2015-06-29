@@ -85,7 +85,7 @@ class _Keithley2000MultimeterChannel(ChannelRead):
             self._instrument.write("TRIG:SIGN")
             if waiting_time > 0:
                 time.sleep(waiting_time)
-            data.append(self._instrument.query_ascii_values("FETCH?")[0])
+            data.append(self._instrument.query_binary_values("FETCH?")[0])
 
         return data
 
@@ -98,7 +98,7 @@ class _Keithley2000MultimeterChannel(ChannelRead):
             self.init()
             self._instrument.write("TRAC:FEED:CONT NEV")
 
-            data = self._instrument.query_ascii_values("TRAC:DATA?")
+            data = self._instrument.query_binary_values("TRAC:DATA?")
 
             cmds = (":TRAC:CLE", ":TRAC:FEED:CONT NEXT")
             self._instrument.write(";".join(cmds))
@@ -669,6 +669,7 @@ class Keithley2000Multimeter(PyVisaInstrument):
         self.defaults()
 
     def defaults(self):
+        self.format.data = 'sre'
         self._instrument.write("TRIG:SOUR bus")
 
     @property

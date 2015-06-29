@@ -26,9 +26,8 @@ class HdfProxy(object):
     def add_attrs(self, pairs, prefix='', suffix='', none_type=False):
         """Adding a list of tuples or a dictonary type to the attributes.
 
-        To handle unsupported types it transforms none to False and tries to make a str
+        To handle unsupported types it transforms None to False and tries to make a str
         out of everything else.
-        str.
 
         """
 
@@ -100,13 +99,38 @@ class HdfInterface(HdfProxy):
 
         return Dataset(dataset)
 
+    def create_composed_dataset(self, key, override, fieldnames, fieldtype=np.float64,
+                                fillvalue=np.nan, **kwargs):
+
+        # Creating the composed dataytpe
+        try:
+            if not len(fieldnames) == len(fieldtype):
+                raise TypeError('fieldnames and fieldtypes have different len')
+            fields = zip(fieldnames, fieldtype)
+        except TypeError:
+            fields = ((fieldname, fieldtype) for fieldname in fieldnames)
+
+        composed_dtype = np.dtype(list(fields))
+
+        # Creating the composed fillvalue
+        try:
+            if not len(fillvalue) == len(fieldnames):
+                raise TypeError('fillvalues and fields have different len')
+            fillvalues = fillvalue
+        except TypeError:
+            fillvalues = (fillvalue for i in range(len(fieldnames)))
+
+        composed_fillvalue = np.array(tuple(fillvalues), dtype=composed_dtype)
+
+        return self.create_dataset(key, override, date=True, dtype=composed_dtype,
+                                   fillvalue=composed_fillvalue, **kwargs)
+
     def add_image(self, key, filename, override=False):
         """Load image into hdf dataset.
 
         """
 
-        # Store the image as HDF dataset and save it after converting in RGB values
-        # Open the image
+        # Store image as HDF dataset and after converting into RGB values
         with PIL.Image.open(filename) as im:
 
             # Convert the image in RGB numpy array
@@ -120,7 +144,6 @@ class HdfInterface(HdfProxy):
             dset.attrs['CLASS'] = np.string_('IMAGE')
             dset.attrs['IMAGE_VERSION'] = np.string_('1.2')
             dset.attrs['IMAGE_SUBCLASS'] = np.string_('IMAGE_TRUECOLOR')
-
 
     def add_txt(self, key, filename, override=False, unicode=True):
         """Load txt file into hdf dataset.
@@ -138,6 +161,7 @@ class HdfInterface(HdfProxy):
             dset = self.create_dataset(key, override=override,
                                        shape=(1,), dtype=dt, fillvalue=None)
             dset[0] = content
+
 
 class File(HdfInterface):
 
@@ -194,7 +218,8 @@ class Dataset(HdfProxy):
 
     def add_data(self, position, data):
 
-        data = np.array(data, copy=False)
+        # Transform input data to the right dataytpe
+        data = np.array(data, copy=False, dtype=self.dtype)
 
         size_dim0 = self.shape[-1]
         start = position[-1]
