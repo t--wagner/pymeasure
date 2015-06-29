@@ -12,7 +12,7 @@ try:
     from pymeasure.instruments.keithley2000_multimeter import Keithley2000Multimeter
     from pymeasure.instruments.oxford_ips import QxfordIPS
     from pymeasure.instruments.oxford_ps_120 import QxfordPS120
-    #  Keithley2000MultiMeter von Felix hinzugefügt     
+    from pymeasure.instruments.sr780_signalanalyzer import SR780
     
       
 except ImportError:
