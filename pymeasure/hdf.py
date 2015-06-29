@@ -5,9 +5,6 @@ import numpy as np
 import datetime
 import PIL
 import os
-from os import makedirs
-from os.path import exists
-from os.path import dirname
 
 
 class HdfProxy(object):
@@ -175,7 +172,7 @@ class File(HdfInterface):
         directory = os.path.dirname(filename)
         if directory:
             if not os.path.exists(directory):
-                os.mkdir(directory)
+                os.makedirs(directory)
 
         #  Check for existing file if overide is False
         if override:
