@@ -89,11 +89,11 @@ class Measurment5d(Measurment4d):
 
 if __name__ == '__main__':
     meas = Measurment5d()
-    meas.sweep.append(range(2))
-    meas.sweep.append(range(2))
-    meas.sweep.append(range(2))
-    meas.sweep.append(pym.SweepLinear(foo['out1'], 0, 10, 11))
-    meas.sweep.append(pym.SweepLinear(foo['out0'], 0, 10, 101, 0.0005))
+    meas.sweep.append(range(1))
+    meas.sweep.append(range(1))
+    meas.sweep.append(range(1))
+    meas.sweep.append(pym.SweepLinear(foo['out1'], 0, 10, 11, 0.5))
+    meas.sweep.append(pym.SweepLinear(foo['out0'], 0, 10, 101, 0.05))
 
     meas.filename = 'data.hdf'
     #meas.start()
