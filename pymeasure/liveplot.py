@@ -1002,7 +1002,10 @@ class Dataplot2d(DataplotBase):
         """Add a list of data to the plot.
 
         """
-        self._graph.add_task(self._add_data, data[:])
+        if isinstance(data, Dataplot1d):
+            self._graph.add_task(self._add_data, data)
+        else:
+            self._graph.add_task(self._add_data, data[:])
 
     def _add_data(self, data):
 

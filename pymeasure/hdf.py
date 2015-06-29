@@ -4,6 +4,10 @@ import h5py
 import numpy as np
 import datetime
 import PIL
+import os
+from os import makedirs
+from os.path import exists
+from os.path import dirname
 
 
 class HdfProxy(object):
@@ -165,7 +169,19 @@ class HdfInterface(HdfProxy):
 
 class File(HdfInterface):
 
-    def __init__(self, filename, *file_args, **file_kwargs):
+    def __init__(self, filename, *file_args, override=False, **file_kwargs):
+
+        # Create directories if it does not exit
+        directory = os.path.dirname(filename)
+        if directory:
+            if not os.path.exists(directory):
+                os.mkdir(directory)
+
+        #  Check for existing file if overide is False
+        if override:
+            if os.path.exists(filename):
+                os.remove(filename)
+
         self.__dict__['_hdf'] = h5py.File(filename, *file_args, **file_kwargs)
 
     def __repr__(self):

@@ -23,15 +23,13 @@ class Measurment1d(pym.Measurment):
 
         with File(self.filename) as data:
 
-            #data.create_composed_dataset('data/cdata', fieldnames=('sin', 'cos'), shape=self.looper.shape, override=True)
-
             data.create_dataset('data/sin', shape=self.looper.shape, override=True)
             data['data/sin'].add_attrs(foo['out0'].config())
 
             data.create_dataset('data/cos', shape=self.looper.shape, override=True)
             data['data/sin'].add_attrs(foo['out1'].config())
 
-            data.add_txt('script', 'test.py', override=True)
+            #data.add_txt('script', 'test.py', override=True)
 
             self._meas(data)
 
@@ -93,12 +91,12 @@ class Measurment5d(Measurment4d):
 
 
 if __name__ == '__main__':
-    meas = Measurment5d()
-    meas.sweep.append(range(2))
-    meas.sweep.append(range(2))
+    meas = Measurment3d()
+    #meas.sweep.append(range(2))
+    #meas.sweep.append(range(2))
     meas.sweep.append(range(2))
     meas.sweep.append(pym.SweepLinear(foo['out1'], 0, 10, 11))
     meas.sweep.append(pym.SweepLinear(foo['out0'], 0, 10, 101, 0.0005))
 
-    meas.filename = 'data.hdf'
-    #meas.start()
+    meas.filename = 'test/data.hdf'
+    meas.start()

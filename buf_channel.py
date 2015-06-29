@@ -63,13 +63,13 @@ class Measurment1d(pym.Measurment):
         self.sweep = []
 
     def _graph(self, looper, master=None):
-        self.graph = pym.LiveGraph(master, figsize=(15, 8))
+        self.graph = pym.LiveGraph(master, figsize=(12, 8))
         self.graph.connect_looper(looper)
         self.graph['sin'] = pym.Dataplot1d(111, marker='o')
         self.graph.show()
 
     def _run(self):
-        self.looper = pym.Looper(self, range(1000))
+        self.looper = pym.Looper(self, *self.sweep)
         self._graph(self.looper)
 
         self._meas()
@@ -80,18 +80,36 @@ class Measurment1d(pym.Measurment):
 
         self.steps = []
 
-        for i in range(10):
-            for step in self.looper[-1]:
-                self.steps.append(step)
-                time.sleep(0.01)
-                self.data = ch.query()
+        for step in self.looper[-1]:
+            self.steps.append(step)
+            time.sleep(0.01)
+            self.data = ch.query()
 
-                if self.data:
-                    self.graph['sin'].add_data(self.steps, self.data)
-                    self.steps.clear()
+            if self.data:
+                self.graph['sin'].add_data(self.steps, self.data)
+                self.steps.clear()
+
+class Measurment2d(Measurment1d):
+
+    def _graph(self, looper, master=None):
+        self.graph2d = pym.LiveGraph(master=None, figsize=(8, 8))
+        self.graph2d.connect_looper(looper)
+        self.graph2d['sin'] = pym.Dataplot2d(111)
+        self.graph2d.show()
+        super()._graph(looper, self.graph2d)
+
+    def _meas(self, *args, **kwargs):
+
+        self.graph2d['sin'].clear()
+
+        for step0 in self.looper[-2]:
+            super()._meas(*args, **kwargs)
+            self.graph2d['sin'].add_data(self.graph['sin'])
 
 
 if __name__ == '__main__':
 
-    meas1d = Measurment1d()
-    meas1d.start()
+    meas2d = Measurment2d()
+    meas2d.sweep.append(range(10))
+    meas2d.sweep.append(range(1000))
+    meas2d.start()
