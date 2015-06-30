@@ -229,7 +229,7 @@ class Dataset(HdfProxy):
 
         return self._hdf.__getitem__(key)
 
-    def add_data(self, position, data):
+    def add_data(self, position, data, flush=True):
 
         # Transform input data to the right dataytpe
         data = np.array(data, copy=False, dtype=self.dtype)
@@ -266,3 +266,6 @@ class Dataset(HdfProxy):
             ary1d = data[index: index + size_dim0]
             sl = tuple(position + [slice(None, ary1d.size)])
             self[sl] = ary1d
+
+        if flush:
+            self.file.flush()
