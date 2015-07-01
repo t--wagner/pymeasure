@@ -637,7 +637,7 @@ class Keithley2000Multimeter(PyVisaInstrument):
         PyVisaInstrument.__init__(self, rm, address, name)
 
         # Setting the termination characters
-        self._instrument.read_termination = self._instrument.LF
+        #self._instrument.read_termination = self._instrument.LF
 
         # Subsystems
         self.display = _Keithley2000MultimeterSubsystemDisplay(self._instrument)
