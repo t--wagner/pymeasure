@@ -4,14 +4,14 @@ from pymeasure.instruments.pyvisa_instrument import PyVisaInstrument
 from pymeasure.case import ChannelWrite
 import time
 from collections import OrderedDict
-from . import oxford as ox
+from .oxford import OxfordInstrument
 
 
 class _OxfordPS120FieldChannel(ChannelWrite):
 
     def __init__(self, instrument):
         ChannelWrite.__init__(self)
-        self._instrument = instrument
+        self._instr = instrument
         self._unit = 'tesla'
         self._readback = True
 
@@ -34,7 +34,7 @@ class _OxfordPS120FieldChannel(ChannelWrite):
 
     @property
     def setpoint(self):
-        return float(ox.write(self._instrument, 'R8')) / 1000
+        return float(self._instr.write('R8')) / 1000
 
     @setpoint.setter
     def setpoint(self, tesla):
@@ -42,13 +42,13 @@ class _OxfordPS120FieldChannel(ChannelWrite):
         zeros = '0' * (5 - len(tesla))
         value = zeros + tesla
         while True:
-             ox.write(self._instrument, 'J' + value)
-             if tesla == str(int(ox.write(self._instrument, 'R8'))):
+             self._instr.write('J' + value)
+             if tesla == str(int(self._instr.write('R8'))):
                  break
 
     @property
     def sweeprate(self):
-        return float(ox.write(self._instrument, 'R9')) / 1000
+        return float(self._instr.write('R9')) / 1000
 
     @sweeprate.setter
     def sweeprate(self, rate):
@@ -56,17 +56,17 @@ class _OxfordPS120FieldChannel(ChannelWrite):
         zeros = '0' * (5 - len(rate))
         value = zeros + rate
         while True:
-            ox.write(self._instrument, 'T' + value)
-            if rate == str(int(ox.write(self._instrument, 'R9'))):
+            self._instr.write('T' + value)
+            if rate == str(int(self._instr.write('R9'))):
                  break
 
     @property
     def persistant_field(self):
-        return float(ox.write(self._instrument, 'R18'))
+        return float(self._instr.write('R18'))
 
     @property
     def heater(self):
-        heater = int(ox.write(self._instrument, 'X')[7:8])
+        heater = int(self._instr.write('X')[7:8])
 
         if heater == 1:
             return True
@@ -89,9 +89,9 @@ class _OxfordPS120FieldChannel(ChannelWrite):
 
         # Turn heater on or off
         if boolean == 0:
-            ox.write(self._instrument, 'H0')
+            self._instr.write('H0')
         elif boolean == 1:
-            ox.write(self._instrument, 'H1')
+            self._instr.write('H1')
 
         # Wait 10seconds to make sure the heater chaged state
         waitingtime = 20
@@ -110,16 +110,16 @@ class _OxfordPS120FieldChannel(ChannelWrite):
             raise ValueError('switch heater did not change its state.')
 
     def hold(self):
-        ox.write(self._instrument, 'A0')
+        self._instr.write('A0')
 
     def goto_setpoint(self):
-        ox.write(self._instrument, 'A1')
+        self._instr.write('A1')
 
     def goto_zero(self):
-        ox.write(self._instrument, 'A2')
+        self._instr.write('A2')
 
     def read(self):
-        return [float(ox.write(self._instrument, 'R7')) / 1000]
+        return [float(self._instr.write('R7')) / 1000]
 
     def write(self, tesla, verbose=False):
         if not isinstance(tesla, (int, float)):
@@ -133,7 +133,7 @@ class _OxfordPS120FieldChannel(ChannelWrite):
 
         last_time = time.time()
         # Wait until the oxford stops sweeping
-        while int(ox.write(self._instrument, 'X')[10:11]):
+        while int(self._instr.write('X')[10:11]):
 
             if verbose:
                 if (time.time() - last_time) > verbose:
@@ -150,10 +150,11 @@ class QxfordPS120(PyVisaInstrument):
 
     def __init__(self, rm, address, name='', defaults=True):
         PyVisaInstrument.__init__(self, rm, address, name)
+        self._instrument = OxfordInstrument(self._instrument)
         self._instrument.read_termination = self._instrument.CR
 
         # Set the communication protocol to normal
-        ox.write(self._instrument, 'Q0')
+        self._instr.write('Q0')
 
         # Channels
         self.__setitem__('bfield', _OxfordPS120FieldChannel(self._instrument))
@@ -162,10 +163,10 @@ class QxfordPS120(PyVisaInstrument):
             self.defaults()
 
     def defaults(self):
-        ox.write(self._instrument, 'C3')
+        self._instr.write('C3')
 
     def _status_index(self):
-        status_str = ox.write(self._instrument, 'X')
+        status_str = self._instr.write('X')
         status = {'system_m': int(status_str[0]),
                   'system_n': int(status_str[1]),
                   'activity': int(status_str[3]),
@@ -258,14 +259,14 @@ class QxfordPS120(PyVisaInstrument):
     def remote(self, boolean):
         if boolean:
             if self.locked:
-                ox.write(self._instrument, 'C1')
+                self._instr.write('C1')
             else:
-                ox.write(self._instrument, 'C3')
+                self._instr.write('C3')
         else:
             if self.locked:
-                ox.write(self._instrument, 'C0')
+                self._instr.write('C0')
             else:
-                ox.write(self._instrument, 'C2')
+                self._instr.write('C2')
 
     @property
     def locked(self):
@@ -279,17 +280,17 @@ class QxfordPS120(PyVisaInstrument):
     def locked(self, boolean):
         if boolean:
             if self.remote:
-                ox.write(self._instrument, 'C1')
+                self._instr.write('C1')
             else:
-                ox.write(self._instrument, 'C0')
+                self._instr.write('C0')
         else:
             if self.remote:
-                ox.write(self._instrument, 'C3')
+                self._instr.write('C3')
             else:
-                ox.write(self._instrument, 'C2')
+                self._instr.write('C2')
 
     @property
     def version(self):
-        return ox.write(self._instrument, 'V')
+        return self._instr.write('V')
 
 
