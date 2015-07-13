@@ -121,19 +121,26 @@ class _OxfordIPSFieldChannel(ChannelWrite):
         return [float(self._instr.write('R7'))]
 
     def write(self, tesla, verbose=False):
+        
+        self._x = None
+
         if not isinstance(tesla, (int, float)):
             raise ValueError
 
         # Set setpoint
         self.setpoint = tesla
-
+        
         # Go to set point
         self.goto_setpoint()
 
         last_time = time.time()
         # Wait until the oxford stops sweeping
-        while int(self._instr.write('X')[10:11]):
-
+        while True:           
+            self._x = int(self._instr.write('X')[10:11])
+            
+            if not self._x:
+                break
+            
             if verbose:
                 if (time.time() - last_time) > verbose:
                     last_time = time.time()

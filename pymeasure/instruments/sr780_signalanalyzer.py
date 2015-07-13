@@ -17,30 +17,30 @@ class TransferFunction(ChannelRead):
     def __init__(self, instrument):
         self._instrument = instrument
         ChannelRead.__init__(self)
-
-        self._config += []
+        self._unit = ''
+        self._config += ['frequency', 'resolution', 'range', 'averagepoints',
+                         'average_complete', 'autoscale']
 
     @ChannelRead._readmethod
     def read(self):
-        bins = int(self._instrument.query('DSPN? 1'))
+        bins = int(self._instrument.query('DSPN? 0'))
         noise = []
         for i in range(bins):
-            noise += [float(self._instrument.query('DSPY? 1, {}'.format(i)))]
-            return noise
+            noise += [float(self._instrument.query('DSPY? 0, {}'.format(i)))]
+        return noise
 
     @property
-    def get_frequency(self):
-        bins = int(self._instrument.query('DSPN? {}'.format(self._channel)))
-        start = float(self._instrument.query('FSTR? {}'.format(self._channel)))
-        end = float(self._instrument.query('FEND? {}'.format(self._channel)))
+    def frequency(self):
+        bins = int(self._instrument.query('DSPN? 0'))
+        start = float(self._instrument.query('SSTR? 0'))
+        end = float(self._instrument.query('SSTP? 0'))
         freq = np.linspace(int(start), int(end), int(bins))
-        return freq 
+        return freq
 
     @property
     def resolution(self):
-        bins = int(self._instrument.query('FLIN? 1'))
-        values = [101, 201, 401, 801]
-        return values[bins]
+        bins = int(self._instrument.query('SNPS? 1'))
+        return(bins)
 
     @resolution.setter
     def resolution(self, bins):
@@ -51,21 +51,23 @@ class TransferFunction(ChannelRead):
         elif bins < 600:
             number = 2
         else:
-            number = 3 
-        self._instrument.write('FLIN2 , {}'.format(number))
+            number = 3
+        bins = [100, 200, 400, 800]
+        self._instrument.write('SNPS2 , {}'.format(bins[number]))
 
     @property
     def range(self):
-        start = float(self._instrument.query('FSTR? 1'))
-        end = float(self._instrument.query('FEND? 1'))
+        start = float(self._instrument.query('SSTR? 0'))
+        end = float(self._instrument.query('SSTP? 0'))
         return [start, end]
 
     @range.setter
     def range(self, frange):
-        span = int(frange[1] - frange[0])
-        self._instrument.write('FSPN 2,{}'.format(span))
-        self._instrument.write('FEND 2,{}'.format(int(frange[1])))
-        self._instrument.write('FSTR 2,{}'.format(int(frange[0])))
+        if frange[0]< 1:
+            self._instrument.write('SSTR 2,1')
+        else:
+            self._instrument.write('SSTR 2,{}'.format(int(frange[0])))
+        self._instrument.write('SSTP 2,{}'.format(int(frange[1])))
 
     @property
     def average_complete(self):
@@ -99,6 +101,7 @@ class Source(ChannelStep):
 
         ChannelStep.__init__(self)
         self.unit = 'Hz'
+        self._config += ['source_type', 'amplitude', 'offset', 'noise_type']
 
     @ChannelStep._readmethod
     def read(self):
@@ -216,7 +219,9 @@ class Spectrum(ChannelRead):
         self._channel = channel
         ChannelRead.__init__(self)
 
-        self._config += []
+        self._config += ['frequency', 'resolution', 'frequency_span', 'range',
+                         'averagepoints', 'average_complete', 'autoscale', 'autoranging',
+                         'auto_offset']
 
 #    fast but not stable for high resolution and/or for some units
 #    @ChannelRead._readmethod
@@ -224,7 +229,7 @@ class Spectrum(ChannelRead):
 #        if self._channel == 2:
 #            return 'error: can only read one channel at once'
 #        else:
-#            noise = self._instrument.query_ascii_values('DSPY? {}'.format(self._channel))            
+#            noise = self._instrument.query_ascii_values('DSPY? {}'.format(self._channel))
 #            return noise
 
     @ChannelRead._readmethod
@@ -247,20 +252,20 @@ class Spectrum(ChannelRead):
 #        else:
 #            noise = self._instrument.query_binary_values('DSPB ? {}'.format(self._channel), datatype='f', is_big_endian=True)
 #            return noise
-            
+
 #    @property
 #    def get_frequency(self):
 #        if self._channel == 2:
 #            return 'error: can only read one channel at once'
 #        else:
-#            bins = int(self._instrument.query('DSPN? {}'.format(self._channel))) 
+#            bins = int(self._instrument.query('DSPN? {}'.format(self._channel)))
 #            frequency = []
 #            for i in range(bins):
-#                frequency += [float(self._instrument.query('DBIN? {},{}'.format(self._channel,i)))]     
+#                frequency += [float(self._instrument.query('DBIN? {},{}'.format(self._channel,i)))]
 #            return frequency
 
     @property
-    def get_frequency(self):
+    def frequency(self):
         if self._channel == 2:
             raise SystemError('can only read one channel at once')
         else:
@@ -268,8 +273,8 @@ class Spectrum(ChannelRead):
             start = float(self._instrument.query('FSTR? {}'.format(self._channel)))
             end = float(self._instrument.query('FEND? {}'.format(self._channel)))
             freq = np.linspace(int(start), int(end), int(bins))
-            return freq 
-            
+            return freq
+
     @property
     def read_binary(self):
         if self._channel == 2:
@@ -283,13 +288,13 @@ class Spectrum(ChannelRead):
                         noise = self._instrument.query_binary_values('DSPB? {}'.format(self._channel),  header_fmt='empty')
                         if bins != len(noise):
                             pass
-                        self._instrument.read_termination = self._instrument.LF                        
+                        self._instrument.read_termination = self._instrument.LF
                         break
                 except (VisaIOError, IndexError):
                         noise = []
                         pass
-            
-            
+
+
             #self._instrument.read_termination = self._instrument.LF
             #time.sleep(0.2)
             #self._instrument.write('*CLS')
@@ -414,7 +419,7 @@ class Spectrum(ChannelRead):
         self._instrument.write('IAOM {}'.format(boolian))
 
     @property
-    def unit_set(self):
+    def unit(self):
         """Chosen unit has to be an integer of range(6)
         [0,1,2,3,4,5] = ['Vpk', 'Vrms', 'Vpk^2', 'Vrms^2', 'dBVpk', 'dBVrms']
         """
@@ -425,8 +430,8 @@ class Spectrum(ChannelRead):
             unitlist = ['Vpk', 'Vrms', 'Vpk^2', 'Vrms^2', 'dBVpk', 'dBVrms']
             return unitlist[unit]
 
-    @unit_set.setter
-    def unit_set(self, unit):
+    @unit.setter
+    def unit(self, unit):
         """Chosen unit has to be an integer of range(6)
         [0,1,2,3,4,5] = ['Vpk', 'Vrms', 'Vpk^2', 'Vrms^2', 'dBVpk', 'dBVrms']
         """
@@ -441,23 +446,23 @@ class SweptSine(ChannelRead):
         self._channel = channel
         ChannelRead.__init__(self)
 
-        self._config += []
+        self._config += ['frequency', 'range', 'resolution', 'autoscale', 'auto_offset']
 
     @ChannelRead._readmethod
     def read(self):
         bins = int(self._instrument.query('DSPN? {}'.format(self._channel)))
         noise = []
         for i in range(bins):
-            noise += [float(self._instrument.query('DSPY? {}, {}'.format(self._channel, i)))]            
+            noise += [float(self._instrument.query('DSPY? {}, {}'.format(self._channel, i)))]
         return noise
 
     @property
-    def get_frequency(self):
+    def frequency(self):
         bins = int(self._instrument.query('DSPN? {}'.format(self._channel)))
         start = float(self._instrument.query('SSTR? {}'.format(self._channel)))
         end = float(self._instrument.query('SSTP? {}'.format(self._channel)))
         freq = np.linspace(int(start), int(end), int(bins))
-        return freq 
+        return freq
 
     @property
     def range(self):
@@ -468,7 +473,10 @@ class SweptSine(ChannelRead):
     @range.setter
     def range(self, frange):
         self._instrument.write('SSTP {},{}'.format(self._channel, int(frange[1])))
-        self._instrument.write('SSTR {},{}'.format(self._channel, int(frange[0])))
+        if frange < 1:
+            self._instrument.write('SSTR {},1'.format(self._channel))
+        else:
+            self._instrument.write('SSTR {},{}'.format(self._channel, int(frange[0])))
 
     @property
     def resolution(self):
@@ -536,20 +544,19 @@ class SR780(PyVisaInstrument):
 
     def start_average(self):
         self._instrument.write('FAVG 2, 1')     #averaging is on (both displays)
-        self._instrument.write('FAVT 2, 0')     #average type is linear  
+        self._instrument.write('FAVM 2, 1')
+        self._instrument.write('FAVT 2, 0')     #average type is linear
         self._instrument.write('STRT')          #starts new averaging
 
     def TransferFunction(self):
-        self._instrument.write('MGRP2, 0')
-        self._instrument.write('MEAS0, 0')
-        self._instrument.write('MEAS1, 10')
-        self._instrument.write('VIEW2, 1')
-        self._instrument.write('UNIT1, 10')
-        self._instrument.write('UNIT0, 3')
-        self._instrument.write('FWIN2, 0')
-        self._instrument.write('SRCO 1')        #Sourcing is on
-        self._instrument.write('STYP 1')
-        self._instrument.write('CSRC 0')
+        self._instrument.write('MGRP2, 2')
+        self._instrument.write('MEAS0, 33')
+        self._instrument.write('MEAS1, 31')
+        self._instrument.write('VIEW0, 3')
+        self._instrument.write('UNIT0, 10')
+        self._instrument.write('FWIN2, 1')
+        self._instrument.write('IAOM 0')
+
 
     def SweptSine(self):
         self._instrument.write('MGRP2, 2')
@@ -557,7 +564,7 @@ class SR780(PyVisaInstrument):
         self._instrument.write('MEAS1, 31')
         self._instrument.write('VIEW2, 1')
         self._instrument.write('UNIT2, 3')
-        self._instrument.write('FWIN2, 3')
+        self._instrument.write('FWIN2, 2')
         self._instrument.write('IAOM 0')    #turn off auto offset
         self._instrument.write('FAVM2, 0')
         self._instrument.write('SSTY2, 0')
@@ -570,12 +577,12 @@ class SR780(PyVisaInstrument):
         self._instrument.write('UNIT2, 3')
         self._instrument.write('FWIN2, 1')  #Hanning Filter is used
         self._instrument.write('IAOM 0')    #turn off auto offset
-        self._instrument.write('FAVM2, 1')
+        self._instrument.write('PSDU2, 0')  #use Power Spectral Density
 
     @property
     def sourcing(self):
         boolian = int(self._instrument.query('SRCO?'))      #ask if source is on or of
-        boolian2 = int(self._instrument.query('STYP?'))     #ask for source type 
+        boolian2 = int(self._instrument.query('STYP?'))     #ask for source type
         return bool(boolian) and not bool(boolian2)
 
     @sourcing.setter

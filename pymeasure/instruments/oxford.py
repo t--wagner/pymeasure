@@ -4,14 +4,11 @@ from visa import VisaIOError
 
 class OxfordInstrument(object):
 
-    def __init__(self, instrument, delay=None, isobus=False):
+    def __init__(self, instrument, delay=None, isobus=None):
         self.__dict__['_instr'] = instrument
         self.__dict__['delay'] = delay
-        
-        if isobus:
-            self.__dict__['cmd_prefix'] = 2
-        else:
-            self.__dict__['cmd_prefix'] = 0
+
+        self.__dict__['isobus'] = isobus
 
     def __getattr__(self, name):
         return getattr(self._instr, name)
@@ -20,14 +17,20 @@ class OxfordInstrument(object):
         setattr(self._instr, name, value)
 
     def write(self, command):
+        return self.query(command)
 
-        command = command[self.cmd_prefix:]        
-        
+    def query(self, command):
+
+        if self.isobus:
+            oxford_cmd = '@{}{}'.format(self.isobus, command)
+        else:
+            oxford_cmd = command
+
         while True:
             try:
                 # The ips answers with the commands first letter if it
                 # understood otherwise with '?'
-                answer = self._instr.query(command, self.delay)
+                answer = self._instr.query(oxford_cmd, self.delay)
                 if answer[0] == command[0]:
                     return answer[1:]
             except (VisaIOError, IndexError):
