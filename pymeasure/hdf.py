@@ -24,6 +24,9 @@ class HdfProxy(object):
     def __dir__(self):
         return dir(self._hdf)
 
+    def __len__(self):
+        return len(self._hdf)
+
     def add_attrs(self, pairs, prefix='', suffix='', none_type=False):
         """Adding a list of tuples or a dictonary type to the attributes.
 
@@ -73,7 +76,44 @@ class HdfInterface(HdfProxy):
         del self._hdf[name]
 
     def tree(self):
-        return self._hdf.visit(print)
+        """Detailed view of hdf group content.
+
+        """
+
+        class Tree(object):
+
+            def __init__(self):
+                self.items = []
+
+            def add_item(self, path, item):
+                self.items.append((path, item))
+
+            def show(self):
+                '''Show the different datatypes and shapes to the related keys
+
+                '''
+                for path, item in self.items:
+                    if isinstance (item, h5py.Group):
+                        itype = 'group'
+                        shape = 'none'
+                    elif isinstance (item, h5py.Dataset):
+                        try:
+                            if item.attrs['CLASS'] == b'IMAGE':
+                                itype = 'image'
+                                shape = item.shape
+                            else:
+                                itype = 'dataset'
+                                shape = item.shape
+                        except KeyError:
+                            itype = 'dataset'
+                            shape = item.shape
+
+                    print(path, ':', itype, ':', shape)
+
+        tree = Tree()
+        self.visititems(tree.add_item)
+        tree.show()
+
 
     def create_dataset(self, key, override=False, date=True,
                        dtype=np.float64, fillvalue=np.nan, **kwargs):
