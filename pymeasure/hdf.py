@@ -92,11 +92,19 @@ class HdfInterface(HdfProxy):
                 '''Show the different datatypes and shapes to the related keys
 
                 '''
+                # Get len of maximum path
+                def path_len(item):
+                    path, *r = item
+                    return len(path)
+
+                max_path_len = len(max(self.items, default=[''], key=path_len)[0])
+
+                # Print everything pretty
                 for path, item in self.items:
-                    if isinstance (item, h5py.Group):
+                    if isinstance(item, h5py.Group):
                         itype = 'group'
-                        shape = 'none'
-                    elif isinstance (item, h5py.Dataset):
+                        shape = ''
+                    elif isinstance(item, h5py.Dataset):
                         try:
                             if item.attrs['CLASS'] == b'IMAGE':
                                 itype = 'image'
@@ -108,7 +116,10 @@ class HdfInterface(HdfProxy):
                             itype = 'dataset'
                             shape = item.shape
 
-                    print(path, ':', itype, ':', shape)
+                    seperator0 = (max_path_len - len(path)) * ' '
+                    seperator1 = (len('dataset') - len(itype)) * ' '
+
+                    print(path, seperator0, itype, seperator1, shape)
 
         tree = Tree()
         self.visititems(tree.add_item)
