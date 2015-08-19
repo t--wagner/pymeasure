@@ -121,7 +121,7 @@ class _OxfordIPSFieldChannel(ChannelWrite):
         return [float(self._instr.write('R7'))]
 
     def write(self, tesla, verbose=False):
-        
+
         self._x = None
 
         if not isinstance(tesla, (int, float)):
@@ -129,18 +129,18 @@ class _OxfordIPSFieldChannel(ChannelWrite):
 
         # Set setpoint
         self.setpoint = tesla
-        
+
         # Go to set point
         self.goto_setpoint()
 
         last_time = time.time()
         # Wait until the oxford stops sweeping
-        while True:           
+        while True:
             self._x = int(self._instr.write('X')[10:11])
-            
+
             if not self._x:
                 break
-            
+
             if verbose:
                 if (time.time() - last_time) > verbose:
                     last_time = time.time()
@@ -176,6 +176,7 @@ class QxfordIPS(PyVisaInstrument):
         self._instrument = OxfordInstrument(self._instrument)
         self._instrument.timeout = 5
         self._instrument.read_termination = self._instrument.CR
+        self._instrument.write('C1')
 
         # Set the communication protocol to normal
         #self._instr.write('Q0')

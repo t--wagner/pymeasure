@@ -3,7 +3,9 @@
 from pymeasure.case import ChannelRead, Instrument
 import time
 import ADwin
+import os
 
+module_directory = os.path.dirname(os.path.abspath(__file__))
 
 class _AdwinSubsystem(object):
 
@@ -217,8 +219,7 @@ class AdwinPro2ADC(AdwinInstrument):
 
     def reboot(self):
         adwin_boot = 'C:\ADwin\ADwin11.btl'
-        #adwin_dac_bin = 'E:/timo/pymeasure/pymeasure/instruments/adwin_pro2_adc.TB1'
-        adwin_adc_bin = 'E:/bayer/python messskripte/pymeasure/pymeasure/instruments/adwin_pro2_adc.TB1'
+        adwin_adc_bin = os.path.join(module_directory, 'adwin_pro2_adc.TB1')
         self._instrument.Boot(adwin_boot)
         self._instrument.Load_Process(adwin_adc_bin)
         self._instrument.Start_Process(1)

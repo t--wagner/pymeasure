@@ -417,7 +417,7 @@ class Spectrum(ChannelRead):
     def auto_offset(self, boolian):
         boolian = int(boolian)
         self._instrument.write('IAOM {}'.format(boolian))
-
+'''
     @property
     def unit(self):
         """Chosen unit has to be an integer of range(6)
@@ -437,7 +437,7 @@ class Spectrum(ChannelRead):
         """
         self._instrument.write('UNIT {}, {}'.format(self._channel, int(unit)))
 
-
+'''
 
 class SweptSine(ChannelRead):
 

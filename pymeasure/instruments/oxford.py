@@ -21,7 +21,7 @@ class OxfordInstrument(object):
 
     def query(self, command):
 
-        if self.isobus:
+        if self.isobus is not None:
             oxford_cmd = '@{}{}'.format(self.isobus, command)
         else:
             oxford_cmd = command

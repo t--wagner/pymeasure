@@ -5,10 +5,11 @@
 ' Control_long_Delays_for_Stop   = No
 ' Priority                       = High
 ' Version                        = 1
-' ADbasic_Version                = 5.0.8
+' ADbasic_Version                = 6.0.0
 ' Optimize                       = Yes
 ' Optimize_Level                 = 1
-' Info_Last_Save                 = ORWELL  FKP2\bayer
+' Stacksize                      = 1000
+' Info_Last_Save                 = THOMSON  FKP2\kuehne
 '<Header End>
 #Include ADwinPro_All.INC
 
@@ -122,6 +123,7 @@ Event:
     average7 = average7 * factor + adc_values[7] / running_index
     average8 = average8 * factor + adc_values[8] / running_index       
        
+    
     If (running_index >= INTEGRATION_POINTS) Then
       
       ' Put out the average channel value

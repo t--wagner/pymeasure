@@ -3,6 +3,7 @@
 from pymeasure.instruments.pyvisa_instrument import PyVisaInstrument
 from pymeasure.case import ChannelRead
 from pymeasure.instruments.oxford import OxfordInstrument
+import time
 
 
 class _QxfordILMChannel(ChannelRead):
@@ -18,21 +19,22 @@ class _QxfordILMChannel(ChannelRead):
     def read(self):
         while True:
             helium = self._instrument.query('R')
-            helium = helium[3:]
-            if len(helium) == 3:
+            helium = helium[2:]
+            if len(helium) == 4:
                 break
-        return float(helium)/10
+        return [float(helium)/10]
 
     @property
     def fast(self):
         while True:
             status = self._instrument.query('X')
-            status = int(status[5])
-            if status == 4:
+            status = status[5]
+            if status == '4' or status == 'C':
                 return False
-            elif status == 2 or status == 3:
+            elif status == '2' or status == '3' or status == 'A' :
                 return True
             else:
+                time.sleep(1)
                 pass
 
     @fast.setter
@@ -53,7 +55,7 @@ class QxfordILM(PyVisaInstrument):
 
         self._instrument.read_termination = '\r'
         self._instrument.write_termination = '\r'
-        self._instrument.write('C1')
+        self._instrument.write('C3')
         # Channels
         self.__setitem__('helium', _QxfordILMChannel(self._instrument))
 

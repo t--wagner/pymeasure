@@ -2,6 +2,7 @@
 
 from pymeasure.instruments.pyvisa_instrument import PyVisaInstrument
 from pymeasure.case import ChannelRead, ChannelWrite
+from visa import VisaIOError
 
 
 class _PercentChannel(ChannelWrite):
@@ -14,9 +15,19 @@ class _PercentChannel(ChannelWrite):
 
     @ChannelWrite._readmethod
     def read(self):
-        valve_str = self._instrument.query('valve?')
-        if not valve_str[:3] == 'vlv':
-            raise ValueError
+
+        while True:
+            valve_str = self._instrument.query('valve?')
+            if valve_str[:3] == 'vlv':
+                break
+            else:
+                try:
+                    # Clear buffer
+                    while True:
+                        self._instrument.read()
+                except VisaIOError:
+                    #Buffer is clear when nothing is returned
+                    pass
 
         return [float(valve_str[4:])]
 
@@ -35,9 +46,18 @@ class _PressureChannel(ChannelRead):
     @ChannelRead._readmethod
     def read(self):
 
-        pressure_str = self._instrument.query('pressure?')
-        if not pressure_str[:3] == 'prs':
-            raise ValueError
+        while True:
+            pressure_str = self._instrument.query('pressure?')
+            if pressure_str[:3] == 'prs':
+                break
+            else:
+                try:
+                    # Clear buffer
+                    while True:
+                        self._instrument.read()
+                except VisaIOError:
+                    #Buffer is clear when nothing is returned
+                    pass
 
         return [float(pressure_str[3:-4])]
 
@@ -61,6 +81,7 @@ class RonnyValve(PyVisaInstrument):
 
         term = self._instrument.LF + self._instrument.CR
         self._instrument.read_termination = term
+        self._instrument.timeout = 100
 
         self.__setitem__('percent',  _PercentChannel(self._instrument))
         self.__setitem__('position', _PositionChannel(self._instrument))
