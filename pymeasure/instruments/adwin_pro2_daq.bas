@@ -5,10 +5,11 @@
 ' Control_long_Delays_for_Stop   = No
 ' Priority                       = High
 ' Version                        = 1
-' ADbasic_Version                = 5.0.8
+' ADbasic_Version                = 6.0.0
 ' Optimize                       = Yes
 ' Optimize_Level                 = 1
-' Info_Last_Save                 = THOMSON  FKP2\wagner
+' Stacksize                      = 1000
+' Info_Last_Save                 = THOMSON  FKP2\kuehne
 '<Header End>
 #Include ADwinPro_All.INC
 
@@ -19,7 +20,7 @@
 Dim sampling_rate As Long
 
 ' Define fifo size
-#Define fifo_size 10000000
+#Define fifo_size 1000000
 
 ' Define the channel number to aquire from
 
@@ -44,7 +45,7 @@ Dim Data_2[fifo_size] As Long As Fifo
 
 Init:
   ' Set sampling rate
-  sampling_rate = 500e3
+  sampling_rate = 100e3
   ProcessDelay = 300e6 / sampling_rate
   
   ' Clear the fifo fields

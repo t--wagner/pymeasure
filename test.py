@@ -21,7 +21,7 @@ class Measurment1d(pym.Measurment):
         self.looper = pym.Looper(self, *self.sweep)
         self._graph(self.looper)
 
-        with File(self.filename) as data:
+        with pym.HdfFile(self.filename) as data:
 
             data.create_dataset('data/sin', shape=self.looper.shape, override=True)
             data['data/sin'].add_attrs(foo['out0'].config())
@@ -67,6 +67,7 @@ class Measurment2d(Measurment1d):
             super()._meas(data, *args, **kwargs)
             self.graph2d['sin'].add_data(self.graph['sin'])
             self.graph2d['cos'].add_data(self.graph['cos'])
+            print(self.looper.position)
 
 
 class Measurment3d(Measurment2d):
@@ -96,8 +97,8 @@ if __name__ == '__main__':
     #meas.sweep.append(range(2))
     #meas.sweep.append(range(2))
     meas.sweep.append(range(2))
-    meas.sweep.append(pym.SweepLinear(foo['out1'], 0, 10, 11))
-    meas.sweep.append(pym.SweepLinear(foo['out0'], 0, 10, 101, 0.0005))
+    meas.sweep.append(pym.SweepLinear(foo['out1'], 0, 10, 11, waiting_time=0.1))
+    meas.sweep.append(pym.SweepLinear(foo['out0'], 0, 10, 101, 0.05))
 
     meas.filename = 'test0/test1/test2/data.hdf'
     meas.start()

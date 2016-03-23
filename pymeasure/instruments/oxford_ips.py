@@ -121,6 +121,48 @@ class _OxfordIPSFieldChannel(ChannelWrite):
         return [float(self._instr.write('R7'))]
 
     def write(self, tesla, verbose=False):
+        if not isinstance(tesla, (int, float)):
+            raise ValueError
+        self.setpoint = tesla
+        self.goto_setpoint()
+
+        while True:
+            test = int(self._instr.write('X')[10:11])
+
+            if test:
+               pass
+
+            point, = self.read()
+
+            if point == self.setpoint:
+                break
+            self.goto_setpoint()
+
+        # Put on hold
+        self.hold()
+
+        # Return the field
+        if self._readback:
+
+            # Two avoid wrong values from the ips we need to compare two
+            # readbacks.
+            condition = 1
+            last_value = None
+            while condition:
+                value = self.read()
+                if last_value == value:
+                    condition -= 1
+                else:
+                    condition = 1
+                last_value = value
+
+            return value
+        else:
+            return [tesla]
+
+
+'''
+    def write(self, tesla, verbose=False):
 
         self._x = None
 
@@ -167,7 +209,7 @@ class _OxfordIPSFieldChannel(ChannelWrite):
             return value
         else:
             return [tesla]
-
+'''
 
 class QxfordIPS(PyVisaInstrument):
 

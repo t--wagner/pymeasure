@@ -25,5 +25,6 @@ try:
     from pymeasure.instruments.adwin_pro2_adc import AdwinPro2ADC
     from pymeasure.instruments.adwin_pro2_daq import AdwinPro2Daq
     from pymeasure.instruments.adwin_pro2_feedback import AdwinPro2Feedback
+    from pymeasure.instruments.adwin_pro2_fft import AdwinPro2FFT
 except:
     pass

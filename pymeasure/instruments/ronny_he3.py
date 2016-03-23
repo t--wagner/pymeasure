@@ -2,6 +2,7 @@
 
 from pymeasure.instruments.pyvisa_instrument import PyVisaInstrument
 from pymeasure.case import ChannelRead, ChannelWrite
+import time
 
 
 class He3Channel(ChannelRead):
@@ -162,6 +163,7 @@ class RonnyHe3(PyVisaInstrument):
     @property
     def info(self):
 
+        self._instr.write('ERROR RESET')
         p1 = self._instr.query('P1?')
         p2 = self._instr.query('P2?')
         p3 = self._instr.query('P3?')
@@ -176,18 +178,18 @@ class RonnyHe3(PyVisaInstrument):
         print('              Inset              ')
         print('                |                ')
         print('P1 = {:>5} mbar---|----><---><----|'.format(p1))
-        print('                        |   ')
-        print('                |---------------|')
-        print('                |               |')
-        print('             V3={:>5}%        V4={:<3}'.format(v3, v4))
-        print('                |               |')
+        print('                          |   ')
+        print('                  |---------------|')
+        print('                  |               |')
+        print('               V3={:>5}%        V4={:<3}'.format(v3, v4))
+        print('                  |               |')
         print('P2 = {:>5} mbar---|-----|{:<3}>-----|--- P3 = {:<5} mbar'.format(p2, pump, p3))
-        print('                |               |')
-        print('              V7={:<3}          V6={:<4}'.format(v7, v6))
-        print('                |               |')
-        print('                |---------------|')
-        print('                        |        ')
-        print('                      Dumps      ')
+        print('                  |               |')
+        print('                V7={:<3}          V6={:<4}'.format(v7, v6))
+        print('                  |               |')
+        print('                  |---------------|')
+        print('                          |        ')
+        print('                        Dumps      ')
         print('')
         print('')
         print('               Remote:   {}'.format(self._instr.query('REMOTE?')))

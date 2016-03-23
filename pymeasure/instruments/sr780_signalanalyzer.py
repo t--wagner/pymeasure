@@ -220,7 +220,7 @@ class Spectrum(ChannelRead):
         ChannelRead.__init__(self)
 
         self._config += ['frequency', 'resolution', 'frequency_span', 'range',
-                         'averagepoints', 'average_complete', 'autoscale', 'autoranging',
+                         'averagepoints', 'autoscale', 'autoranging',
                          'auto_offset']
 
 #    fast but not stable for high resolution and/or for some units
@@ -362,16 +362,18 @@ class Spectrum(ChannelRead):
     def averagepoints(self, avpoints):
         self._instrument.write('FAVN {} , {}'.format(self._channel, avpoints))
 
-    @property
-    def average_complete(self):
+    def average_complete(self, waiting_time = 0):
+
         if self._channel ==2:
             avpoints1 = int(self._instrument.query('FAVN? 0'))
-            finished1 = int(self._instrument.query('NAVG? 0'))
             avpoints2 = int(self._instrument.query('FAVN? 1'))
+            time.sleep(waiting_time)
+            finished1 = int(self._instrument.query('NAVG? 0'))
             finished2 = int(self._instrument.query('NAVG? 1'))
             return avpoints1 == finished1 and avpoints2 == finished2
         else:
             avpoints = int(self._instrument.query('FAVN? {}'.format(self._channel)))
+            time.sleep(waiting_time)
             finished = int(self._instrument.query('NAVG? {}'.format(self._channel)))
             return avpoints == finished
 
@@ -473,7 +475,7 @@ class SweptSine(ChannelRead):
     @range.setter
     def range(self, frange):
         self._instrument.write('SSTP {},{}'.format(self._channel, int(frange[1])))
-        if frange < 1:
+        if frange[0] < 1:
             self._instrument.write('SSTR {},1'.format(self._channel))
         else:
             self._instrument.write('SSTR {},{}'.format(self._channel, int(frange[0])))
@@ -556,6 +558,7 @@ class SR780(PyVisaInstrument):
         self._instrument.write('UNIT0, 10')
         self._instrument.write('FWIN2, 1')
         self._instrument.write('IAOM 0')
+        self._instrument.write('SRPT2,0')
 
 
     def SweptSine(self):
@@ -565,7 +568,6 @@ class SR780(PyVisaInstrument):
         self._instrument.write('VIEW2, 1')
         self._instrument.write('UNIT2, 3')
         self._instrument.write('FWIN2, 2')
-        self._instrument.write('IAOM 0')    #turn off auto offset
         self._instrument.write('FAVM2, 0')
         self._instrument.write('SSTY2, 0')
 
@@ -577,7 +579,7 @@ class SR780(PyVisaInstrument):
         self._instrument.write('UNIT2, 3')
         self._instrument.write('FWIN2, 1')  #Hanning Filter is used
         self._instrument.write('IAOM 0')    #turn off auto offset
-        self._instrument.write('PSDU2, 0')  #use Power Spectral Density
+        self._instrument.write('PSDU2, 1')  #use Power Spectral Density
 
     @property
     def sourcing(self):
