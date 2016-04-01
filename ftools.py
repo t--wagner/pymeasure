@@ -59,6 +59,11 @@ def fsplit(filename, directories=False, extension=False):
     return list(splitted)
 
 
+def fcut_extension(filename):
+    basename, filetype = os.path.splitext(filename)
+    return basename
+
+
 def findex(filename, digits=3, start=0, stop=None, step=1, position=-1, seperator='_'):
     value = start
     splitted = fsplit(filename, directories=True)
