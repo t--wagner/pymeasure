@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from pymeasure.instruments.foo_instrument import FooInstrument
+from pymeasure.instruments.foo_instrument import FooDac, FooTControler, FooVoltage, FooPS
 
 #Visa Imports
 try:
