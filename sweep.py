@@ -2,7 +2,7 @@
 
 import abc
 import time
-from . import itertools
+import itertools
 
 
 class Sweep(object, metaclass=abc.ABCMeta):
