@@ -215,7 +215,7 @@ class QxfordIPS(PyVisaInstrument):
 
     def __init__(self, rm, address, name='', reset=True, defaults=True):
         PyVisaInstrument.__init__(self, rm, address, name)
-        self._instrument = OxfordInstrument(self._instrument)
+        self._instrument = OxfordInstrument(self._instrument, delay=0.02)
         self._instrument.timeout = 5
         self._instrument.read_termination = self._instrument.CR
         self._instrument.write('C1')

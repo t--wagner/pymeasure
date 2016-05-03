@@ -32,7 +32,7 @@ class _Egg7260LockInAmplifierChannel(ChannelRead):
         value = self._instrument.query(self._channel + ".")
         try:     
             value = float(value)
-        except UnicodeEncodeError:
+        except ValueError:
             value = float(value.strip('\x00'))
         return [value]
 

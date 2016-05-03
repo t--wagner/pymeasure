@@ -150,8 +150,9 @@ class QxfordPS120(PyVisaInstrument):
 
     def __init__(self, rm, address, name='', defaults=True):
         PyVisaInstrument.__init__(self, rm, address, name)
-        self._instrument = OxfordInstrument(self._instrument)
+        self._instrument = OxfordInstrument(self._instrument, delay=0.02)
         self._instrument.read_termination = self._instrument.CR
+        self._instrument.timeout = 1
 
         # Set the communication protocol to normal
         self._instr.write('Q0')
