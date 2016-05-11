@@ -15,8 +15,7 @@ try:
     from pymeasure.instruments.oxford_itc503 import QxfordITC503
     from pymeasure.instruments.oxford_ps_120 import QxfordPS120
     from pymeasure.instruments.sr780_signalanalyzer import SR780
-
-
+    from pymeasure.instruments.thorlabs_mdt693A import PiezoControlMDT693A
 except ImportError:
     pass
 
