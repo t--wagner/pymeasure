@@ -14,8 +14,8 @@
 #Include ADwinPro_All.INC
 
 ' Define the ADC module number
-#Define adc_module 3
-#define adc_offset 32767.5
+#Define adc_module 1
+#define adc_offset 8388608
 #Define integration_time FPar_70 
 #Define integration_points Par_70
 #Define trigger Par_71
@@ -73,11 +73,11 @@ Init:
   buffered_points = 0
   
   ' Set sampling rate  
-  sampling_rate = 500e3
+  sampling_rate = 400e3
   integration_time = 0.02
   
   ' Calculate number of integration points
-  ProcessDelay = 2000
+  ProcessDelay = 300e6 / sampling_rate
   integration_points = sampling_rate * integration_time
   
   ' Clear buffer and init FIFO-pointers
@@ -102,13 +102,14 @@ Init:
   average7  = 0
   average8  = 0
   
-  P2_ADCF_Mode(101b, 1)
+  ' Activate timer-modus for continous sampling
+  P2_ADCF_Mode(adc_module, 1)
+    
+  '  Conversation on all Channels synchronous
+  P2_Start_ConvF(adc_module, 011111111b)
   
 Event:
-  P2_Read_ADCF8(adc_module, adc_values, 1)
-  Par_1  = adc_values[1]
-  Par_2  = adc_values[2]
-  
+  P2_Read_ADCF8_24B(adc_module, adc_values, 1)  
   IF ((trigger = 1) OR (continuous = 1)) Then
              
     ' Running average

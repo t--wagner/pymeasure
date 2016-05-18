@@ -2,7 +2,6 @@
 
 from pymeasure.instruments.pyvisa_instrument import PyVisaInstrument
 from pymeasure.case import ChannelRead, ChannelWrite
-import time
 
 
 class He3Channel(ChannelRead):
@@ -127,8 +126,8 @@ class ValveChannel(He3Channel, ChannelWrite):
 
 class RonnyHe3(PyVisaInstrument):
 
-    def __init__(self, resource_manager, address, name=''):
-        PyVisaInstrument.__init__(self, resource_manager, address, name)
+    def __init__(self, address, name='', **pyvisa):
+        super().__init__(address, name, **pyvisa)
 
         term = self._instr.LF + self._instr.CR
         self._instr.read_termination = term

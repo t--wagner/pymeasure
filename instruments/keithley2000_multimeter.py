@@ -50,7 +50,7 @@ def validate_limits(value, limits):
 class _Keithley2000MultimeterChannel(ChannelRead):
 
     def __init__(self, instrument, measurment_function):
-        ChannelRead.__init__(self)
+        super().__init__()
 
         self._instrument = instrument
         self._measf = measurment_function
@@ -85,7 +85,7 @@ class _Keithley2000MultimeterChannel(ChannelRead):
             self._instrument.write("TRIG:SIGN")
             if waiting_time > 0:
                 time.sleep(waiting_time)
-            data.append(self._instrument.query_binary_values("FETCH?")[0])
+            data.append(self._instrument.query_values("FETCH?")[0])
 
         return data
 
@@ -98,7 +98,7 @@ class _Keithley2000MultimeterChannel(ChannelRead):
             self.init()
             self._instrument.write("TRAC:FEED:CONT NEV")
 
-            data = self._instrument.query_binary_values("TRAC:DATA?")
+            data = self._instrument.query_values("TRAC:DATA?")
 
             cmds = (":TRAC:CLE", ":TRAC:FEED:CONT NEXT")
             self._instrument.write(";".join(cmds))
@@ -223,7 +223,7 @@ class _Keithley2000MultimeterChannel(ChannelRead):
 class _Keithley2000MultimeterChannelVoltageDC(_Keithley2000MultimeterChannel):
 
     def __init__(self, instrument):
-        _Keithley2000MultimeterChannel.__init__(self, instrument, 'VOLT:DC')
+        super().__init__(instrument, 'VOLT:DC')
 
     # --- range --- #
     @property
@@ -252,7 +252,7 @@ class _Keithley2000MultimeterChannelVoltageDC(_Keithley2000MultimeterChannel):
 class _Keithley2000MultimeterChannelCurrentDC(_Keithley2000MultimeterChannel):
 
     def __init__(self, instrument):
-        _Keithley2000MultimeterChannel.__init__(self, instrument, 'CURR:DC')
+        super().__init__(instrument, 'CURR:DC')
 
     # --- range --- #
     @property
@@ -281,7 +281,7 @@ class _Keithley2000MultimeterChannelCurrentDC(_Keithley2000MultimeterChannel):
 class _Keithley2000MultimeterChannelResistance(_Keithley2000MultimeterChannel):
 
     def __init__(self, instrument):
-        _Keithley2000MultimeterChannel.__init__(self, instrument, 'RES')
+        super().__init__(instrument, 'RES')
 
     # --- range ---#
     @property
@@ -569,6 +569,11 @@ class _Keithley2000MultimeterSubsystemFormat(object):
                                "'sreal' = 'sre', 'dreal' = 'dre')."))
             raise ValueError(err_str)
 
+        if form in ['ascii', 'asc']:
+            self._instrument.values_format.use_ascii('f', ',')
+        else:
+            self._instrument.values_format.use_binary(datatype='f', is_big_endian=False)
+
         self._instrument.write("FORM:DATA {}".format(form))
 
     # --- elements --- #
@@ -633,11 +638,8 @@ class _Keithley2000MultimeterSubsystemSystem(object):
 
 class Keithley2000Multimeter(PyVisaInstrument):
 
-    def __init__(self, rm, address, name='', defaults=False, reset=False):
-        PyVisaInstrument.__init__(self, rm, address, name)
-
-        # Setting the termination characters
-        #self._instrument.read_termination = self._instrument.LF
+    def __init__(self, address, name='', defaults=False, reset=False, **pyvisa):
+        super().__init__(address, name, **pyvisa)
 
         # Subsystems
         self.display = _Keithley2000MultimeterSubsystemDisplay(self._instrument)

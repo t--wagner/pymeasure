@@ -30,7 +30,7 @@ class _Egg7260LockInAmplifierChannel(ChannelRead):
 
         '''
         value = self._instrument.query(self._channel + ".")
-        try:     
+        try:
             value = float(value)
         except ValueError:
             value = float(value.strip('\x00'))
@@ -130,12 +130,12 @@ class _Egg7260LockInAmplifierOscillator(ChannelStep):
 
         '''
         value = self._instrument.query('OA.')
-        try:     
+        try:
             value = float(value)
         except UnicodeEncodeError:
             value = float(value.strip('\x00'))
         return [value]
-        
+
 
     @ChannelStep._writemethod
     def write(self, level):
@@ -413,13 +413,13 @@ class _Egg7260LockInAmplifierRearPanelSubsystem(object):
 
 class Egg7260LockInAmplifier(PyVisaInstrument):
 
-    def __init__(self, rm, address, name='', defaults=False, reset=False):
-        PyVisaInstrument.__init__(self, rm, address, name)
-        
+    def __init__(self, address, name='', defaults=False, reset=False, **pyvisa):
+        PyVisaInstrument.__init__(self, address, name, **pyvisa)
+
         # Setting the termination characters
         term_chars = self._instrument.CR + self._instrument.LF
         self._instrument.read_termination = term_chars
-        
+
         # Channels
         x_channel = _Egg7260LockInAmplifierChannel(self._instrument, 'X')
         self.__setitem__('x', x_channel)

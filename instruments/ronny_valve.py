@@ -76,8 +76,8 @@ class _PositionChannel(ChannelRead):
 
 class RonnyValve(PyVisaInstrument):
 
-    def __init__(self, resource_manager, address, name=''):
-        PyVisaInstrument.__init__(self, resource_manager, address, name)
+    def __init__(self, address, name='', **pyvisa):
+        PyVisaInstrument.__init__(self, address, name, **pyvisa)
 
         term = self._instrument.LF + self._instrument.CR
         self._instrument.read_termination = term

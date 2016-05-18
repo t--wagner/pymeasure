@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*
 
+import visa
 from pymeasure.case import Instrument
 
 class _PyVisaSubsystem(object):
@@ -26,11 +27,13 @@ class _PyVisaSubsystem(object):
 
 class PyVisaInstrument(Instrument):
 
-    def __init__(self, rm, instrument_address, name='', *args, **kwargs):
+    def __init__(self, instrument_address, name='', resource_manager=None, *args, **kwargs):
         super().__init__(name)
+
+        if not resource_manager:
+            rm = visa.ResourceManager()
         self._instrument = rm.open_resource(instrument_address, *args, **kwargs)
         self._instr = self._instrument
-        #self._instrument = visa.instrument(instrument_address, *args, **kwargs)
         self._pyvisa_subsystem = _PyVisaSubsystem(self._instrument,
                                                   instrument_address)
 

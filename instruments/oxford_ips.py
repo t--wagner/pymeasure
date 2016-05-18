@@ -213,8 +213,8 @@ class _OxfordIPSFieldChannel(ChannelWrite):
 
 class QxfordIPS(PyVisaInstrument):
 
-    def __init__(self, rm, address, name='', reset=True, defaults=True):
-        PyVisaInstrument.__init__(self, rm, address, name)
+    def __init__(self, address, name='', reset=True, defaults=True, **pyvisa):
+        PyVisaInstrument.__init__(self, address, name, **pyvisa)
         self._instrument = OxfordInstrument(self._instrument)
         self._instrument.timeout = 5
         self._instrument.read_termination = self._instrument.CR

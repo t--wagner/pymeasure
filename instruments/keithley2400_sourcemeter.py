@@ -202,8 +202,8 @@ class _Keithley2400SourceMeterChannelMeasureResistance(_Keithley2400SourceMeterC
 class Keithley2400SourceMeter(PyVisaInstrument):
 
     #--- constructor ---#
-    def __init__(self, rm, address, name='', defaults=False, reset=False):
-        PyVisaInstrument.__init__(self, rm, address, name)
+    def __init__(self, address, name='', defaults=False, reset=False, **pyvisa):
+        PyVisaInstrument.__init__(self, address, name, **pyvisa)
 
         # Setting the termination characters
         self._instrument.read_termination = self._instrument.LF
