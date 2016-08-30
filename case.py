@@ -34,9 +34,10 @@ class Channel(object, metaclass=abc.ABCMeta):
 
     """
 
-    def __init__(self, name='', unit=''):
+    def __init__(self, name='', unit='', instr=None):
         self.name = name
         self.unit = unit
+        self._instr = instr
 
         # Define config list
         self._config = ['name', 'unit']
@@ -92,10 +93,10 @@ class Channel(object, metaclass=abc.ABCMeta):
 
 class ChannelRead(Channel):
 
-    def __init__(self, name='', unit=''):
+    def __init__(self, name='', unit='', *channel, **kw_channel):
 
         # Call Channel constructor
-        super().__init__(name, unit)
+        super().__init__(name, unit, *channel, **kw_channel)
 
         self.factor = None
 
@@ -196,9 +197,9 @@ class ChannelRead(Channel):
 
 class ChannelWrite(ChannelRead):
 
-    def __init__(self, name='', unit=''):
+    def __init__(self, name='', unit='', *channel, **kw_channel):
 
-        super().__init__(name, unit)
+        super().__init__(name, unit, *channel, **kw_channel)
 
         self.limit = (None, None)
 
@@ -302,8 +303,8 @@ class ChannelWrite(ChannelRead):
 
 class ChannelStep(ChannelWrite):
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, *channel, **kw_channel):
+        super().__init__(*channel, **kw_channel)
 
         # Update config list
         self._config += ['steprate', 'steptime', 'stepsize']
@@ -433,12 +434,13 @@ class Instrument(IndexDict):
     from IndexDict to provide a lightweight interface for interactive work.
     """
 
-    def __init__(self, name=''):
+    def __init__(self, name='', instr=None):
         """Initiate Instrument class.
 
         """
         super().__init__()
         self._name = name
+        self._instr = instr
 
     def __setitem__(self, key, channel):
         if isinstance(channel, Channel):

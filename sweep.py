@@ -64,6 +64,35 @@ class Sweep(object, metaclass=abc.ABCMeta):
         return self._readback
 
 
+class SweepForEver(Sweep):
+
+    def __init__(self, waiting_time=0):
+        super().__init__(channel=None, waiting_time=waiting_time)
+
+    def __iter__(self):
+        for step in self.steps:
+            if self._waiting_time:
+                time.sleep(self._waiting_time)
+
+            yield [step]
+
+    @property
+    def steps(self):
+        """The step generator.
+        """
+
+        step = 0
+        while True:
+            yield step
+            step += 1
+
+    @property
+    def points(self):
+        """Number of sweep points.
+        """
+        return len(self.steps)
+
+
 class SweepSteps(Sweep):
 
     def __init__(self, channel, steps, waiting_time=0, readback=False):

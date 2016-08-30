@@ -204,6 +204,20 @@ class Line:
             self._xdata = xdata
             self._ydata = ydata
 
+    @Manager.task
+    def clear(self):
+        del self._xdata[:]
+        del self._ydata[:]
+
+    @property
+    def continuously(self):
+        """Set continuously plotting True or False.
+
+        If continuously plotting is True Dataplot1d gets cleared when the
+        number of added datapoints matches length.
+
+        """
+        return self._continuously
 
     def update(self):
         self._curve.setData(np.array(self._xdata), np.array(self._ydata))

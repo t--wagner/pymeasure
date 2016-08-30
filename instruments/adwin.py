@@ -1,78 +1,127 @@
 # -*- coding: utf-8 -*-
 
-from pymeasure.case import Instrument, ChannelRead, ChannelStep
-from functools import partial
+from pymeasure.case import Instrument
 import ADwin
-import numpy as np
 
 
-class AdwinType(object):
-    """Wrapper class allowing easy access to ADwins global variables.
+class AdwinBool:
 
-    """
+    def __init__(self, index, writeable=True):
+        self.index = index
+        self.writeable = writeable
 
-    def __init__(self, adwin, datatype, address, set=False):
+    def __get__(self, instance, *args, **kwargs):
+        return bool(instance._instr.Get_Par(self.index))
 
-        if datatype == 'par':
-            get = adwin.Get_Par
-            set = adwin.Set_Par
-        elif datatype == 'fpar':
-            get = adwin.Get_FPar
-            set = adwin.Set_FPar
-
-        self.get = partial(get, address)
-        if set:
-            self.set = partial(set, address)
-
-    def __call__(self, *values):
-        if len(values):
-            self.set(*values)
+    def __set__(self, instance, value, *args, **kwargs):
+        if self.writeable:
+            return instance._instr.Set_Par(int(self.index), value)
         else:
-            return self.get()
+            raise AttributeError("can't set attribute")
+
+
+class AdwinInt:
+
+    def __init__(self, index, writeable=True):
+        self.index = index
+        self.writeable = writeable
+
+    def __get__(self, instance, *args, **kwargs):
+        return instance._instr.Get_Par(self.index)
+
+    def __set__(self, instance, value, *args, **kwargs):
+        if self.writeable:
+            return instance._instr.Set_Par(self.index, value)
+        else:
+            raise AttributeError("can't set attribute")
+
+
+class AdwinFloat:
+
+    def __init__(self, index, writeable=True):
+        self.index = index
+        self.writeable = writeable
+
+    def __get__(self, instance, *args, **kwargs):
+        return instance._instr.Get_FPar(self.index)
+
+    def __set__(self, instance, value, *args, **kwargs):
+        if self.writeable:
+            return instance._instr.Set_FPar(self.index, value)
+        else:
+            raise AttributeError("can't set attribute")
+
+
+class AdwinData:
+    pass
+
+
+class AdwinFData:
+    pass
+
+
+class AdwinFifo:
+    pass
+
+
+class AdwinFFifo:
+    pass
 
 
 class AdwinInstrument(Instrument):
 
-    def __init__(self, device_number, name=''):
-        Instrument.__init__(self, name)
-        self._instrument = ADwin.ADwin(device_number)
+    def __init__(self, device_number=1, processor_type=12, reset=False, name=''):
+        super().__init__(name, instr=ADwin.ADwin(device_number))
+
+        if reset:
+            self.reset(processor_type, reset)
+
+    def reset(self, processor_type, boolean=False):
+        """Reboot the ADwin operation system.
+
+        """
+        if boolean is True:
+            os_file = '{}adwin{}.btl'.format(self._instr.ADwindir, processor_type)
+            self._instr.Boot(os_file)
 
     def test_version(self):
         """Checks if the correct operating system for the processor has been
         loaded and if the processor can be accessed.
 
         """
-        if self._instrument.Test_Version() == 0:
+        if self._instr.Test_Version() == 0:
             return True
         else:
             return False
 
     @property
     def free_memory(self):
-        """Free_Mem determines the free memory for the different memory types.
+        """Determines the free memory for the different memory types.
 
         """
         free_memory = {}
-        free_memory['pm'] = self._instrument.Free_Mem(1)
-        free_memory['em'] = self._instrument.Free_Mem(2)
-        free_memory['dm'] = self._instrument.Free_Mem(3)
-        free_memory['dx'] = self._instrument.Free_Mem(4)
+        free_memory['pm'] = self._instr.Free_Mem(1)
+        free_memory['em'] = self._instr.Free_Mem(2)
+        free_memory['dm'] = self._instr.Free_Mem(3)
+        free_memory['dx'] = self._instr.Free_Mem(4)
+        free_memory['cm'] = self._instr.Free_Mem(5)
+        free_memory['um'] = self._instr.Free_Mem(6)
 
         return free_memory
 
     @property
     def device_number(self):
-        """Returns the ADwin device number.
+        """ADwin device number.
 
         """
-        return self._instrument.DeviceNo
+        return self._instr.DeviceNo
 
     @property
-    def processor_type(self):
-        """Returns the processor type of the system.
+    def processor(self):
+        """Processor type of the system.
 
         """
-        processor_nr = self._instrument.Processor_Type()
+        processor_nr = self._instr.Processor_Type()
 
         if processor_nr == 2:
             processor_str = 'T2'
@@ -88,6 +137,8 @@ class AdwinInstrument(Instrument):
             processor_str = 'T10'
         elif processor_nr == 1011:
             processor_str = 'T11'
+        elif processor_nr == 1012:
+            processor_str = 'T12'
         elif processor_nr == 0:
             processor_str = 'Error'
 
@@ -95,117 +146,16 @@ class AdwinInstrument(Instrument):
 
     @property
     def workload(self):
-        """Returns the processor workload in percentage.
+        """Processor workload in percentage.
 
         """
-        return self._instrument.Workload()
+        return self._instr.Workload()
 
     @property
     def version(self):
-        return self._instrument.version
-
-
-class AdwinPro2AdcChannel(ChannelRead):
-
-    def __init__(self, instrument, adc_number):
-        ChannelRead.__init__(self)
-        self._instrument = instrument
-
-        self._integration_time   = AdwinType(instrument, 'fpar', 70, True)
-        self._integration_points = AdwinType(instrument, 'par',  70)
-        self._continous          = AdwinType(instrument, 'par',   3, True)
-        self._adc                = AdwinType(instrument, 'fpar', adc_number)
-        self._adc_number = adc_number
-        self._config += ['continous', 'integration_time']
-
-    @ChannelRead._readmethod
-    def read(self):
-        self.continous = True
-        return [self._adc()]
+        return self._instr.version
 
     @property
-    def continous(self):
-        return bool(self._continous())
-
-    @continous.setter
-    def continous(self, boolean):
-        if boolean is True:
-            self._continous(1)
-        elif boolean is False:
-            self._continous(0)
-        else:
-            raise ValueError('Has to be boolean')
-
-    @property
-    def integration_time(self):
-        return self._integration_time()
-
-    @integration_time.setter
-    def integration_time(self, seconds):
-        self._integration_time(seconds)
-
-    @property
-    def integration_points(self):
-        return self._integration_points()
-
-
-class AdwinPro2DacChannel(ChannelStep):
-
-    def __init__(self, instrument, dac_number, fpar_number):
-        ChannelStep.__init__(self)
-
-        self._instrument = instrument
-        self._dac_number = dac_number
-        self._fpar_number = AdwinType(instrument, 'fpar', fpar_number, True)
-        self.limit = (-10, 10)
-
-    @ChannelStep._readmethod
-    def read(self):
-        return [self._fpar_number()]
-
-    @ChannelStep._writemethod
-    def write(self, value):
-        self._fpar_number(value)
-
-
-class AdwinPro2DaqChannel(ChannelRead):
-
-    def __init__(self, instrument, fifo_number):
-        ChannelRead.__init__(self)
-        self._instrument = instrument
-        self._fifo_number = fifo_number
-        self._samples = 1
-
-    @property
-    def samples(self):
-        return self._samples
-
-    @samples.setter
-    def samples(self, samples):
-        self._samples = int(samples)
-
-    def fifo_clear(self):
-        self._instrument.Fifo_Clear(self._fifo_number)
-
-    @property
-    def fifo_empty(self):
-        return self._instrument.Fifo_Empty(self._fifo_number)
-
-    @property
-    def fifo_full(self):
-        return self._instrument.Fifo_Full(self._fifo_number)
-
-    @ChannelRead._readmethod
-    def read(self, fifo_clear=True):
-
-        if fifo_clear:
-            self.fifo_clear()
-        elif not self.fifo_empty:
-            raise ADwin.ADwinError('aquire', 'Fifo overrun.', 0)
-
-        while self.fifo_full <= self._samples:
-            pass
-
-        data = self._instrument.GetFifo_Float(self._fifo_number, self._samples)
-
-        return np.array(data)
+    def error(self):
+        nr_error = self._instr.Get_Last_Error()
+        return self._instr.Get_Last_Error_Text(nr_error)

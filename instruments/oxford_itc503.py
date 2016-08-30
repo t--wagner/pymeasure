@@ -46,7 +46,12 @@ class _QxfordITCChannel(ChannelStep):
 
     @ChannelStep._readmethod
     def read(self):
-        temp = self._instrument.query('R1')
+        temp = float(self._instrument.query('R1'))
+
+        # Sometimes the ITC returns 0.000 as temperture.
+        while temp == 0:
+            temp = float(self._instrument.query('R1'))
+
         return [float(temp)]
 
     @ChannelStep._writemethod

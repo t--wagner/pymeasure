@@ -48,7 +48,7 @@ class _QxfordILMChannel(ChannelRead):
 class QxfordILM(PyVisaInstrument):
 
     def __init__(self, address, name='', reset=True, defaults=True, isobus=6, **pyvisa):
-        PyVisaInstrument.__init__(self, address, name, **pyvisa)
+        super().__init__(address, name, **pyvisa)
         self._isobus = isobus
         self._instrument = OxfordInstrument(self._instrument, isobus = self._isobus)
         self._instrument.timeout = 200

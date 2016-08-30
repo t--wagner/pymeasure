@@ -1,8 +1,0 @@
-ADbasic Project File 1002000
-5
-44 0 1 -1 -1 -1 -1 0 0 972 1040
-".\adwin_pro2_feedback_com.bas" 0 44 0 1 -1 -1 -1 -1 0 0 793 416
-".\adwin_pro2_feedback_conf.inc" 0 44 0 1 -1 -1 -1 -1 25 25 818 441
-".\adwin_pro2_feedback_def.inc" 0 44 0 1 -1 -1 -1 -1 0 0 793 416
-".\adwin_pro2_feedback_main.bas" 0 44 0 1 -1 -1 -1 -1 100 100 893 516
-".\adwin_pro2_feedback_adc.bas" 0 44 2 3 -1 -1 -1 -1 -8 -30 656 730

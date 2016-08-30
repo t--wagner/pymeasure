@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+from pymeasure.instruments.pyvisa_instrument import PyVisaInstrument
 from visa import VisaIOError
 
 class OxfordInstrument(object):
@@ -42,7 +43,7 @@ class OxfordInstrument(object):
         try:
             # Clear buffer
             while True:
-                self._instr.read()
+                self._instr.read_raw()
         except VisaIOError:
             #Buffer is clear when nothing is returned
             pass

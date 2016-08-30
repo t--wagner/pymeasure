@@ -18,11 +18,12 @@ class He3Channel(ChannelRead):
     @property
     def pump(self):
         """Turn on and off the pump."""
+        self._instr.flush(16)
         status = self._instr.query('PUMP?')
         if status == 'OFF':
-            return False
-        elif status == 'ON':
             return True
+        elif status == 'ON':
+            return False
 
     @pump.setter
     def pump(self, boolean):
@@ -34,9 +35,11 @@ class He3Channel(ChannelRead):
         else:
             self._instr.write('PUMP OFF')
 
+
     @property
     def valve4(self):
         """Open and close Valve 4"""
+        self._instr.flush(16)
         status = self._instr.query('V4?')
         if status == 'OFF':
             return False
@@ -56,6 +59,7 @@ class He3Channel(ChannelRead):
     @property
     def valve6(self):
         """Open and close Valve 6"""
+        self._instr.flush(16)
         status = self._instr.query('V6?')
         if status == 'OFF':
             return False
@@ -75,6 +79,7 @@ class He3Channel(ChannelRead):
     @property
     def valve7(self):
         """Open and close Valve 7"""
+        self._instr.flush(16)
         status = self._instr.query('V7?')
         if status == 'OFF':
             return False
@@ -94,16 +99,19 @@ class He3Channel(ChannelRead):
     @property
     def pressure1(self):
         """Read pressure 1 at He3 inset."""
+        self._instr.flush(16)
         return(self._instr.query_ascii_values('P1?')[0])
 
     @property
     def pressure2(self):
         """Read preassure 2 infront of the pump."""
+        self._instr.flush(16)
         return(self._instr.query_ascii_values('P2?')[0])
 
     @property
     def pressure3(self):
         """Read pressure 3 behind the pump"""
+        self._instr.flush(16)
         return(self._instr.query_ascii_values('P3?')[0])
 
 
@@ -117,6 +125,7 @@ class ValveChannel(He3Channel, ChannelWrite):
 
     @ChannelWrite._readmethod
     def read(self):
+        self._instr.flush(16)
         return self._instr.query_ascii_values('V3?')
 
     @ChannelWrite._writemethod
@@ -132,6 +141,7 @@ class RonnyHe3(PyVisaInstrument):
         term = self._instr.LF + self._instr.CR
         self._instr.read_termination = term
         self._instr.write_termination = self._instr.CR
+        #self._instr.query_delay = 0.1
 
         self.__setitem__('valve',  ValveChannel(self._instr))
         self.__setitem__('pressure1', He3Channel(self._instr, 'pressure1'))
@@ -140,10 +150,12 @@ class RonnyHe3(PyVisaInstrument):
 
     @property
     def identification(self):
+        self._instr.flush(16)
         return self._instr.query('*idn?')
 
     @property
     def remote(self):
+        self._instr.flush(16)
         switch = self._instr.query('REMOTE?')
         if switch == 'ON':
             return True
@@ -161,18 +173,29 @@ class RonnyHe3(PyVisaInstrument):
 
     @property
     def info(self):
-
+        self._instr.flush(16)
         self._instr.write('ERROR RESET')
+        self._instr.flush(16)
         p1 = self._instr.query('P1?')
+        self._instr.flush(16)
         p2 = self._instr.query('P2?')
+        self._instr.flush(16)
         p3 = self._instr.query('P3?')
-
+        self._instr.flush(16)
         v3 = self._instr.query('V3?')
+        self._instr.flush(16)
         v4 = self._instr.query('V4?')
+        self._instr.flush(16)
         v6 = self._instr.query('V6?')
+        self._instr.flush(16)
         v7 = self._instr.query('V7?')
-
+        self._instr.flush(16)
         pump = self._instr.query('PUMP?')
+        if pump == 'ON':
+            pump = 'OFF'
+        elif pump == 'OFF':
+            pump = 'ON'
+
         print('                                 ')
         print('              Inset              ')
         print('                |                ')
@@ -191,8 +214,11 @@ class RonnyHe3(PyVisaInstrument):
         print('                        Dumps      ')
         print('')
         print('')
+        self._instr.flush(16)
         print('               Remote:   {}'.format(self._instr.query('REMOTE?')))
+        self._instr.flush(16)
         print('               Lock:     {}'.format(self._instr.query('LOCK?')))
+        self._instr.flush(16)
         print('               Pressure: {}mbar'.format(self._instr.query('PRES?')))
 
 
@@ -200,6 +226,7 @@ class RonnyHe3(PyVisaInstrument):
     @property
     def error(self):
         """Last error meassage."""
+        self._instr.flush(16)
         nr = int(self._instr.query('ERROR?'))
         self._instr.write('ERROR RESET')
         return he3_errors[nr]
@@ -207,14 +234,11 @@ class RonnyHe3(PyVisaInstrument):
     @property
     def error_list(self):
         """Last 10 error messages."""
+        self._instr.flush(16)
         error_list = self._instr.query('ERRORLIST?').rstrip().split(' ')
 
         errors = [he3_errors[int(nr)] for nr in error_list]
         return errors
-
-if __name__ == '__main__':
-    he3 = RonnyHe3(rm, 'ASRL14::INSTR')
-    he3.info
 
 
 he3_errors = [

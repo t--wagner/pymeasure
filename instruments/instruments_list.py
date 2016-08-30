@@ -6,6 +6,7 @@ from pymeasure.instruments.foo_instrument import FooDac, FooTControler, FooVolta
 try:
     from pymeasure.instruments.ad5791dac import Ad5791Dac
     from pymeasure.instruments.ronny_valve import RonnyValve
+    from pymeasure.instruments.ametek7270_lock_in_amplifier import Ametek7270LockInAmplifier
     from pymeasure.instruments.egg7260_lock_in_amplifier import Egg7260LockInAmplifier
     from pymeasure.instruments.egg5210_lock_in_amplifier import Egg5210LockInAmplifier
     from pymeasure.instruments.keithley2400_sourcemeter import Keithley2400SourceMeter
