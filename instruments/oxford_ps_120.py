@@ -148,8 +148,9 @@ class _OxfordPS120FieldChannel(ChannelWrite):
 
 class QxfordPS120(PyVisaInstrument):
 
-    def __init__(self, rm, address, name='', defaults=True):
-        PyVisaInstrument.__init__(self, rm, address, name)
+    
+    def __init__(self, address, name='', reset=True, defaults=True, **pyvisa):
+        PyVisaInstrument.__init__(self, address, name, **pyvisa)
         self._instrument = OxfordInstrument(self._instrument, delay=0.02)
         self._instrument.read_termination = self._instrument.CR
         self._instrument.timeout = 1
