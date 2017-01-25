@@ -121,25 +121,35 @@ class _OxfordIPSFieldChannel(ChannelWrite):
         return [float(self._instr.write('R7'))]
 
     def write(self, tesla, verbose=False):
+        
         if not isinstance(tesla, (int, float)):
             raise ValueError
-        self.setpoint = tesla
-        self.goto_setpoint()
-
-        while True:
-            test = int(self._instr.write('X')[10:11])
-
-            if test:
-               pass
-
-            point, = self.read()
-
-            if point == self.setpoint:
-                break
+        
+        tesla = round(tesla, 3)
+        
+        try:
+            self.setpoint = tesla
             self.goto_setpoint()
-
-        # Put on hold
-        self.hold()
+            
+            time.sleep(0.05)
+            
+            while int(self._instr.write('X')[10:11]):
+                pass
+             
+                #point, = self.read()
+                
+                #
+                #if point == self.setpoint:
+                #    break
+                #self.goto_setpoint()
+    
+            # Put on hold
+            self.hold()
+        except KeyboardInterrupt:
+            self._instr.flush()
+            self.hold()
+            raise KeyboardInterrupt
+            
 
         # Return the field
         if self._readback:
@@ -225,14 +235,21 @@ class QxfordIPS(PyVisaInstrument):
 
         # Channels
         self.__setitem__('bfield', _OxfordIPSFieldChannel(self._instrument))
-
-        if defaults is True:
+        
+        if reset:
+            self.reset()
+        
+        if defaults:
             self.defaults()
 
     #@property
     #def status(self):
     #    return self._instrument.query('X')
 
+    def reset(self):
+        self._instrument._instr.write('Q0')
+        self._instrument.flush()
+    
     def defaults(self):
-        pass
+        self._instrument.write('M01')
 
