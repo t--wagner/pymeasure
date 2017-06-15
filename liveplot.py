@@ -24,8 +24,8 @@ import numpy as np
 import matplotlib as mpl
 from matplotlib.backends.backend_tkagg import (FigureCanvasTkAgg,
                                                NavigationToolbar2TkAgg)
-from PyQt4 import QtGui, QtCore
-from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg
+from PyQt5 import QtGui, QtCore
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
 from matplotlib.colors import Normalize, LogNorm
 from queue import Queue
 from threading import Event
